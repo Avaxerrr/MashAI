@@ -27,7 +27,11 @@ contextBridge.exposeInMainWorld('api', {
     // Settings
     getSettings: () => ipcRenderer.invoke('get-settings'),
     saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
-    onSettingsUpdated: (callback) => ipcRenderer.on('settings-updated', (e, data) => callback(data)),
+    onSettingsUpdated: (callback) => {
+        const handler = (e, data) => callback(data);
+        ipcRenderer.on('settings-updated', handler);
+        return () => ipcRenderer.removeListener('settings-updated', handler);
+    },
 
 
     // Navigation
@@ -35,20 +39,66 @@ contextBridge.exposeInMainWorld('api', {
     goForward: () => ipcRenderer.send('nav-forward'),
     reload: () => ipcRenderer.send('nav-reload'),
 
-    // Listeners (React will use these)
-    onProfilesLoaded: (callback) => ipcRenderer.on('profiles-loaded', (e, data) => callback(data)),
-    onTabCreated: (callback) => ipcRenderer.on('tab-created', (e, data) => callback(data)),
-    onTabUpdated: (callback) => ipcRenderer.on('tab-updated', (e, data) => callback(data)),
-    onRestoreActive: (callback) => ipcRenderer.on('restore-active', (e, id) => callback(id)),
-    onProfileTabsLoaded: (callback) => ipcRenderer.on('profile-tabs-loaded', (e, data) => callback(data)),
-    onWindowMaximized: (callback) => ipcRenderer.on('window-maximized', (e, isMax) => callback(isMax)),
-    onRequestCloseTab: (callback) => ipcRenderer.on('request-close-tab', (e, id) => callback(id)),
-    onTabClosedBackend: (callback) => ipcRenderer.on('tab-closed-backend', (e, id) => callback(id)),
-    onSwitchProfileRequest: (callback) => ipcRenderer.on('switch-profile-request', (e, id) => callback(id)),
-    onOpenSettingsModal: (callback) => ipcRenderer.on('open-settings-modal', (e) => callback()),
+    // Listeners (React will use these) - Each returns a cleanup function
+    onProfilesLoaded: (callback) => {
+        const handler = (e, data) => callback(data);
+        ipcRenderer.on('profiles-loaded', handler);
+        return () => ipcRenderer.removeListener('profiles-loaded', handler);
+    },
+    onTabCreated: (callback) => {
+        const handler = (e, data) => callback(data);
+        ipcRenderer.on('tab-created', handler);
+        return () => ipcRenderer.removeListener('tab-created', handler);
+    },
+    onTabUpdated: (callback) => {
+        const handler = (e, data) => callback(data);
+        ipcRenderer.on('tab-updated', handler);
+        return () => ipcRenderer.removeListener('tab-updated', handler);
+    },
+    onRestoreActive: (callback) => {
+        const handler = (e, id) => callback(id);
+        ipcRenderer.on('restore-active', handler);
+        return () => ipcRenderer.removeListener('restore-active', handler);
+    },
+    onProfileTabsLoaded: (callback) => {
+        const handler = (e, data) => callback(data);
+        ipcRenderer.on('profile-tabs-loaded', handler);
+        return () => ipcRenderer.removeListener('profile-tabs-loaded', handler);
+    },
+    onWindowMaximized: (callback) => {
+        const handler = (e, isMax) => callback(isMax);
+        ipcRenderer.on('window-maximized', handler);
+        return () => ipcRenderer.removeListener('window-maximized', handler);
+    },
+    onRequestCloseTab: (callback) => {
+        const handler = (e, id) => callback(id);
+        ipcRenderer.on('request-close-tab', handler);
+        return () => ipcRenderer.removeListener('request-close-tab', handler);
+    },
+    onTabClosedBackend: (callback) => {
+        const handler = (e, id) => callback(id);
+        ipcRenderer.on('tab-closed-backend', handler);
+        return () => ipcRenderer.removeListener('tab-closed-backend', handler);
+    },
+    onSwitchProfileRequest: (callback) => {
+        const handler = (e, id) => callback(id);
+        ipcRenderer.on('switch-profile-request', handler);
+        return () => ipcRenderer.removeListener('switch-profile-request', handler);
+    },
+    onOpenSettingsModal: (callback) => {
+        const handler = (e) => callback();
+        ipcRenderer.on('open-settings-modal', handler);
+        return () => ipcRenderer.removeListener('open-settings-modal', handler);
+    },
+    onActiveProfileChanged: (callback) => {
+        const handler = (e, profileId) => callback(profileId);
+        ipcRenderer.on('active-profile-changed', handler);
+        return () => ipcRenderer.removeListener('active-profile-changed', handler);
+    },
 
     // Context Menu
     showContextMenu: (tabId) => ipcRenderer.send('show-context-menu', { tabId }),
     showProfileMenu: (x, y, activeProfileId) => ipcRenderer.send('show-profile-menu', { x, y, activeProfileId }),
     showNewTabMenu: (x, y, profileId) => ipcRenderer.send('show-new-tab-menu', { x, y, profileId })
 });
+

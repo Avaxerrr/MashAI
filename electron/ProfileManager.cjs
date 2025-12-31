@@ -6,6 +6,8 @@ class ProfileManager {
     }
 
     loadProfiles() {
+        // Clear old data first to remove deleted profiles
+        this.profiles.clear();
         const profiles = this.settingsManager.getProfiles();
         profiles.forEach(p => {
             this.profiles.set(p.id, p);

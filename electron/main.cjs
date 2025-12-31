@@ -118,12 +118,23 @@ function createWindow() {
 
     mainWindow.webContents.once('did-finish-load', () => {
         mainWindow.webContents.send('profiles-loaded', profileManager.getAllProfiles());
+
+        // Try to restore session first
+        let sessionData = null;
+        try {
+            if (fs.existsSync(getSessionFile())) {
+                sessionData = JSON.parse(fs.readFileSync(getSessionFile(), 'utf-8'));
+            }
+        } catch (e) {
+            console.error('Failed to load session for fallback:', e);
+        }
+
         restoreSession();
 
         // Ensure at least one tab exists if restore failed or was empty
         if (tabManager.tabs.size === 0) {
-            // Create default tab for the first available profile (usually 'work')
-            const defaultProfile = profileManager.getAllProfiles()[0]?.id || 'work';
+            // Use last active profile if available, otherwise default to first profile
+            const defaultProfile = sessionData?.lastActiveProfileId || profileManager.getAllProfiles()[0]?.id || 'work';
             const id = tabManager.createTab(defaultProfile);
             tabManager.switchTo(id);
             mainWindow.webContents.send('tab-created', {
@@ -374,8 +385,18 @@ function createWindow() {
         }));
 
         template.push({ type: 'separator' });
+
+        let settingsIcon = null;
+        try {
+            const iconPath = path.join(__dirname, '../src/assets/settings.png');
+            settingsIcon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
+        } catch (e) {
+            console.error('Failed to load settings icon:', e);
+        }
+
         template.push({
             label: 'Settings',
+            icon: settingsIcon,
             click: () => {
                 createSettingsWindow();
             }
@@ -453,8 +474,78 @@ function createWindow() {
     });
 
     ipcMain.handle('save-settings', (event, newSettings) => {
+        const oldSettings = settingsManager.getSettings();
         const success = settingsManager.saveSettings(newSettings);
-        // define specific events if needed, e.g. broadcast to all windows
+
+        // Reload profiles in ProfileManager to sync with new settings
+        if (profileManager) {
+            profileManager.loadProfiles();
+        }
+
+        // Clean up tabs for deleted profiles
+        if (tabManager && newSettings.profiles) {
+            const newProfileIds = new Set(newSettings.profiles.map(p => p.id));
+            const oldProfileIds = new Set(oldSettings.profiles.map(p => p.id));
+
+            // Find deleted profile IDs
+            const deletedProfileIds = Array.from(oldProfileIds).filter(id => !newProfileIds.has(id));
+
+            if (deletedProfileIds.length > 0) {
+                // Track if we need to switch profiles
+                let needsProfileSwitch = false;
+                let currentActiveProfileId = null;
+
+                // Get current active profile from active tab
+                if (tabManager.activeTabId) {
+                    const activeTab = tabManager.tabs.get(tabManager.activeTabId);
+                    if (activeTab) {
+                        currentActiveProfileId = activeTab.profileId;
+                        if (deletedProfileIds.includes(currentActiveProfileId)) {
+                            needsProfileSwitch = true;
+                        }
+                    }
+                }
+
+                // Close all tabs belonging to deleted profiles
+                deletedProfileIds.forEach(profileId => {
+                    const tabsToDelete = tabManager.getTabsForProfile(profileId);
+                    tabsToDelete.forEach(tab => {
+                        tabManager.closeTab(tab.id);
+                        mainWindow.webContents.send('tab-closed-backend', tab.id);
+                    });
+                });
+
+                // If active profile was deleted, switch to first remaining profile
+                if (needsProfileSwitch && newSettings.profiles.length > 0) {
+                    const newActiveProfile = newSettings.profiles[0];
+                    const profileTabs = tabManager.getTabsForProfile(newActiveProfile.id);
+
+                    if (profileTabs.length > 0) {
+                        // Switch to first tab of the new active profile
+                        tabManager.switchTo(profileTabs[0].id);
+                        mainWindow.webContents.send('restore-active', profileTabs[0].id);
+                    } else {
+                        // Create a new tab for this profile
+                        const newTabId = tabManager.createTab(newActiveProfile.id);
+                        tabManager.switchTo(newTabId);
+                        mainWindow.webContents.send('tab-created', {
+                            id: newTabId,
+                            profileId: newActiveProfile.id,
+                            title: 'New Thread',
+                            url: tabManager.tabs.get(newTabId)?.url || ''
+                        });
+                        updateViewBounds();
+                    }
+
+                    // Notify frontend to update its active profile state
+                    mainWindow.webContents.send('active-profile-changed', newActiveProfile.id);
+                }
+
+                saveSession();
+            }
+        }
+
+        // Broadcast to all windows (main window updates its UI)
         mainWindow.webContents.send('settings-updated', settingsManager.getSettings());
         return success;
     });
@@ -636,6 +727,15 @@ function updateViewBounds() {
 function saveSession() {
     if (!tabManager) return;
 
+    // Derive the last active profile from the active tab
+    let lastActiveProfileId = null;
+    if (tabManager.activeTabId) {
+        const activeTab = tabManager.tabs.get(tabManager.activeTabId);
+        if (activeTab) {
+            lastActiveProfileId = activeTab.profileId;
+        }
+    }
+
     const sessionData = {
         tabs: Array.from(tabManager.tabs.values()).map(t => ({
             id: t.id,
@@ -644,6 +744,7 @@ function saveSession() {
             title: t.title
         })),
         activeTabId: tabManager.activeTabId,
+        lastActiveProfileId: lastActiveProfileId,
         windowBounds: currentWindowState,
         isMaximized: currentWindowState.isMaximized
     };
@@ -672,11 +773,23 @@ function restoreSession() {
             });
         });
 
+        // Try to restore the exact active tab first
         if (data.activeTabId && tabManager.tabs.has(data.activeTabId)) {
             setTimeout(() => {
                 tabManager.switchTo(data.activeTabId);
                 mainWindow.webContents.send('restore-active', data.activeTabId);
                 updateViewBounds();
+            }, 500);
+        } else if (data.lastActiveProfileId) {
+            // If we can't restore the exact tab, switch to the last active profile
+            setTimeout(() => {
+                const profileTabs = tabManager.getTabsForProfile(data.lastActiveProfileId);
+                if (profileTabs.length > 0) {
+                    // Switch to the first tab of the last active profile
+                    tabManager.switchTo(profileTabs[0].id);
+                    mainWindow.webContents.send('restore-active', profileTabs[0].id);
+                    updateViewBounds();
+                }
             }, 500);
         }
     } catch (e) {
