@@ -21,35 +21,35 @@ class SettingsManager {
                     id: 'perplexity',
                     name: 'Perplexity',
                     url: 'https://www.perplexity.ai',
-                    icon: 'perplexity',
+                    icon: 'https://www.perplexity.ai/favicon.ico',
                     color: '#191A1A'
                 },
                 {
                     id: 'gemini',
                     name: 'Gemini',
                     url: 'https://gemini.google.com',
-                    icon: 'google',
+                    icon: 'https://www.gstatic.com/lamda/images/gemini_sparkle_v002_d4735304ff6292a690345.svg',
                     color: '#000000'
                 },
                 {
                     id: 'chatgpt',
                     name: 'ChatGPT',
                     url: 'https://chatgpt.com',
-                    icon: 'openai',
+                    icon: 'https://cdn.oaistatic.com/assets/favicon-miwirzcz.ico',
                     color: '#212121'
                 },
                 {
                     id: 'claude',
                     name: 'Claude',
                     url: 'https://claude.ai',
-                    icon: 'anthropic',
+                    icon: 'https://claude.ai/favicon.ico',
                     color: '#262624'
                 },
                 {
                     id: 'grok',
                     name: 'Grok',
                     url: 'https://grok.com',
-                    icon: 'x',
+                    icon: 'https://grok.com/favicon.ico',
                     color: '#000000'
                 }
             ],
@@ -109,6 +109,44 @@ class SettingsManager {
 
     getProviders() {
         return this.settings.aiProviders;
+    }
+
+    async fetchFaviconAsDataUrl(url) {
+        try {
+            const urlObj = new URL(url);
+            const faviconUrl = `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
+
+            const response = await fetch(faviconUrl);
+            if (!response.ok) throw new Error('Failed to fetch favicon');
+
+            const buffer = await response.arrayBuffer();
+            const base64 = Buffer.from(buffer).toString('base64');
+
+            // Determine mime type (Google usually returns PNG)
+            const contentType = response.headers.get('content-type') || 'image/png';
+
+            return `data:${contentType};base64,${base64}`;
+        } catch (err) {
+            console.warn(`Failed to fetch favicon for ${url}:`, err.message);
+            return null;
+        }
+    }
+
+    async ensureProvidersFavicons() {
+        // Fetch favicons for any providers that don't have them
+        let updated = false;
+
+        for (const provider of this.settings.aiProviders) {
+            if (!provider.faviconDataUrl) {
+                console.log(`Fetching favicon for ${provider.name}...`);
+                provider.faviconDataUrl = await this.fetchFaviconAsDataUrl(provider.url);
+                updated = true;
+            }
+        }
+
+        if (updated) {
+            this.saveSettings(this.settings);
+        }
     }
 
     getDefaultProviderId() {

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const TabManager = require('./TabManager.cjs');
@@ -107,6 +107,11 @@ function createWindow() {
     // Initialize ProfileManager with settings
     profileManager = new ProfileManager(settingsManager);
 
+    // Pre-fetch favicons for providers that don't have them cached
+    settingsManager.ensureProvidersFavicons().catch(err => {
+        console.error('Failed to fetch provider favicons:', err);
+    });
+
     tabManager = new TabManager(mainWindow, settingsManager);
 
 
@@ -156,13 +161,15 @@ function createWindow() {
     // Tab Management
     ipcMain.on('create-tab', (event, profileId) => {
         const id = tabManager.createTab(profileId);
+        const tab = tabManager.tabs.get(id);
         const success = tabManager.switchTo(id);
 
         if (success) {
             mainWindow.webContents.send('tab-created', {
                 id,
                 profileId,
-                title: 'New Thread'
+                title: 'New Thread',
+                url: tab?.url || ''
             });
             updateViewBounds();
             saveSession();
@@ -171,13 +178,15 @@ function createWindow() {
 
     ipcMain.on('create-tab-with-url', (event, { profileId, url }) => {
         const id = tabManager.createTab(profileId, url);
+        const tab = tabManager.tabs.get(id);
         const success = tabManager.switchTo(id);
 
         if (success) {
             mainWindow.webContents.send('tab-created', {
                 id,
                 profileId,
-                title: 'New Thread'
+                title: 'New Thread',
+                url: tab?.url || url || ''
             });
             updateViewBounds();
             saveSession();
@@ -267,6 +276,11 @@ function createWindow() {
                 tabManager.closeTab(tab.id);
             });
         }
+        saveSession();
+    });
+
+    ipcMain.on('reorder-tabs', (event, tabOrder) => {
+        tabManager.reorderTabs(tabOrder);
         saveSession();
     });
 
@@ -378,25 +392,40 @@ function createWindow() {
     ipcMain.on('show-new-tab-menu', (event, { x, y, profileId }) => {
         const providers = settingsManager.getProviders();
 
-        const template = providers.map(provider => ({
-            label: provider.name,
-            click: () => {
-                // Create a new tab with this provider's URL
-                const id = tabManager.createTab(profileId, provider.url);
-                const success = tabManager.switchTo(id);
-
-                if (success) {
-                    mainWindow.webContents.send('tab-created', {
-                        id,
-                        profileId,
-                        title: 'New Thread',
-                        url: provider.url
-                    });
-                    updateViewBounds();
-                    saveSession();
+        const template = providers.map(provider => {
+            // Convert cached data URL to NativeImage (synchronous, instant)
+            let icon = null;
+            if (provider.faviconDataUrl) {
+                try {
+                    const img = nativeImage.createFromDataURL(provider.faviconDataUrl);
+                    // Resize to 16x16 for menu (standard menu icon size)
+                    icon = img.resize({ width: 16, height: 16 });
+                } catch (err) {
+                    console.warn(`Failed to load cached favicon for ${provider.name}:`, err.message);
                 }
             }
-        }));
+
+            return {
+                label: provider.name,
+                icon: icon, // Will be null if not cached or failed
+                click: () => {
+                    // Create a new tab with this provider's URL
+                    const id = tabManager.createTab(profileId, provider.url);
+                    const success = tabManager.switchTo(id);
+
+                    if (success) {
+                        mainWindow.webContents.send('tab-created', {
+                            id,
+                            profileId,
+                            title: 'New Thread',
+                            url: provider.url
+                        });
+                        updateViewBounds();
+                        saveSession();
+                    }
+                }
+            };
+        });
 
         const menu = Menu.buildFromTemplate(template);
         menu.popup({

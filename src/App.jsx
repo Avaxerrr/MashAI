@@ -63,9 +63,13 @@ function App() {
             setActiveTabId(tab.id)
         }
 
-        const handleTabUpdated = ({ id, title }) => {
+        const handleTabUpdated = ({ id, title, url }) => {
             setTabs(prev => prev.map(tab =>
-                tab.id === id ? { ...tab, title } : tab
+                tab.id === id ? {
+                    ...tab,
+                    ...(title !== undefined && { title }),
+                    ...(url !== undefined && { url })
+                } : tab
             ))
         }
 
@@ -191,6 +195,48 @@ function App() {
         window.api.getProfileTabs(profileId)
     }
 
+    const reorderTabs = (fromIndex, toIndex) => {
+        // Get the current profile's tabs to find the actual tab IDs
+        const profileTabs = tabs.filter(t => t.profileId === activeProfileId);
+
+        if (fromIndex < 0 || fromIndex >= profileTabs.length ||
+            toIndex < 0 || toIndex >= profileTabs.length) {
+            return;
+        }
+
+        const movedTabId = profileTabs[fromIndex].id;
+        const targetTabId = profileTabs[toIndex].id;
+
+        setTabs(prev => {
+            const newTabs = [...prev];
+
+            // Find actual indices in the full array
+            const actualFromIndex = newTabs.findIndex(t => t.id === movedTabId);
+            const actualToIndex = newTabs.findIndex(t => t.id === targetTabId);
+
+            if (actualFromIndex === -1 || actualToIndex === -1) return prev;
+
+            // Remove the moved tab and insert at new position
+            const [movedTab] = newTabs.splice(actualFromIndex, 1);
+
+            // Recalculate target index since array changed after splice
+            const newTargetIndex = newTabs.findIndex(t => t.id === targetTabId);
+            if (newTargetIndex === -1) {
+                // Target was removed, insert at end
+                newTabs.push(movedTab);
+            } else {
+                // Insert at or after the target position
+                newTabs.splice(actualFromIndex < actualToIndex ? newTargetIndex + 1 : newTargetIndex, 0, movedTab);
+            }
+
+            // Send new order to backend
+            const tabOrder = newTabs.map(t => t.id);
+            window.api.reorderTabs(tabOrder);
+
+            return newTabs;
+        });
+    }
+
     // Removed useKeyboardShortcuts - handled by Electron Main Menu now
 
     const currentTabs = tabs.filter(t => t.profileId === activeProfileId)
@@ -211,6 +257,7 @@ function App() {
                 onCloseOtherTabs={closeOtherTabs}
                 onCloseTabsToRight={closeTabsToRight}
                 onSwitchProfile={switchProfile}
+                onReorderTabs={reorderTabs}
                 aiProviders={aiProviders}
             />
 

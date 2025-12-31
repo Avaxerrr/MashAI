@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('api', {
     reopenClosedTab: () => ipcRenderer.send('reopen-closed-tab'),
     closeOtherTabs: (tabId, profileId) => ipcRenderer.send('close-other-tabs', { tabId, profileId }),
     closeTabsToRight: (tabId, profileId) => ipcRenderer.send('close-tabs-to-right', { tabId, profileId }),
+    reorderTabs: (tabOrder) => ipcRenderer.send('reorder-tabs', tabOrder),
 
     // Profile
     getProfileTabs: (profileId) => ipcRenderer.send('get-profile-tabs', profileId),

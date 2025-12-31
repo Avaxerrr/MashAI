@@ -15,9 +15,12 @@ export default function TitleBar({
     onCloseOtherTabs,
     onCloseTabsToRight,
     onSwitchProfile,
+    onReorderTabs,
     aiProviders = []
 }) {
     const [isMaximized, setIsMaximized] = useState(false)
+    const [draggedTab, setDraggedTab] = useState(null)
+    const [dragOverTab, setDragOverTab] = useState(null)
 
     // ... (rest of methods)
 
@@ -28,16 +31,24 @@ export default function TitleBar({
 
     const getIconForTab = (tab) => {
         const provider = getProviderForTab(tab);
-        if (provider) return provider.icon;
 
-        // Fallback
-        if (!tab.url) return 'https://www.perplexity.ai/favicon.ico';
-        try {
-            const urlObj = new URL(tab.url);
-            return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
-        } catch {
-            return 'https://www.perplexity.ai/favicon.ico';
+        // First priority: use pre-cached favicon from provider settings
+        if (provider?.faviconDataUrl) {
+            return provider.faviconDataUrl;
         }
+
+        // Second priority: Use Google favicon service for the specific URL
+        if (tab.url) {
+            try {
+                const urlObj = new URL(tab.url);
+                return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
+            } catch {
+                // Invalid URL
+            }
+        }
+
+        // Final fallback
+        return 'https://www.google.com/s2/favicons?domain=perplexity.ai&sz=32';
     }
 
     const handleMaximize = () => {
@@ -94,10 +105,52 @@ export default function TitleBar({
                         const isActive = tab.id === activeTabId;
                         const provider = getProviderForTab(tab);
                         const activeBg = isActive ? (provider?.color || '#191A1A') : '';
+                        const isDragging = draggedTab === tab.id;
+                        const isDragOver = dragOverTab === tab.id;
 
                         return (
                             <div
                                 key={tab.id}
+                                draggable
+                                onDragStart={(e) => {
+                                    setDraggedTab(tab.id);
+                                    e.dataTransfer.effectAllowed = 'move';
+                                    // Set a transparent drag image to avoid the default ghost image
+                                    const dragImage = document.createElement('div');
+                                    dragImage.style.opacity = '0';
+                                    document.body.appendChild(dragImage);
+                                    e.dataTransfer.setDragImage(dragImage, 0, 0);
+                                    setTimeout(() => document.body.removeChild(dragImage), 0);
+                                }}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    e.dataTransfer.dropEffect = 'move';
+                                    if (draggedTab && draggedTab !== tab.id) {
+                                        setDragOverTab(tab.id);
+                                    }
+                                }}
+                                onDragLeave={(e) => {
+                                    if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget)) {
+                                        setDragOverTab(null);
+                                    }
+                                }}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    if (draggedTab && draggedTab !== tab.id && onReorderTabs) {
+                                        const draggedIndex = tabs.findIndex(t => t.id === draggedTab);
+                                        const targetIndex = tabs.findIndex(t => t.id === tab.id);
+
+                                        if (draggedIndex !== -1 && targetIndex !== -1) {
+                                            onReorderTabs(draggedIndex, targetIndex);
+                                        }
+                                    }
+                                    setDraggedTab(null);
+                                    setDragOverTab(null);
+                                }}
+                                onDragEnd={() => {
+                                    setDraggedTab(null);
+                                    setDragOverTab(null);
+                                }}
                                 onClick={() => onSwitchTab(tab.id)}
                                 onContextMenu={(e) => {
                                     e.preventDefault()
@@ -105,12 +158,14 @@ export default function TitleBar({
                                 }}
                                 className={`h-full px-2 flex items-center gap-2 border-r border-[#1e1e1e] cursor-pointer group select-none
                                         ${!isActive ? 'bg-[#2d2d2d] hover:bg-[#2a2a2a]' : ''}
-                                        min-w-[40px] max-w-[160px] flex-1 transition-colors duration-200
+                                        min-w-[40px] max-w-[160px] flex-1 transition-all duration-200
+                                        ${isDragOver ? 'border-l-2 border-l-blue-500' : ''}
                                     `}
                                 title={tab.title}
                                 style={{
                                     WebkitAppRegion: 'no-drag',
-                                    backgroundColor: isActive ? activeBg : undefined
+                                    backgroundColor: isActive ? activeBg : undefined,
+                                    opacity: isDragging ? 0.5 : 1
                                 }}
                             >
                                 <img

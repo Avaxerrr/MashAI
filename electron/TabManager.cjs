@@ -15,6 +15,7 @@ class TabManager {
         this.settingsManager = settingsManager;
         this.tabs = new Map();
         this.activeTabId = null;
+        this.tabOrder = []; // Track tab order globally
     }
 
     createTab(profileId, url = null, existingId = null) {
@@ -45,6 +46,11 @@ class TabManager {
             url: finalUrl
         });
 
+        // Add to tab order if not already present
+        if (!this.tabOrder.includes(id)) {
+            this.tabOrder.push(id);
+        }
+
         view.webContents.loadURL(finalUrl);
 
         view.webContents.on('did-finish-load', () => {
@@ -61,7 +67,18 @@ class TabManager {
 
         view.webContents.on('did-navigate', (e, url) => {
             const tab = this.tabs.get(id);
-            if (tab) tab.url = url;
+            if (tab) {
+                tab.url = url;
+                this.mainWindow.webContents.send('tab-updated', { id, url });
+            }
+        });
+
+        view.webContents.on('did-navigate-in-page', (e, url) => {
+            const tab = this.tabs.get(id);
+            if (tab) {
+                tab.url = url;
+                this.mainWindow.webContents.send('tab-updated', { id, url });
+            }
         });
 
         return id;
@@ -112,12 +129,29 @@ class TabManager {
         }
 
         this.tabs.delete(tabId);
+
+        // Remove from tab order
+        const orderIndex = this.tabOrder.indexOf(tabId);
+        if (orderIndex !== -1) {
+            this.tabOrder.splice(orderIndex, 1);
+        }
     }
 
     getTabsForProfile(profileId) {
-        return Array.from(this.tabs.values())
-            .filter(tab => tab.profileId === profileId)
-            .map(tab => ({ id: tab.id, title: tab.title, url: tab.url, profileId: tab.profileId }));
+        // Return tabs in the order defined by tabOrder, filtered by profileId
+        const orderedTabs = [];
+        for (const tabId of this.tabOrder) {
+            const tab = this.tabs.get(tabId);
+            if (tab && tab.profileId === profileId) {
+                orderedTabs.push({
+                    id: tab.id,
+                    title: tab.title,
+                    url: tab.url,
+                    profileId: tab.profileId
+                });
+            }
+        }
+        return orderedTabs;
     }
 
     getAllTabs() {
@@ -157,19 +191,27 @@ class TabManager {
         if (view) view.webContents.reload();
     }
 
-    getTabsForProfile(profileId) {
-        return Array.from(this.tabs.values())
-            .filter(tab => tab.profileId === profileId)
-            .map(tab => ({ id: tab.id, profileId: tab.profileId, title: tab.title, url: tab.url }));
+    getAllTabs() {
+        // Return tabs in the order defined by tabOrder
+        const orderedTabs = [];
+        for (const tabId of this.tabOrder) {
+            const tab = this.tabs.get(tabId);
+            if (tab) {
+                orderedTabs.push({
+                    id: tab.id,
+                    profileId: tab.profileId,
+                    title: tab.title,
+                    url: tab.url
+                });
+            }
+        }
+        return orderedTabs;
     }
 
-    getAllTabs() {
-        return Array.from(this.tabs.values()).map(tab => ({
-            id: tab.id,
-            profileId: tab.profileId,
-            title: tab.title,
-            url: tab.url
-        }));
+    reorderTabs(newOrder) {
+        // Update the tab order array
+        // Only include tabs that currently exist
+        this.tabOrder = newOrder.filter(id => this.tabs.has(id));
     }
 
     getActiveTabId() {

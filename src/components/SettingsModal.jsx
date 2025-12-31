@@ -261,6 +261,35 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                                                 <Star size={16} fill={isDefault ? 'currentColor' : 'none'} />
                                             </button>
 
+                                            {/* Favicon display */}
+                                            <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
+                                                {provider.faviconDataUrl ? (
+                                                    <img
+                                                        src={provider.faviconDataUrl}
+                                                        alt=""
+                                                        className="w-4 h-4"
+                                                        onError={(e) => {
+                                                            // Fallback to Google favicon service if cached favicon fails
+                                                            try {
+                                                                const urlObj = new URL(provider.url);
+                                                                e.target.src = `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
+                                                            } catch {
+                                                                e.target.style.display = 'none';
+                                                            }
+                                                        }}
+                                                    />
+                                                ) : provider.url ? (
+                                                    <img
+                                                        src={`https://www.google.com/s2/favicons?domain=${new URL(provider.url).hostname}&sz=32`}
+                                                        alt=""
+                                                        className="w-4 h-4"
+                                                        onError={(e) => e.target.style.display = 'none'}
+                                                    />
+                                                ) : (
+                                                    <div className="w-4 h-4 bg-gray-700 rounded" />
+                                                )}
+                                            </div>
+
                                             <div className="flex-1 space-y-1">
                                                 <input
                                                     type="text"
