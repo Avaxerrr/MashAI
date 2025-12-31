@@ -1,4 +1,4 @@
-import { Minus, Square, X, ChevronDown, ArrowLeft, RotateCw, Plus } from 'lucide-react'
+import { Minus, Square, X, ChevronDown, ArrowLeft, RotateCw, Plus, Briefcase, User, Home, Zap, Code, Globe } from 'lucide-react'
 import { useState } from 'react'
 
 export default function TitleBar({
@@ -62,6 +62,20 @@ export default function TitleBar({
         window.api.showProfileMenu(Math.round(rect.left), Math.round(rect.bottom), activeProfile?.id)
     }
 
+    // Icon renderer for profiles
+    const renderProfileIcon = (iconName) => {
+        const iconMap = {
+            'briefcase': Briefcase,
+            'user': User,
+            'home': Home,
+            'zap': Zap,
+            'code': Code,
+            'globe': Globe
+        }
+        const IconComponent = iconMap[iconName] || User
+        return <IconComponent size={16} />
+    }
+
     return (
         <div
             className="h-[36px] bg-[#323233] flex items-center justify-between select-none"
@@ -74,7 +88,12 @@ export default function TitleBar({
                     onClick={handleProfileClick}
                     className="h-full px-2 flex items-center gap-2 hover:bg-[#2a2a2a] transition-colors outline-none focus:outline-none relative z-50"
                 >
-                    <span className="text-lg">{activeProfile?.icon || '💼'}</span>
+                    <div
+                        className="w-6 h-6 rounded flex items-center justify-center text-white"
+                        style={{ backgroundColor: activeProfile?.color || '#3b82f6' }}
+                    >
+                        {renderProfileIcon(activeProfile?.icon || 'briefcase')}
+                    </div>
                     <span className="text-sm text-white">{activeProfile?.name || 'Work'}</span>
                     <ChevronDown size={14} className="text-gray-400" />
                 </button>

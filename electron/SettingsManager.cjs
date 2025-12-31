@@ -12,8 +12,8 @@ class SettingsManager {
     getDefaultSettings() {
         return {
             profiles: [
-                { id: 'work', name: 'Work', icon: '💼' },
-                { id: 'personal', name: 'Personal', icon: '🏠' }
+                { id: 'work', name: 'Work', icon: 'briefcase', color: '#3b82f6' },
+                { id: 'personal', name: 'Personal', icon: 'home', color: '#10b981' }
             ],
             defaultProfileId: 'work',
             aiProviders: [
@@ -73,6 +73,35 @@ class SettingsManager {
                             ...(defaultP ? { color: defaultP.color } : { color: '#191A1A' }), // Default or fallback
                             ...p
                         };
+                    });
+                }
+
+                // Migrate old emoji-based profiles to new icon system
+                if (data.profiles) {
+                    data.profiles = data.profiles.map(p => {
+                        // If profile has old emoji format, migrate to new icon format
+                        if (typeof p.icon === 'string' && /[\u{1F300}-\u{1F9FF}]/u.test(p.icon)) {
+                            // Map common emojis to icon names
+                            const emojiToIcon = {
+                                '💼': { icon: 'briefcase', color: '#3b82f6' },
+                                '🏠': { icon: 'home', color: '#10b981' },
+                                '👤': { icon: 'user', color: '#6366f1' },
+                                '⚡': { icon: 'zap', color: '#eab308' },
+                                '💻': { icon: 'code', color: '#8b5cf6' },
+                                '🌐': { icon: 'globe', color: '#06b6d4' }
+                            };
+                            const mapped = emojiToIcon[p.icon] || { icon: 'user', color: '#6366f1' };
+                            return {
+                                ...p,
+                                icon: mapped.icon,
+                                color: p.color || mapped.color
+                            };
+                        }
+                        // Ensure color field exists for already-migrated profiles
+                        if (!p.color) {
+                            return { ...p, color: '#3b82f6' };
+                        }
+                        return p;
                     });
                 }
 

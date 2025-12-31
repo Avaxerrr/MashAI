@@ -28,9 +28,9 @@ function createSettingsWindow() {
     }
 
     settingsWindow = new BrowserWindow({
-        width: 700,
+        width: 750,
         height: 600,
-        minWidth: 600,
+        minWidth: 750,
         minHeight: 500,
         maximizable: false,
         resizable: true,

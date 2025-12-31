@@ -111,6 +111,22 @@ function App() {
             })
         }
 
+        // Listen for settings updates (when user changes settings in the Settings window)
+        if (window.api.onSettingsUpdated) {
+            window.api.onSettingsUpdated((newSettings) => {
+                console.log('App: Settings updated', newSettings)
+                if (newSettings.profiles) {
+                    setProfiles(newSettings.profiles)
+                }
+                if (newSettings.aiProviders) {
+                    setAiProviders(newSettings.aiProviders)
+                }
+                if (newSettings.defaultProviderId) {
+                    setDefaultProviderId(newSettings.defaultProviderId)
+                }
+            })
+        }
+
         // Cleanup function (prevents double registration)
         return () => {
             // Note: ipcRenderer.removeListener would go here if we exposed it

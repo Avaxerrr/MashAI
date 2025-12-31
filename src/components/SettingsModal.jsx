@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Plus, Trash2, Save, Monitor, Cpu, RotateCcw, Star } from 'lucide-react'
+import { X, Plus, Trash2, Save, Monitor, Cpu, RotateCcw, Star, Briefcase, User, Home, Zap, Code, Globe } from 'lucide-react'
 
 export default function SettingsModal({ isOpen, onClose, onSave, initialSettings }) {
     if (!isOpen) return null
@@ -48,8 +48,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
             // Get fresh defaults from backend
             const defaultSettings = {
                 profiles: [
-                    { id: 'work', name: 'Work', icon: '💼' },
-                    { id: 'personal', name: 'Personal', icon: '🏠' }
+                    { id: 'work', name: 'Work', icon: 'briefcase', color: '#3b82f6' },
+                    { id: 'personal', name: 'Personal', icon: 'home', color: '#10b981' }
                 ],
                 aiProviders: [
                     { id: 'perplexity', name: 'Perplexity', url: 'https://www.perplexity.ai', icon: 'perplexity', color: '#191A1A' },
@@ -69,7 +69,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     // --- Profile Handlers ---
     const addProfile = () => {
         const newId = 'profile-' + Date.now()
-        setProfiles([...profiles, { id: newId, name: 'New Profile', icon: '👤' }])
+        setProfiles([...profiles, { id: newId, name: 'New Profile', icon: 'user', color: '#6366f1' }])
     }
 
     const updateProfile = (id, field, value) => {
@@ -121,21 +121,44 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         updateProvider(providerId, 'color', defaultColor)
     }
 
+    // Icon renderer for profiles
+    const renderProfileIcon = (iconName) => {
+        const iconMap = {
+            'briefcase': Briefcase,
+            'user': User,
+            'home': Home,
+            'zap': Zap,
+            'code': Code,
+            'globe': Globe
+        }
+        const IconComponent = iconMap[iconName] || User
+        return <IconComponent size={20} />
+    }
+
+    const availableIcons = [
+        { name: 'briefcase', component: Briefcase },
+        { name: 'user', component: User },
+        { name: 'home', component: Home },
+        { name: 'zap', component: Zap },
+        { name: 'code', component: Code },
+        { name: 'globe', component: Globe }
+    ]
+
     return (
-        <div className="h-screen w-screen bg-[#252526] flex flex-col overflow-hidden">
+        <div className="h-screen w-screen bg-[#323233] flex flex-col overflow-hidden">
 
             {/* Header - Draggable */}
             <div
-                className="h-14 border-b border-[#3e3e42] flex items-center justify-between px-4 select-none"
+                className="h-14 border-b border-[#3e3e42] bg-[#323233] flex items-center justify-between px-6 select-none"
                 style={{ WebkitAppRegion: 'drag' }}
             >
-                <h2 className="text-white font-semibold flex items-center gap-2">
-                    <Monitor size={18} className="text-blue-400" />
+                <h2 className="text-white font-semibold text-lg flex items-center gap-3">
+                    <Monitor size={20} className="text-blue-400" />
                     Settings
                 </h2>
                 <button
                     onClick={handleClose}
-                    className="p-1 hover:bg-[#3e3e42] rounded text-gray-400 hover:text-white"
+                    className="p-2 hover:bg-[#3e3e42] rounded-lg text-gray-400 hover:text-white transition-all"
                     style={{ WebkitAppRegion: 'no-drag' }}
                 >
                     <X size={20} />
@@ -144,81 +167,122 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Sidebar */}
-                <div className="w-48 border-r border-[#3e3e42] bg-[#1e1e1e] p-2 flex flex-col gap-1">
+                <div className="w-56 border-r border-[#3e3e42] bg-[#252526] p-3 flex flex-col gap-2">
                     <button
                         onClick={() => setActiveTab('general')}
-                        className={`px-3 py-2 rounded text-left text-sm ${activeTab === 'general' ? 'bg-[#37373d] text-white' : 'text-gray-400 hover:text-white hover:bg-[#2a2d2e]'}`}
+                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'general'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
+                            }`}
                     >
                         General
                     </button>
                     <button
                         onClick={() => setActiveTab('profiles')}
-                        className={`px-3 py-2 rounded text-left text-sm ${activeTab === 'profiles' ? 'bg-[#37373d] text-white' : 'text-gray-400 hover:text-white hover:bg-[#2a2d2e]'}`}
+                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'profiles'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            : 'text-gray-400 hover:text-white hover:bg-[#18181b]'
+                            }`}
                     >
                         Profiles
                     </button>
                     <button
                         onClick={() => setActiveTab('providers')}
-                        className={`px-3 py-2 rounded text-left text-sm ${activeTab === 'providers' ? 'bg-[#37373d] text-white' : 'text-gray-400 hover:text-white hover:bg-[#2a2d2e]'}`}
+                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'providers'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            : 'text-gray-400 hover:text-white hover:bg-[#18181b]'
+                            }`}
                     >
                         AI Providers
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 p-6 overflow-y-auto bg-[#1e1e1e]">
+                <div className="flex-1 p-8 overflow-y-auto bg-[#323233]">
 
                     {/* GENERAL TAB */}
                     {activeTab === 'general' && (
-                        <div className="space-y-6">
-                            <div className="bg-[#252526] p-4 rounded border border-[#3e3e42]">
-                                <h3 className="text-white font-medium mb-2">About MashAI</h3>
-                                <p className="text-sm text-gray-400">
+                        <div className="space-y-6 max-w-2xl">
+                            <div className="bg-[#252526] p-6 rounded-xl border border-[#3e3e42]">
+                                <h3 className="text-white font-semibold text-base mb-3">About MashAI</h3>
+                                <p className="text-sm text-gray-400 leading-relaxed">
                                     A unified interface for all your AI assistants. Manage multiple AI providers and profiles in one place.
                                 </p>
-                                <p className="text-xs text-gray-500 mt-4">Version 1.0.0</p>
+                                <div className="mt-6 pt-4 border-t border-[#3e3e42]">
+                                    <p className="text-xs text-gray-500">Version 1.0.0</p>
+                                </div>
                             </div>
-                            <div className="text-sm text-gray-500">
-                                <p>💡 <strong className="text-gray-400">Tip:</strong> Set your default AI provider in the "AI Providers" tab by clicking the star icon.</p>
+                            <div className="bg-blue-950/20 border border-blue-900/30 rounded-xl p-4">
+                                <p className="text-sm text-blue-300">
+                                    💡 <strong className="font-medium">Tip:</strong> Set your default AI provider in the "AI Providers" tab by clicking the star icon.
+                                </p>
                             </div>
                         </div>
                     )}
 
                     {/* PROFILES TAB */}
                     {activeTab === 'profiles' && (
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-white font-medium">Manage Profiles</h3>
-                                <button onClick={addProfile} className="flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded">
-                                    <Plus size={14} /> Add Profile
+                        <div className="space-y-6 max-w-2xl">
+                            <div className="flex items-center justify-between mb-2">
+                                <div>
+                                    <h3 className="text-white font-semibold text-lg">Manage Profiles</h3>
+                                    <p className="text-sm text-gray-500 mt-1">Organize your work with different profiles</p>
+                                </div>
+                                <button onClick={addProfile} className="flex items-center gap-2 text-sm bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-lg shadow-blue-600/20">
+                                    <Plus size={16} /> Add Profile
                                 </button>
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 {profiles.map((profile, idx) => (
-                                    <div key={profile.id} className="flex items-center gap-2 bg-[#252526] p-2 rounded border border-[#3e3e42]">
-                                        <div className="w-8 flex justify-center text-xl cursor-default">{profile.icon}</div>
-                                        <div className="flex-1 space-y-1">
+                                    <div key={profile.id} className="flex items-center gap-4 bg-[#252526] p-4 rounded-xl transition-all">
+                                        {/* Icon & Color Selector */}
+                                        <div className="flex flex-col gap-2 flex-shrink-0">
+                                            <div
+                                                className="w-12 h-12 rounded-lg flex items-center justify-center text-white transition-all"
+                                                style={{ backgroundColor: profile.color || '#3b82f6' }}
+                                            >
+                                                {renderProfileIcon(profile.icon)}
+                                            </div>
+                                            <input
+                                                type="color"
+                                                value={profile.color || '#3b82f6'}
+                                                onChange={(e) => updateProfile(profile.id, 'color', e.target.value)}
+                                                className="w-12 h-6 rounded cursor-pointer border-0"
+                                                title="Profile Color"
+                                            />
+                                        </div>
+
+                                        <div className="flex-1 space-y-3">
                                             <input
                                                 type="text"
                                                 value={profile.name}
                                                 onChange={(e) => updateProfile(profile.id, 'name', e.target.value)}
-                                                className="w-full bg-transparent text-white text-sm outline-none border-b border-transparent focus:border-blue-500"
+                                                className="w-full bg-[#1e1e1e] text-white text-sm px-3 py-2 rounded-lg outline-none border-0 focus:ring-2 focus:ring-blue-500 transition-all"
                                                 placeholder="Profile Name"
                                             />
-                                            <input
-                                                type="text"
-                                                value={profile.icon}
-                                                onChange={(e) => updateProfile(profile.id, 'icon', e.target.value)}
-                                                className="w-full bg-transparent text-xs text-gray-400 outline-none border-b border-transparent focus:border-blue-500"
-                                                placeholder="Icon (Emoji)"
-                                            />
+                                            {/* Icon Selector */}
+                                            <div className="flex gap-2">
+                                                {availableIcons.map(({ name, component: IconComp }) => (
+                                                    <button
+                                                        key={name}
+                                                        onClick={() => updateProfile(profile.id, 'icon', name)}
+                                                        className={`p-2 rounded-lg transition-all ${profile.icon === name
+                                                            ? 'bg-blue-500/20 text-blue-400'
+                                                            : 'bg-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#2a2a2c]'
+                                                            }`}
+                                                        title={name}
+                                                    >
+                                                        <IconComp size={16} />
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                         <button
                                             onClick={() => deleteProfile(profile.id)}
-                                            className="p-2 text-gray-500 hover:text-red-400"
+                                            className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all"
                                             title="Delete Profile"
                                         >
-                                            <Trash2 size={16} />
+                                            <Trash2 size={18} />
                                         </button>
                                     </div>
                                 ))}
@@ -228,46 +292,46 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
 
                     {/* PROVIDERS TAB */}
                     {activeTab === 'providers' && (
-                        <div className="space-y-4">
+                        <div className="space-y-6 max-w-3xl">
                             <div className="flex items-center justify-between mb-2">
                                 <div>
-                                    <h3 className="text-white font-medium">AI Presets</h3>
-                                    <p className="text-xs text-gray-500">Click the star to set as default for new tabs</p>
+                                    <h3 className="text-white font-semibold text-lg">AI Providers</h3>
+                                    <p className="text-sm text-gray-500 mt-1">Click the star to set as default for new tabs</p>
                                 </div>
-                                <button onClick={addProvider} className="flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded">
-                                    <Plus size={14} /> Add AI
+                                <button onClick={addProvider} className="flex items-center gap-2 text-sm bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-lg shadow-blue-600/20">
+                                    <Plus size={16} /> Add AI
                                 </button>
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 {providers.map((provider) => {
                                     const isDefault = provider.id === defaultProviderId;
                                     return (
                                         <div
                                             key={provider.id}
-                                            className={`flex items-center gap-2 p-2 rounded border transition-colors ${isDefault
-                                                ? 'bg-[#2a2a2a] border-blue-500/50'
-                                                : 'bg-[#252526] border-[#3e3e42]'
+                                            className={`flex items-center gap-4 p-4 rounded-xl transition-all ${isDefault
+                                                ? 'bg-[#252526] ring-2 ring-blue-500/50 shadow-lg shadow-blue-500/10'
+                                                : 'bg-[#252526]'
                                                 }`}
                                         >
                                             {/* Star button for setting default */}
                                             <button
                                                 onClick={() => setAsDefault(provider.id)}
-                                                className={`p-1 transition-colors ${isDefault
-                                                    ? 'text-yellow-400'
-                                                    : 'text-gray-600 hover:text-yellow-400'
+                                                className={`p-2 rounded-lg transition-all ${isDefault
+                                                    ? 'text-yellow-400 bg-yellow-500/10'
+                                                    : 'text-gray-600 hover:text-yellow-400 hover:bg-yellow-500/5'
                                                     }`}
                                                 title={isDefault ? 'Default AI' : 'Set as default'}
                                             >
-                                                <Star size={16} fill={isDefault ? 'currentColor' : 'none'} />
+                                                <Star size={18} fill={isDefault ? 'currentColor' : 'none'} />
                                             </button>
 
                                             {/* Favicon display */}
-                                            <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
+                                            <div className="w-[76px] h-[76px] flex-shrink-0 flex items-center justify-center rounded-lg">
                                                 {provider.faviconDataUrl ? (
                                                     <img
                                                         src={provider.faviconDataUrl}
                                                         alt=""
-                                                        className="w-4 h-4"
+                                                        className="w-8 h-8"
                                                         onError={(e) => {
                                                             // Fallback to Google favicon service if cached favicon fails
                                                             try {
@@ -282,53 +346,55 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                                                     <img
                                                         src={`https://www.google.com/s2/favicons?domain=${new URL(provider.url).hostname}&sz=32`}
                                                         alt=""
-                                                        className="w-4 h-4"
+                                                        className="w-8 h-8"
                                                         onError={(e) => e.target.style.display = 'none'}
                                                     />
                                                 ) : (
-                                                    <div className="w-4 h-4 bg-gray-700 rounded" />
+                                                    <div className="w-8 h-8 bg-[#3e3e42] rounded" />
                                                 )}
                                             </div>
 
-                                            <div className="flex-1 space-y-1">
+                                            <div className="flex-1 space-y-2">
                                                 <input
                                                     type="text"
                                                     value={provider.name}
                                                     onChange={(e) => updateProvider(provider.id, 'name', e.target.value)}
-                                                    className="w-full bg-transparent text-white text-sm outline-none font-medium"
+                                                    className="w-full bg-[#1e1e1e] text-white text-sm font-medium px-3 py-2 rounded-lg outline-none border-0 focus:ring-2 focus:ring-blue-500 transition-all"
                                                     placeholder="Provider Name"
                                                 />
                                                 <input
                                                     type="text"
                                                     value={provider.url}
                                                     onChange={(e) => updateProvider(provider.id, 'url', e.target.value)}
-                                                    className="w-full bg-transparent text-xs text-blue-400 outline-none hover:underline"
+                                                    className="w-full bg-[#1e1e1e] text-xs text-blue-400 px-3 py-2 rounded-lg outline-none border-0 focus:ring-2 focus:ring-blue-500 transition-all"
                                                     placeholder="https://..."
                                                 />
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="color"
-                                                    value={provider.color || '#191A1A'}
-                                                    onChange={(e) => updateProvider(provider.id, 'color', e.target.value)}
-                                                    className="w-6 h-6 rounded cursor-pointer bg-transparent border-none p-0"
-                                                    title="Tab Background Color"
-                                                />
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <input
+                                                        type="color"
+                                                        value={provider.color || '#191A1A'}
+                                                        onChange={(e) => updateProvider(provider.id, 'color', e.target.value)}
+                                                        className="w-10 h-10 rounded-lg cursor-pointer border-0"
+                                                        title="Tab Background Color"
+                                                    />
+                                                    <button
+                                                        onClick={() => resetProviderColor(provider.id)}
+                                                        className="p-1 text-gray-500 hover:text-blue-400 transition-colors"
+                                                        title="Reset to default color"
+                                                    >
+                                                        <RotateCcw size={12} />
+                                                    </button>
+                                                </div>
                                                 <button
-                                                    onClick={() => resetProviderColor(provider.id)}
-                                                    className="p-1 text-gray-500 hover:text-blue-400 transition-colors"
-                                                    title="Reset to default color"
+                                                    onClick={() => deleteProvider(provider.id)}
+                                                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all"
+                                                    title="Delete provider"
                                                 >
-                                                    <RotateCcw size={14} />
+                                                    <Trash2 size={18} />
                                                 </button>
                                             </div>
-                                            <button
-                                                onClick={() => deleteProvider(provider.id)}
-                                                className="p-2 text-gray-500 hover:text-red-400"
-                                                title="Delete provider"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
                                         </div>
                                     );
                                 })}
@@ -340,19 +406,19 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
             </div>
 
             {/* Footer */}
-            <div className="h-14 border-t border-[#3e3e42] flex items-center justify-between px-4 gap-2 bg-[#252526]">
+            <div className="h-16 border-t border-[#3e3e42] flex items-center justify-between px-6 gap-3 bg-[#252526]">
                 <button
                     onClick={handleResetAll}
-                    className="px-4 py-2 rounded text-sm text-gray-300 hover:bg-[#3e3e42] flex items-center gap-2"
+                    className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#3e3e42] flex items-center gap-2 transition-all"
                 >
                     <RotateCcw size={16} />
                     Reset All
                 </button>
-                <div className="flex gap-2">
-                    <button onClick={handleClose} className="px-4 py-2 rounded text-sm text-gray-300 hover:bg-[#3e3e42]">
+                <div className="flex gap-3">
+                    <button onClick={handleClose} className="px-5 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#3e3e42] transition-all font-medium">
                         Cancel
                     </button>
-                    <button onClick={handleSave} className="px-4 py-2 rounded text-sm bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2">
+                    <button onClick={handleSave} className="px-5 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2 font-medium transition-all shadow-lg shadow-blue-600/20">
                         <Save size={16} />
                         Save Changes
                     </button>
