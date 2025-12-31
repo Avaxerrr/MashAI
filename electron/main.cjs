@@ -11,9 +11,14 @@ let tabManager;
 let profileManager;
 let settingsManager;
 let currentWindowState = { width: 1200, height: 800, isMaximized: false }; // Track state
-const SESSION_FILE = path.join(app.getPath('userData'), 'session.json');
 const closedTabs = [];
 const isDev = process.env.NODE_ENV === 'development';
+
+// Lazy getter for SESSION_FILE to avoid calling app.getPath before app is ready
+function getSessionFile() {
+    return path.join(app.getPath('userData'), 'session.json');
+}
+
 
 function createSettingsWindow() {
     // Prevent multiple settings windows
@@ -58,8 +63,8 @@ function createSettingsWindow() {
 function createWindow() {
     let windowState = {};
     try {
-        if (fs.existsSync(SESSION_FILE)) {
-            const data = JSON.parse(fs.readFileSync(SESSION_FILE, 'utf-8'));
+        if (fs.existsSync(getSessionFile())) {
+            const data = JSON.parse(fs.readFileSync(getSessionFile(), 'utf-8'));
             if (data.windowBounds) windowState = data.windowBounds;
             if (data.isMaximized) windowState.isMaximized = true;
         }
@@ -589,11 +594,12 @@ function createApplicationMenu() {
 function updateViewBounds() {
     if (!mainWindow || !tabManager) return;
     const bounds = mainWindow.getBounds();
+    const TITLEBAR_HEIGHT = 36; // Height of React titlebar
     const contentBounds = {
         x: 0,
-        y: 40, // Height of React titlebar
+        y: TITLEBAR_HEIGHT,
         width: bounds.width,
-        height: bounds.height - 40
+        height: bounds.height - TITLEBAR_HEIGHT
     };
     tabManager.resizeActiveView(contentBounds);
 }
@@ -614,7 +620,7 @@ function saveSession() {
     };
 
     try {
-        fs.writeFileSync(SESSION_FILE, JSON.stringify(sessionData, null, 2));
+        fs.writeFileSync(getSessionFile(), JSON.stringify(sessionData, null, 2));
     } catch (e) {
         console.error('Failed to save session:', e);
     }
@@ -622,9 +628,9 @@ function saveSession() {
 
 function restoreSession() {
     try {
-        if (!fs.existsSync(SESSION_FILE)) return;
+        if (!fs.existsSync(getSessionFile())) return;
 
-        const data = JSON.parse(fs.readFileSync(SESSION_FILE, 'utf-8'));
+        const data = JSON.parse(fs.readFileSync(getSessionFile(), 'utf-8'));
 
         if (!data.tabs || data.tabs.length === 0) return;
 
