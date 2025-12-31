@@ -6,6 +6,7 @@ const ProfileManager = require('./ProfileManager.cjs');
 const SettingsManager = require('./SettingsManager.cjs');
 
 let mainWindow;
+let settingsWindow;
 let tabManager;
 let profileManager;
 let settingsManager;
@@ -13,6 +14,46 @@ let currentWindowState = { width: 1200, height: 800, isMaximized: false }; // Tr
 const SESSION_FILE = path.join(app.getPath('userData'), 'session.json');
 const closedTabs = [];
 const isDev = process.env.NODE_ENV === 'development';
+
+function createSettingsWindow() {
+    // Prevent multiple settings windows
+    if (settingsWindow) {
+        settingsWindow.focus();
+        return;
+    }
+
+    settingsWindow = new BrowserWindow({
+        width: 700,
+        height: 600,
+        minWidth: 600,
+        minHeight: 500,
+        maximizable: false,
+        resizable: true,
+        backgroundColor: '#252526',
+        parent: mainWindow,
+        modal: false,
+        frame: false,
+        titleBarStyle: 'hidden',
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.cjs'),
+            contextIsolation: true,
+            nodeIntegration: false
+        }
+    });
+
+    settingsWindow.setMenuBarVisibility(false);
+
+    // Load settings page
+    if (isDev) {
+        settingsWindow.loadURL('http://localhost:5173/#/settings');
+    } else {
+        settingsWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: '/settings' });
+    }
+
+    settingsWindow.on('closed', () => {
+        settingsWindow = null;
+    });
+}
 
 function createWindow() {
     let windowState = {};
@@ -106,8 +147,6 @@ function createWindow() {
         }
     });
     ipcMain.on('window-close', () => mainWindow.close());
-    ipcMain.on('hide-webview', () => tabManager.hideActiveView());
-    ipcMain.on('show-webview', () => tabManager.showActiveView());
 
     // Tab Management
     ipcMain.on('create-tab', (event, profileId) => {
@@ -319,10 +358,7 @@ function createWindow() {
         template.push({
             label: 'Settings',
             click: () => {
-                // Open Settings (Phase 4 placeholder)
-                console.log('Open Settings Clicked');
-                // You can send an event to frontend to open modal
-                mainWindow.webContents.send('open-settings-modal');
+                createSettingsWindow();
             }
         });
 

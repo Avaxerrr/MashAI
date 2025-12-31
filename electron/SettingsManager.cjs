@@ -21,31 +21,36 @@ class SettingsManager {
                     id: 'perplexity',
                     name: 'Perplexity',
                     url: 'https://www.perplexity.ai',
-                    icon: 'perplexity' // specific mapping or generic
+                    icon: 'perplexity',
+                    color: '#191A1A'
                 },
                 {
                     id: 'gemini',
                     name: 'Gemini',
                     url: 'https://gemini.google.com',
-                    icon: 'google'
+                    icon: 'google',
+                    color: '#000000'
                 },
                 {
                     id: 'chatgpt',
                     name: 'ChatGPT',
                     url: 'https://chatgpt.com',
-                    icon: 'openai'
+                    icon: 'openai',
+                    color: '#212121'
                 },
                 {
                     id: 'claude',
                     name: 'Claude',
                     url: 'https://claude.ai',
-                    icon: 'anthropic'
+                    icon: 'anthropic',
+                    color: '#262624'
                 },
                 {
                     id: 'grok',
                     name: 'Grok',
                     url: 'https://grok.com',
-                    icon: 'x'
+                    icon: 'x',
+                    color: '#000000'
                 }
             ],
             defaultProviderId: 'perplexity'
@@ -57,7 +62,21 @@ class SettingsManager {
             if (fs.existsSync(this.settingsPath)) {
                 const data = JSON.parse(fs.readFileSync(this.settingsPath, 'utf-8'));
                 // Merge with defaults to ensure new keys exist if schema changes
-                return { ...this.getDefaultSettings(), ...data };
+                const defaults = this.getDefaultSettings();
+
+                // Deep merge/Backfill for providers to ensure they get the new 'color' field
+                // if the user hasn't deleted them.
+                if (data.aiProviders) {
+                    data.aiProviders = data.aiProviders.map(p => {
+                        const defaultP = defaults.aiProviders.find(dp => dp.id === p.id);
+                        return {
+                            ...(defaultP ? { color: defaultP.color } : { color: '#191A1A' }), // Default or fallback
+                            ...p
+                        };
+                    });
+                }
+
+                return { ...defaults, ...data };
             }
         } catch (e) {
             console.error('Failed to load settings:', e);

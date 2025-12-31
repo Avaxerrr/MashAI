@@ -21,14 +21,17 @@ export default function TitleBar({
 
     // ... (rest of methods)
 
-    const getIconForTab = (tab) => {
-        // Find provider matching the URL
-        if (!tab.url) return 'https://www.perplexity.ai/favicon.ico'; // Fallback
+    const getProviderForTab = (tab) => {
+        if (!tab.url) return null;
+        return aiProviders.find(p => tab.url.includes(p.url) || (p.url && tab.url.startsWith(p.url)));
+    }
 
-        const provider = aiProviders.find(p => tab.url.includes(p.url) || (p.url && tab.url.startsWith(p.url)));
+    const getIconForTab = (tab) => {
+        const provider = getProviderForTab(tab);
         if (provider) return provider.icon;
 
-        // Use Google Favicon grabber as fallback for unknown URLs
+        // Fallback
+        if (!tab.url) return 'https://www.perplexity.ai/favicon.ico';
         try {
             const urlObj = new URL(tab.url);
             return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
@@ -36,8 +39,6 @@ export default function TitleBar({
             return 'https://www.perplexity.ai/favicon.ico';
         }
     }
-
-
 
     const handleMaximize = () => {
         window.api.maximizeWindow()
@@ -53,7 +54,7 @@ export default function TitleBar({
     return (
         <>
             <div
-                className="h-10 bg-[#323233] flex items-center justify-between select-none border-b border-[#1e1e1e]"
+                className="h-10 bg-[#323233] flex items-center justify-between select-none"
                 style={{ WebkitAppRegion: 'drag' }}
             >
 
@@ -62,7 +63,7 @@ export default function TitleBar({
                     <div className="relative z-50">
                         <button
                             onClick={handleProfileClick}
-                            className="h-10 px-3 flex items-center gap-2 hover:bg-[#2a2a2a] transition-colors"
+                            className="h-10 px-3 flex items-center gap-2 hover:bg-[#2a2a2a] transition-colors outline-none focus:outline-none"
                         >
                             <span className="text-lg">{activeProfile?.icon || '💼'}</span>
                             <span className="text-sm text-white">{activeProfile?.name || 'Work'}</span>
@@ -92,49 +93,58 @@ export default function TitleBar({
                 {/* Center: Tabs */}
                 <div className="flex-1 flex items-center h-full overflow-hidden">
                     <div className="flex-1 flex items-center h-full overflow-x-auto scrollbar-hide">
-                        {tabs.map(tab => (
-                            <div
-                                key={tab.id}
-                                onClick={() => onSwitchTab(tab.id)}
-                                onContextMenu={(e) => {
-                                    e.preventDefault()
-                                    window.api.showContextMenu(tab.id)
-                                }}
-                                className={`h-full px-2 flex items-center gap-2 border-r border-[#1e1e1e] cursor-pointer group select-none
-                                    ${tab.id === activeTabId ? 'bg-[#191A1A]' : 'bg-[#2d2d2d] hover:bg-[#2a2a2a]'}
-                                    min-w-[40px] max-w-[160px] flex-1
-                                `}
-                                title={tab.title}
-                                style={{ WebkitAppRegion: 'no-drag' }}
-                            >
-                                <img
-                                    src={getIconForTab(tab)}
-                                    className="w-4 h-4 flex-shrink-0"
-                                    alt=""
-                                    onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.src = 'https://www.perplexity.ai/favicon.ico'; // Fallback to default on error
-                                    }}
-                                />
-                                {/* Hide text if tab gets too small */}
-                                <span className="text-xs text-white truncate flex-1 text-center">
-                                    {tab.title?.replace(' - Perplexity', '') || 'New Thread'}
-                                </span>
-                                <button
+                        {tabs.map(tab => {
+                            const isActive = tab.id === activeTabId;
+                            const provider = getProviderForTab(tab);
+                            const activeBg = isActive ? (provider?.color || '#191A1A') : '';
+
+                            return (
+                                <div
+                                    key={tab.id}
+                                    onClick={() => onSwitchTab(tab.id)}
                                     onContextMenu={(e) => {
                                         e.preventDefault()
                                         window.api.showContextMenu(tab.id)
                                     }}
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        onCloseTab(tab.id)
+                                    className={`h-full px-2 flex items-center gap-2 border-r border-[#1e1e1e] cursor-pointer group select-none
+                                        ${!isActive ? 'bg-[#2d2d2d] hover:bg-[#2a2a2a]' : ''}
+                                        min-w-[40px] max-w-[160px] flex-1 transition-colors duration-200
+                                    `}
+                                    title={tab.title}
+                                    style={{
+                                        WebkitAppRegion: 'no-drag',
+                                        backgroundColor: isActive ? activeBg : undefined
                                     }}
-                                    className="hover:bg-[#3e3e42] rounded p-0.5 flex-shrink-0"
                                 >
-                                    <X size={14} className="text-gray-400" />
-                                </button>
-                            </div>
-                        ))}
+                                    <img
+                                        src={getIconForTab(tab)}
+                                        className="w-4 h-4 flex-shrink-0"
+                                        alt=""
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.src = 'https://www.perplexity.ai/favicon.ico'; // Fallback to default on error
+                                        }}
+                                    />
+                                    {/* Hide text if tab gets too small */}
+                                    <span className="text-xs text-white truncate flex-1 text-center">
+                                        {tab.title?.replace(' - Perplexity', '') || 'New Thread'}
+                                    </span>
+                                    <button
+                                        onContextMenu={(e) => {
+                                            e.preventDefault()
+                                            window.api.showContextMenu(tab.id)
+                                        }}
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            onCloseTab(tab.id)
+                                        }}
+                                        className="hover:bg-[#3e3e42] rounded p-0.5 flex-shrink-0"
+                                    >
+                                        <X size={14} className="text-gray-400" />
+                                    </button>
+                                </div>
+                            )
+                        })}
                     </div>
 
                     {/* New Tab Button */}

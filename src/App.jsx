@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import TitleBar from './components/TitleBar'
-import SettingsModal from './components/SettingsModal'
 
 function App() {
     const [profiles, setProfiles] = useState([])
@@ -10,7 +9,6 @@ function App() {
 
     const [aiProviders, setAiProviders] = useState([]) // New state for providers
     const [defaultProviderId, setDefaultProviderId] = useState('perplexity')
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
     // Ref to hold the latest closeTab function to avoid stale closures in listeners
     const closeTabRef = useRef()
@@ -71,10 +69,6 @@ function App() {
             ))
         }
 
-        const handleOpenSettings = () => {
-            setIsSettingsOpen(true)
-        }
-
         const handleRestoreActive = (tabId) => {
             setActiveTabId(tabId)
         }
@@ -93,7 +87,6 @@ function App() {
         window.api.onTabUpdated(handleTabUpdated)
         window.api.onRestoreActive(handleRestoreActive)
         window.api.onProfileTabsLoaded(handleProfileTabsLoaded)
-        window.api.onOpenSettingsModal(handleOpenSettings)
 
         // Listen for Menu events
         const removeSwitchProfileRequest = window.api.onSwitchProfileRequest((id) => {
@@ -198,22 +191,6 @@ function App() {
         window.api.getProfileTabs(profileId)
     }
 
-    const handleSaveSettings = async (newSettings) => {
-        const success = await window.api.saveSettings(newSettings)
-        if (success) {
-            // Reload local state
-            setProfiles(newSettings.profiles)
-            setAiProviders(newSettings.aiProviders)
-            setDefaultProviderId(newSettings.defaultProviderId)
-            // If active profile was deleted, switch to first??
-            if (!newSettings.profiles.find(p => p.id === activeProfileId)) {
-                if (newSettings.profiles.length > 0) {
-                    switchProfile(newSettings.profiles[0].id)
-                }
-            }
-        }
-    }
-
     // Removed useKeyboardShortcuts - handled by Electron Main Menu now
 
     const currentTabs = tabs.filter(t => t.profileId === activeProfileId)
@@ -239,17 +216,6 @@ function App() {
 
             {/* The WebContentsView will render here (controlled by Electron) */}
             <div className="flex-1" />
-
-            <SettingsModal
-                isOpen={isSettingsOpen}
-                onClose={() => setIsSettingsOpen(false)}
-                onSave={handleSaveSettings}
-                initialSettings={{
-                    profiles,
-                    aiProviders,
-                    defaultProviderId
-                }}
-            />
         </div>
     )
 }
