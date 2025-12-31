@@ -3,10 +3,12 @@ const path = require('path');
 const fs = require('fs');
 const TabManager = require('./TabManager.cjs');
 const ProfileManager = require('./ProfileManager.cjs');
+const SettingsManager = require('./SettingsManager.cjs');
 
 let mainWindow;
 let tabManager;
 let profileManager;
+let settingsManager;
 let currentWindowState = { width: 1200, height: 800, isMaximized: false }; // Track state
 const SESSION_FILE = path.join(app.getPath('userData'), 'session.json');
 const closedTabs = [];
@@ -55,8 +57,13 @@ function createWindow() {
         mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
     }
 
-    tabManager = new TabManager(mainWindow);
-    profileManager = new ProfileManager();
+    settingsManager = new SettingsManager();
+    // Initialize ProfileManager with settings
+    profileManager = new ProfileManager(settingsManager);
+
+    tabManager = new TabManager(mainWindow, settingsManager);
+
+
 
     mainWindow.webContents.once('did-finish-load', () => {
         mainWindow.webContents.send('profiles-loaded', profileManager.getAllProfiles());
@@ -78,6 +85,15 @@ function createWindow() {
         }
     });
 
+    // Intercept Ctrl+R to reload active tab, not the React app
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        if (input.type === 'keyDown' && input.control && input.key.toLowerCase() === 'r') {
+            event.preventDefault();
+            // Reload the active tab's web content
+            tabManager.reload();
+        }
+    });
+
     createApplicationMenu();
 
     // Window Controls
@@ -90,10 +106,27 @@ function createWindow() {
         }
     });
     ipcMain.on('window-close', () => mainWindow.close());
+    ipcMain.on('hide-webview', () => tabManager.hideActiveView());
+    ipcMain.on('show-webview', () => tabManager.showActiveView());
 
     // Tab Management
     ipcMain.on('create-tab', (event, profileId) => {
         const id = tabManager.createTab(profileId);
+        const success = tabManager.switchTo(id);
+
+        if (success) {
+            mainWindow.webContents.send('tab-created', {
+                id,
+                profileId,
+                title: 'New Thread'
+            });
+            updateViewBounds();
+            saveSession();
+        }
+    });
+
+    ipcMain.on('create-tab-with-url', (event, { profileId, url }) => {
+        const id = tabManager.createTab(profileId, url);
         const success = tabManager.switchTo(id);
 
         if (success) {
@@ -265,9 +298,95 @@ function createWindow() {
         menu.popup({ window: mainWindow });
     });
 
+    ipcMain.on('show-profile-menu', (event, { x, y, activeProfileId }) => {
+        const profiles = profileManager.getAllProfiles();
+        // Native Menu Template
+        const template = profiles.map(profile => ({
+            label: profile.name,
+            // Add checkmark if active
+            type: 'radio',
+            checked: profile.id === activeProfileId,
+            click: () => {
+                // Tell frontend to switch
+                mainWindow.webContents.send('switch-profile-request', profile.id);
+                // Also trigger backend switch if needed, but frontend flow drives it
+                // 'get-profile-tabs' is called by frontend in handleSwitchProfile
+            },
+            icon: null // TODO: Can we use emoji here? System menus usually support text.
+        }));
+
+        template.push({ type: 'separator' });
+        template.push({
+            label: 'Settings',
+            click: () => {
+                // Open Settings (Phase 4 placeholder)
+                console.log('Open Settings Clicked');
+                // You can send an event to frontend to open modal
+                mainWindow.webContents.send('open-settings-modal');
+            }
+        });
+
+        const menu = Menu.buildFromTemplate(template);
+        menu.popup({
+            window: mainWindow,
+            x: x,
+            y: y
+        });
+    });
+
+    ipcMain.on('show-new-tab-menu', (event, { x, y, profileId }) => {
+        const providers = settingsManager.getProviders();
+
+        const template = providers.map(provider => ({
+            label: provider.name,
+            click: () => {
+                // Create a new tab with this provider's URL
+                const id = tabManager.createTab(profileId, provider.url);
+                const success = tabManager.switchTo(id);
+
+                if (success) {
+                    mainWindow.webContents.send('tab-created', {
+                        id,
+                        profileId,
+                        title: 'New Thread',
+                        url: provider.url
+                    });
+                    updateViewBounds();
+                    saveSession();
+                }
+            }
+        }));
+
+        const menu = Menu.buildFromTemplate(template);
+        menu.popup({
+            window: mainWindow,
+            x: x,
+            y: y
+        });
+    });
+
     ipcMain.on('get-profile-tabs', (event, profileId) => {
         const tabs = tabManager.getTabsForProfile(profileId);
         event.reply('profile-tabs-loaded', { profileId, tabs });
+    });
+
+    ipcMain.handle('get-all-tabs', () => {
+        return {
+            tabs: tabManager.getAllTabs(),
+            activeTabId: tabManager.activeTabId
+        };
+    });
+
+    // Settings Management
+    ipcMain.handle('get-settings', () => {
+        return settingsManager.getSettings();
+    });
+
+    ipcMain.handle('save-settings', (event, newSettings) => {
+        const success = settingsManager.saveSettings(newSettings);
+        // define specific events if needed, e.g. broadcast to all windows
+        mainWindow.webContents.send('settings-updated', settingsManager.getSettings());
+        return success;
     });
 
     // Navigation

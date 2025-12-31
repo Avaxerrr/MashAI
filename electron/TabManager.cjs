@@ -10,14 +10,24 @@ const INJECTED_CSS = `
 `;
 
 class TabManager {
-    constructor(mainWindow) {
+    constructor(mainWindow, settingsManager) {
         this.mainWindow = mainWindow;
+        this.settingsManager = settingsManager;
         this.tabs = new Map();
         this.activeTabId = null;
     }
 
-    createTab(profileId, url = 'https://www.perplexity.ai', existingId = null) {
+    createTab(profileId, url = null, existingId = null) {
         const id = existingId || 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
+        // Determine URL
+        let finalUrl = url;
+        if (!finalUrl) {
+            const defaultProviderId = this.settingsManager.getDefaultProviderId();
+            const providers = this.settingsManager.getProviders();
+            const provider = providers.find(p => p.id === defaultProviderId);
+            finalUrl = provider ? provider.url : 'https://www.perplexity.ai';
+        }
 
         const view = new WebContentsView({
             webPreferences: {
@@ -32,10 +42,10 @@ class TabManager {
             view,
             profileId,
             title: 'New Thread',
-            url: url
+            url: finalUrl
         });
 
-        view.webContents.loadURL(url);
+        view.webContents.loadURL(finalUrl);
 
         view.webContents.on('did-finish-load', () => {
             view.webContents.insertCSS(INJECTED_CSS);
@@ -110,6 +120,11 @@ class TabManager {
             .map(tab => ({ id: tab.id, title: tab.title, url: tab.url, profileId: tab.profileId }));
     }
 
+    getAllTabs() {
+        return Array.from(this.tabs.values())
+            .map(tab => ({ id: tab.id, title: tab.title, url: tab.url, profileId: tab.profileId }));
+    }
+
     getActiveView() {
         if (!this.activeTabId) return null;
         const tab = this.tabs.get(this.activeTabId);
@@ -140,6 +155,49 @@ class TabManager {
     reload() {
         const view = this.getActiveView();
         if (view) view.webContents.reload();
+    }
+
+    getTabsForProfile(profileId) {
+        return Array.from(this.tabs.values())
+            .filter(tab => tab.profileId === profileId)
+            .map(tab => ({ id: tab.id, profileId: tab.profileId, title: tab.title, url: tab.url }));
+    }
+
+    getAllTabs() {
+        return Array.from(this.tabs.values()).map(tab => ({
+            id: tab.id,
+            profileId: tab.profileId,
+            title: tab.title,
+            url: tab.url
+        }));
+    }
+
+    getActiveTabId() {
+        return this.activeTabId;
+    }
+
+    hideActiveView() {
+        if (!this.activeTabId) return;
+        const tab = this.tabs.get(this.activeTabId);
+        if (tab && tab.view) {
+            try {
+                this.mainWindow.contentView.removeChildView(tab.view);
+            } catch (e) {
+                console.warn('Could not hide view:', e);
+            }
+        }
+    }
+
+    showActiveView() {
+        if (!this.activeTabId) return;
+        const tab = this.tabs.get(this.activeTabId);
+        if (tab && tab.view) {
+            try {
+                this.mainWindow.contentView.addChildView(tab.view);
+            } catch (e) {
+                console.warn('Could not show view:', e);
+            }
+        }
     }
 }
 

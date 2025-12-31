@@ -1,4 +1,4 @@
-import { Minus, Square, X, ChevronDown, Plus, ArrowLeft, RotateCw } from 'lucide-react'
+import { Minus, Square, X, ChevronDown, ArrowLeft, RotateCw, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 export default function TitleBar({
@@ -7,20 +7,47 @@ export default function TitleBar({
     tabs = [],
     activeTabId,
     onCreateTab,
+    onCreateTabWithUrl,
     onSwitchTab,
     onCloseTab,
     onDuplicateTab,
     onReloadTab,
     onCloseOtherTabs,
     onCloseTabsToRight,
-    onSwitchProfile
+    onSwitchProfile,
+    aiProviders = []
 }) {
-    const [showProfileMenu, setShowProfileMenu] = useState(false)
     const [isMaximized, setIsMaximized] = useState(false)
+
+    // ... (rest of methods)
+
+    const getIconForTab = (tab) => {
+        // Find provider matching the URL
+        if (!tab.url) return 'https://www.perplexity.ai/favicon.ico'; // Fallback
+
+        const provider = aiProviders.find(p => tab.url.includes(p.url) || (p.url && tab.url.startsWith(p.url)));
+        if (provider) return provider.icon;
+
+        // Use Google Favicon grabber as fallback for unknown URLs
+        try {
+            const urlObj = new URL(tab.url);
+            return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
+        } catch {
+            return 'https://www.perplexity.ai/favicon.ico';
+        }
+    }
+
+
 
     const handleMaximize = () => {
         window.api.maximizeWindow()
         setIsMaximized(!isMaximized)
+    }
+
+    const handleProfileClick = (e) => {
+        const rect = e.currentTarget.getBoundingClientRect()
+        // Send coordinates for menu
+        window.api.showProfileMenu(Math.round(rect.left), Math.round(rect.bottom), activeProfile?.id)
     }
 
     return (
@@ -31,36 +58,19 @@ export default function TitleBar({
             >
 
                 {/* Left: Profile Switcher */}
-                <div className="flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' }}>
-                    <div className="relative">
+                <div className="flex items-center h-full relative" style={{ WebkitAppRegion: 'no-drag' }}>
+                    <div className="relative z-50">
                         <button
-                            onClick={() => setShowProfileMenu(!showProfileMenu)}
+                            onClick={handleProfileClick}
                             className="h-10 px-3 flex items-center gap-2 hover:bg-[#2a2a2a] transition-colors"
                         >
                             <span className="text-lg">{activeProfile?.icon || '💼'}</span>
                             <span className="text-sm text-white">{activeProfile?.name || 'Work'}</span>
                             <ChevronDown size={14} className="text-gray-400" />
                         </button>
-
-                        {/* Profile Dropdown */}
-                        {showProfileMenu && (
-                            <div className="absolute top-10 left-0 bg-[#252526] border border-[#3e3e42] rounded shadow-lg min-w-[150px] z-50">
-                                {profiles.map(profile => (
-                                    <button
-                                        key={profile.id}
-                                        onClick={() => {
-                                            onSwitchProfile(profile.id)
-                                            setShowProfileMenu(false)
-                                        }}
-                                        className={`w-full px-3 py-2 flex items-center gap-2 hover:bg-[#2a2d2e] text-white text-sm ${profile.id === activeProfile?.id ? 'bg-[#37373d]' : ''}`}
-                                    >
-                                        <span>{profile.icon}</span>
-                                        <span>{profile.name}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
                     </div>
+
+                    {/* Navigation Buttons */}
 
                     {/* Navigation Buttons */}
                     <button
@@ -80,9 +90,6 @@ export default function TitleBar({
                 </div>
 
                 {/* Center: Tabs */}
-                {/* REMOVED no-drag from container so the gaps are draggable */}
-                {/* Center: Tabs */}
-                {/* REMOVED no-drag from container so the gaps are draggable */}
                 <div className="flex-1 flex items-center h-full overflow-hidden">
                     <div className="flex-1 flex items-center h-full overflow-x-auto scrollbar-hide">
                         {tabs.map(tab => (
@@ -101,10 +108,13 @@ export default function TitleBar({
                                 style={{ WebkitAppRegion: 'no-drag' }}
                             >
                                 <img
-                                    src="https://www.perplexity.ai/favicon.ico"
+                                    src={getIconForTab(tab)}
                                     className="w-4 h-4 flex-shrink-0"
                                     alt=""
-                                    onError={(e) => e.target.style.display = 'none'}
+                                    onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.src = 'https://www.perplexity.ai/favicon.ico'; // Fallback to default on error
+                                    }}
                                 />
                                 {/* Hide text if tab gets too small */}
                                 <span className="text-xs text-white truncate flex-1 text-center">
@@ -127,9 +137,12 @@ export default function TitleBar({
                         ))}
                     </div>
 
-                    {/* New Tab Button (Fixed outside scroll area) */}
+                    {/* New Tab Button */}
                     <button
-                        onClick={onCreateTab}
+                        onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect()
+                            window.api.showNewTabMenu(Math.round(rect.left), Math.round(rect.bottom), activeProfile?.id)
+                        }}
                         className="h-full px-3 hover:bg-[#2a2a2a] transition-colors flex items-center flex-shrink-0 border-l border-[#1e1e1e]"
                         title="New Tab (Ctrl+T)"
                         style={{ WebkitAppRegion: 'no-drag' }}
