@@ -473,7 +473,7 @@ function createWindow() {
         return settingsManager.getSettings();
     });
 
-    ipcMain.handle('save-settings', (event, newSettings) => {
+    ipcMain.handle('save-settings', async (event, newSettings) => {
         const oldSettings = settingsManager.getSettings();
         const success = settingsManager.saveSettings(newSettings);
 
@@ -545,7 +545,11 @@ function createWindow() {
             }
         }
 
-        // Broadcast to all windows (main window updates its UI)
+        // Fetch favicons for any new providers that don't have them cached
+        // This is async but we await it to ensure the favicon is ready before broadcasting
+        await settingsManager.ensureProvidersFavicons();
+
+        // Broadcast to all windows (main window updates its UI) - now includes fetched favicons
         mainWindow.webContents.send('settings-updated', settingsManager.getSettings());
         return success;
     });

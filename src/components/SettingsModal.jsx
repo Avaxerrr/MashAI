@@ -4,6 +4,15 @@ import { X, Plus, Trash2, Save, Monitor, Cpu, RotateCcw, Star, Briefcase, User, 
 export default function SettingsModal({ isOpen, onClose, onSave, initialSettings }) {
     if (!isOpen) return null
 
+    // Helper function to safely extract hostname from URL
+    const getHostnameSafe = (url) => {
+        try {
+            return new URL(url).hostname
+        } catch (e) {
+            return null
+        }
+    }
+
     const [activeTab, setActiveTab] = useState('general') // general, profiles, providers
     const [profiles, setProfiles] = useState([])
     const [providers, setProviders] = useState([])
@@ -343,12 +352,19 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                                                         }}
                                                     />
                                                 ) : provider.url ? (
-                                                    <img
-                                                        src={`https://www.google.com/s2/favicons?domain=${new URL(provider.url).hostname}&sz=32`}
-                                                        alt=""
-                                                        className="w-8 h-8"
-                                                        onError={(e) => e.target.style.display = 'none'}
-                                                    />
+                                                    (() => {
+                                                        const hostname = getHostnameSafe(provider.url)
+                                                        return hostname ? (
+                                                            <img
+                                                                src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`}
+                                                                alt=""
+                                                                className="w-8 h-8"
+                                                                onError={(e) => e.target.style.display = 'none'}
+                                                            />
+                                                        ) : (
+                                                            <div className="w-8 h-8 bg-[#3e3e42] rounded" />
+                                                        )
+                                                    })()
                                                 ) : (
                                                     <div className="w-8 h-8 bg-[#3e3e42] rounded" />
                                                 )}

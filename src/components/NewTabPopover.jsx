@@ -2,6 +2,15 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
 export default function NewTabPopover({ providers = [], onSelectProvider, profileId }) {
+    // Helper function to safely extract hostname from URL
+    const getHostnameSafe = (url) => {
+        try {
+            return new URL(url).hostname
+        } catch (e) {
+            return null
+        }
+    }
+
     const [isOpen, setIsOpen] = useState(false)
 
     const handleSelect = (provider) => {
@@ -56,12 +65,37 @@ export default function NewTabPopover({ providers = [], onSelectProvider, profil
                                 onClick={() => handleSelect(provider)}
                                 className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-[#2a2d2e] text-white text-sm text-left transition-colors"
                             >
-                                <img
-                                    src={`https://www.google.com/s2/favicons?domain=${new URL(provider.url).hostname}&sz=32`}
-                                    className="w-5 h-5"
-                                    alt=""
-                                    onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10"/></svg>' }}
-                                />
+                                {(() => {
+                                    // Prefer cached favicon, fallback to Google service
+                                    if (provider.faviconDataUrl) {
+                                        return (
+                                            <img
+                                                src={provider.faviconDataUrl}
+                                                className="w-5 h-5"
+                                                alt=""
+                                                onError={(e) => {
+                                                    // Fallback to Google service if cached fails
+                                                    const hostname = getHostnameSafe(provider.url)
+                                                    e.target.src = hostname
+                                                        ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`
+                                                        : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10"/></svg>'
+                                                }}
+                                            />
+                                        )
+                                    }
+                                    const hostname = getHostnameSafe(provider.url)
+                                    return (
+                                        <img
+                                            src={hostname
+                                                ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`
+                                                : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10"/></svg>'
+                                            }
+                                            className="w-5 h-5"
+                                            alt=""
+                                            onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10"/></svg>' }}
+                                        />
+                                    )
+                                })()}
                                 <span>{provider.name}</span>
                             </button>
                         ))}
