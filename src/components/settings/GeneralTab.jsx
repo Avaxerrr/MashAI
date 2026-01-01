@@ -44,18 +44,23 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                         />
                         <span className="text-sm text-white">Remember window size and position</span>
                     </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={settings.hardwareAcceleration}
-                            onChange={(e) => updateSetting('hardwareAcceleration', e.target.checked)}
-                            className="w-4 h-4 accent-blue-500 rounded"
-                        />
-                        <div>
-                            <span className="text-sm text-white">Hardware acceleration</span>
-                            <span className="text-xs text-gray-500 ml-2">(requires restart)</span>
-                        </div>
-                    </label>
+                    <div className="space-y-1">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={settings.hardwareAcceleration}
+                                onChange={(e) => updateSetting('hardwareAcceleration', e.target.checked)}
+                                className="w-4 h-4 accent-blue-500 rounded"
+                            />
+                            <div>
+                                <span className="text-sm text-white">Hardware acceleration</span>
+                                <span className="text-xs text-gray-500 ml-2">(requires restart)</span>
+                            </div>
+                        </label>
+                        <p className="text-xs text-gray-500 pl-7 leading-relaxed">
+                            Uses your graphics card to make the app faster and smoother. Disable this if you experience display issues, flickering, or high GPU usage.
+                        </p>
+                    </div>
                 </div>
             </div>
 

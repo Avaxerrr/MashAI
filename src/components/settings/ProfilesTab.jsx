@@ -46,7 +46,10 @@ export default function ProfilesTab({
         <div className="space-y-6 max-w-2xl">
             <div className="flex items-center justify-between mb-2">
                 <div>
-                    <h3 className="text-white font-semibold text-lg">Manage Profiles</h3>
+                    <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                        <User size={20} className="text-blue-400" />
+                        Profiles
+                    </h2>
                     <p className="text-sm text-gray-400 mt-1">Organize your work with different profiles</p>
                 </div>
                 <button

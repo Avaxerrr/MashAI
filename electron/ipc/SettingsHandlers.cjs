@@ -1,4 +1,4 @@
-const { ipcMain } = require('electron');
+const { ipcMain, app } = require('electron');
 
 /**
  * Registers settings management IPC handlers
@@ -146,12 +146,40 @@ function register(mainWindow, { settingsManager, profileManager, tabManager, sav
         return success;
     });
 
-    // Get memory usage statistics
+    // Get memory usage statistics using app.getAppMetrics() for accurate readings
+    // Cross-platform: privateBytes on Windows, workingSetSize on macOS/Linux
     ipcMain.handle('get-memory-usage', async () => {
         try {
-            // Get main process memory
-            const mainMemory = process.memoryUsage();
-            let totalBytes = mainMemory.heapUsed;
+            const metrics = app.getAppMetrics();
+            const isWindows = process.platform === 'win32';
+
+            console.log('\n[MemoryUsage] ========== Process Metrics ==========');
+            console.log(`[MemoryUsage] Platform: ${process.platform}, Total processes: ${metrics.length}`);
+
+            let totalKB = 0;
+            let gpuKB = 0;
+
+            for (const metric of metrics) {
+                // Use privateBytes on Windows, workingSetSize on macOS/Linux
+                // Note: workingSetSize includes shared memory, privateBytes is more accurate on Windows
+                const memoryKB = isWindows
+                    ? (metric.memory?.privateBytes || 0)
+                    : (metric.memory?.workingSetSize || 0);
+
+                // Track GPU separately (it reports inflated values that don't match Task Manager)
+                if (metric.type === 'GPU') {
+                    gpuKB = memoryKB;
+                    console.log(`[MemoryUsage] PID ${metric.pid} (${metric.type}): ${memoryKB} KB (${Math.round(memoryKB / 1024)} MB) [EXCLUDED - GPU reports inflated values]`);
+                } else {
+                    totalKB += memoryKB;
+                    console.log(`[MemoryUsage] PID ${metric.pid} (${metric.type}): ${memoryKB} KB (${Math.round(memoryKB / 1024)} MB)`);
+                }
+            }
+
+            console.log(`[MemoryUsage] ---------- Totals ----------`);
+            console.log(`[MemoryUsage] App memory (excl. GPU): ${totalKB} KB = ${Math.round(totalKB / 1024)} MB`);
+            console.log(`[MemoryUsage] GPU memory (excluded): ${gpuKB} KB = ${Math.round(gpuKB / 1024)} MB`);
+            console.log(`[MemoryUsage] =====================================\n`);
 
             // Count active and suspended tabs
             let activeTabCount = 0;
@@ -161,20 +189,14 @@ function register(mainWindow, { settingsManager, profileManager, tabManager, sav
                 for (const [tabId, tab] of tabManager.tabs) {
                     if (tab.view && tab.view.webContents && !tab.view.webContents.isDestroyed()) {
                         activeTabCount++;
-                        try {
-                            const tabMemory = await tab.view.webContents.getProcessMemoryInfo();
-                            totalBytes += (tabMemory.private || 0) * 1024; // KB to bytes
-                        } catch (e) {
-                            // Tab may be in a bad state, skip it
-                        }
-                    } else if (tab.suspended) {
+                    } else if (tab.suspended || !tab.loaded) {
                         suspendedTabCount++;
                     }
                 }
             }
 
             return {
-                total: Math.round(totalBytes / (1024 * 1024)), // MB
+                total: Math.round(totalKB / 1024), // KB to MB
                 tabCount: activeTabCount,
                 suspendedCount: suspendedTabCount
             };
@@ -184,7 +206,7 @@ function register(mainWindow, { settingsManager, profileManager, tabManager, sav
         }
     });
 
-    // Get memory usage for a specific tab
+    // Get memory usage for a specific tab using app.getAppMetrics()
     ipcMain.handle('get-tab-memory', async (event, tabId) => {
         try {
             if (!tabManager) return null;
@@ -197,11 +219,21 @@ function register(mainWindow, { settingsManager, profileManager, tabManager, sav
                 return { memory: 0, loaded: false };
             }
 
-            const memInfo = await tab.view.webContents.getProcessMemoryInfo();
-            return {
-                memory: Math.round((memInfo.private || 0) / 1024), // MB
-                loaded: true
-            };
+            // Get the process ID for this tab's webContents
+            const tabPid = tab.view.webContents.getOSProcessId();
+
+            // Find this process in app metrics
+            const metrics = app.getAppMetrics();
+            const processMetric = metrics.find(m => m.pid === tabPid);
+
+            if (processMetric && processMetric.memory) {
+                return {
+                    memory: Math.round((processMetric.memory.privateBytes || 0) / 1024), // KB to MB
+                    loaded: true
+                };
+            }
+
+            return { memory: 0, loaded: true };
         } catch (e) {
             console.error('Failed to get tab memory:', e);
             return null;
@@ -213,6 +245,15 @@ function register(mainWindow, { settingsManager, profileManager, tabManager, sav
         try {
             if (!tabManager) return {};
 
+            // Get all process metrics once
+            const metrics = app.getAppMetrics();
+            const pidToMemory = {};
+            for (const m of metrics) {
+                if (m.memory) {
+                    pidToMemory[m.pid] = Math.round((m.memory.privateBytes || 0) / 1024); // KB to MB
+                }
+            }
+
             const result = {};
 
             for (const [tabId, tab] of tabManager.tabs) {
@@ -220,11 +261,9 @@ function register(mainWindow, { settingsManager, profileManager, tabManager, sav
                     result[tabId] = { memory: 0, loaded: false };
                 } else {
                     try {
-                        const memInfo = await tab.view.webContents.getProcessMemoryInfo();
-                        result[tabId] = {
-                            memory: Math.round((memInfo.private || 0) / 1024), // MB
-                            loaded: true
-                        };
+                        const tabPid = tab.view.webContents.getOSProcessId();
+                        const memory = pidToMemory[tabPid] || 0;
+                        result[tabId] = { memory, loaded: true };
                     } catch (e) {
                         result[tabId] = { memory: 0, loaded: false };
                     }

@@ -10,7 +10,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
         tabLoadingStrategy: 'lastActiveOnly',
         autoSuspendEnabled: true,
         autoSuspendMinutes: 30,
-        profileSwitchBehavior: 'suspend',
+        profileSwitchBehavior: 'keep',  // Default to 'keep' for better UX
         ...performanceSettings
     })
 
@@ -49,20 +49,25 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
         }
     }
 
-    const RadioOption = ({ name, value, currentValue, onChange, label, recommended }) => (
-        <label className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#3e3e42]/50 cursor-pointer transition-colors">
+    const RadioOption = ({ name, value, currentValue, onChange, label, description, recommended }) => (
+        <label className="flex items-start gap-3 p-3 hover:bg-[#3e3e42]/50 cursor-pointer transition-colors">
             <input
                 type="radio"
                 name={name}
                 value={value}
                 checked={currentValue === value}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-4 h-4 accent-blue-500"
+                className="w-4 h-4 accent-blue-500 mt-0.5"
             />
-            <span className="text-sm text-white">
-                {label}
-                {recommended && <span className="text-xs text-green-400 ml-2">(recommended)</span>}
-            </span>
+            <div className="flex-1">
+                <span className="text-sm text-white">
+                    {label}
+                    {recommended && <span className="text-xs text-green-400 ml-2">(recommended)</span>}
+                </span>
+                {description && (
+                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">{description}</p>
+                )}
+            </div>
         </label>
     )
 
@@ -91,6 +96,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                         currentValue={settings.tabLoadingStrategy}
                         onChange={(v) => updateSetting('tabLoadingStrategy', v)}
                         label="Load all my tabs (uses more memory)"
+                        description="Opens every tab from all your profiles right away. Great if you have lots of RAM and want instant access to everything."
                     />
                     <RadioOption
                         name="tabLoading"
@@ -98,6 +104,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                         currentValue={settings.tabLoadingStrategy}
                         onChange={(v) => updateSetting('tabLoadingStrategy', v)}
                         label="Load tabs from my last profile"
+                        description="Only opens tabs from the profile you were using last. Balances speed and memory usage."
                     />
                     <RadioOption
                         name="tabLoading"
@@ -105,6 +112,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                         currentValue={settings.tabLoadingStrategy}
                         onChange={(v) => updateSetting('tabLoadingStrategy', v)}
                         label="Load only my last tab"
+                        description="Opens just the single tab you had open last. Fastest startup with minimal memory usage."
                         recommended
                     />
                 </div>
@@ -122,14 +130,16 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                         currentValue={settings.profileSwitchBehavior}
                         onChange={(v) => updateSetting('profileSwitchBehavior', v)}
                         label="Keep other profile's tabs running"
+                        description="Tabs stay active in the background. Uses more memory but switching back is instant with no reload."
+                        recommended
                     />
                     <RadioOption
                         name="profileSwitch"
                         value="suspend"
                         currentValue={settings.profileSwitchBehavior}
                         onChange={(v) => updateSetting('profileSwitchBehavior', v)}
-                        label="Pause other profile's tabs"
-                        recommended
+                        label="Suspend other profile's tabs"
+                        description="Suspends tabs to free up memory while keeping your session. Tabs reload when you switch back."
                     />
                     <RadioOption
                         name="profileSwitch"
@@ -137,6 +147,11 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                         currentValue={settings.profileSwitchBehavior}
                         onChange={(v) => updateSetting('profileSwitchBehavior', v)}
                         label="Close other profile's tabs"
+                        description={
+                            <span className="text-red-400 font-medium">
+                                Warning: Permanently deletes all tabs when you leave a profile. Tabs and conversations cannot be recovered when you switch back.
+                            </span>
+                        }
                     />
                 </div>
             </div>
@@ -144,25 +159,30 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
             {/* Auto-suspend Section */}
             <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
                 <div className="px-5 py-4 space-y-4">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={settings.autoSuspendEnabled}
-                            onChange={(e) => updateSetting('autoSuspendEnabled', e.target.checked)}
-                            className="w-4 h-4 accent-blue-500 rounded"
-                        />
-                        <span className="text-sm text-white">Pause tabs I haven't used in</span>
-                        <input
-                            type="number"
-                            min="1"
-                            max="120"
-                            value={settings.autoSuspendMinutes}
-                            onChange={(e) => updateSetting('autoSuspendMinutes', parseInt(e.target.value) || 30)}
-                            disabled={!settings.autoSuspendEnabled}
-                            className="w-16 px-2 py-1 text-sm bg-[#1e1e1e] border border-[#3e3e42] rounded text-white text-center disabled:opacity-50"
-                        />
-                        <span className="text-sm text-gray-400">minutes</span>
-                    </label>
+                    <div className="space-y-2">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={settings.autoSuspendEnabled}
+                                onChange={(e) => updateSetting('autoSuspendEnabled', e.target.checked)}
+                                className="w-4 h-4 accent-blue-500 rounded"
+                            />
+                            <span className="text-sm text-white">Suspend tabs I haven't used in</span>
+                            <input
+                                type="number"
+                                min="1"
+                                max="120"
+                                value={settings.autoSuspendMinutes}
+                                onChange={(e) => updateSetting('autoSuspendMinutes', parseInt(e.target.value) || 30)}
+                                disabled={!settings.autoSuspendEnabled}
+                                className="w-16 px-2 py-1 text-sm bg-[#1e1e1e] border border-[#3e3e42] rounded text-white text-center disabled:opacity-50"
+                            />
+                            <span className="text-sm text-gray-400">minutes</span>
+                        </label>
+                        <p className="text-xs text-gray-500 pl-7 leading-relaxed">
+                            Automatically suspends inactive tabs to save memory. Suspended tabs will reload when you click on them.
+                        </p>
+                    </div>
 
                     <label className="flex items-center gap-3 cursor-pointer pl-7">
                         <input
@@ -173,7 +193,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                             className="w-4 h-4 accent-blue-500 rounded disabled:opacity-50"
                         />
                         <span className={`text-sm ${settings.autoSuspendEnabled ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Don't pause tabs in my current profile
+                            Don't suspend tabs in my current profile
                         </span>
                     </label>
                 </div>
@@ -185,7 +205,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                     <Gauge size={16} className="text-purple-400" />
                     <h3 className="text-white font-medium text-sm">Memory usage</h3>
                 </div>
-                <div className="p-5">
+                <div className="p-5 space-y-3">
                     <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-bold text-white">{memoryUsage.total || '—'}</span>
                         <span className="text-sm text-gray-400">MB</span>
@@ -196,6 +216,9 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                             </span>
                         )}
                     </div>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                        May differ slightly from Task Manager due to how memory is measured across platforms.
+                    </p>
                 </div>
             </div>
         </div>

@@ -1,4 +1,4 @@
-import { Plus, Trash2, GripVertical, Star, RotateCcw } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Star, RotateCcw, Sparkles } from 'lucide-react'
 import { PROVIDER_DEFAULT_COLORS, DEFAULT_PROVIDER_COLOR } from '../../constants'
 
 /**
@@ -41,7 +41,10 @@ export default function ProvidersTab({
         <div className="space-y-6 max-w-3xl">
             <div className="flex items-center justify-between mb-2">
                 <div>
-                    <h3 className="text-white font-semibold text-lg">AI Providers</h3>
+                    <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                        <Sparkles size={20} className="text-purple-400" />
+                        AI Providers
+                    </h2>
                     <p className="text-sm text-gray-400 mt-1">Click the star to set as default for new tabs</p>
                 </div>
                 <button

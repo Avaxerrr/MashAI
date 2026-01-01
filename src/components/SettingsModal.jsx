@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Save, Monitor, RotateCcw } from 'lucide-react'
+import { X, Save, Settings, RotateCcw } from 'lucide-react'
 import GeneralTab from './settings/GeneralTab'
 import PerformanceTab from './settings/PerformanceTab'
 import ProfilesTab from './settings/ProfilesTab'
@@ -228,7 +228,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                 style={{ WebkitAppRegion: 'drag' }}
             >
                 <h2 className="text-white font-semibold text-lg flex items-center gap-3">
-                    <Monitor size={20} className="text-blue-400" />
+                    <Settings size={20} className="text-blue-400" />
                     Settings
                 </h2>
                 <button
