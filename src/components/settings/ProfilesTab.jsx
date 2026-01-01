@@ -47,7 +47,7 @@ export default function ProfilesTab({
             <div className="flex items-center justify-between mb-2">
                 <div>
                     <h3 className="text-white font-semibold text-lg">Manage Profiles</h3>
-                    <p className="text-sm text-gray-500 mt-1">Organize your work with different profiles</p>
+                    <p className="text-sm text-gray-400 mt-1">Organize your work with different profiles</p>
                 </div>
                 <button
                     onClick={addProfile}
@@ -55,6 +55,16 @@ export default function ProfilesTab({
                 >
                     <Plus size={16} /> Add Profile
                 </button>
+            </div>
+
+            {/* Helpful hints with intentional design */}
+            <div className="flex items-start gap-3 px-4 py-3 bg-[#1e293b] border-l-2 border-blue-500 rounded-r-lg -mt-3">
+                <svg className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-xs text-gray-300 leading-relaxed">
+                    Drag to reorder • Click color picker to customize • Choose icons for each profile
+                </p>
             </div>
             <div ref={profilesListRef} className="space-y-3">
                 {profiles.map((profile, idx) => {
@@ -129,8 +139,8 @@ export default function ProfilesTab({
                                     value={profile.name}
                                     onChange={(e) => updateProfile(profile.id, 'name', e.target.value)}
                                     className={`w-full bg-[#1e1e1e] text-white text-sm px-3 py-2 rounded-lg outline-none border-2 transition-all ${!profile.name.trim()
-                                            ? 'border-red-500/50 focus:ring-2 focus:ring-red-500'
-                                            : 'border-transparent focus:ring-2 focus:ring-blue-500'
+                                        ? 'border-red-500/50 focus:ring-2 focus:ring-red-500'
+                                        : 'border-transparent focus:ring-2 focus:ring-blue-500'
                                         }`}
                                     placeholder="Profile Name (required)"
                                 />

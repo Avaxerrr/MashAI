@@ -14,11 +14,8 @@ function SettingsApp() {
     }, [])
 
     const handleSave = async (newSettings) => {
-        const success = await window.api.saveSettings(newSettings)
-        if (success) {
-            // Close the settings window
-            window.close()
-        }
+        await window.api.saveSettings(newSettings)
+        // Don't auto-close - let the modal component decide when to close
     }
 
     const handleClose = () => {

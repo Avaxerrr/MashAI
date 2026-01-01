@@ -3,6 +3,7 @@ import { X, Save, Monitor, RotateCcw } from 'lucide-react'
 import GeneralTab from './settings/GeneralTab'
 import ProfilesTab from './settings/ProfilesTab'
 import ProvidersTab from './settings/ProvidersTab'
+import Toast from './Toast'
 
 export default function SettingsModal({ isOpen, onClose, onSave, initialSettings }) {
     if (!isOpen) return null
@@ -28,6 +29,9 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     // Drag-and-drop state for providers
     const [draggedProviderId, setDraggedProviderId] = useState(null)
     const [dragOverProviderId, setDragOverProviderId] = useState(null)
+
+    // Toast notification state
+    const [showToast, setShowToast] = useState(false)
 
     // Load initial settings
     useEffect(() => {
@@ -92,12 +96,19 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     }, [newlyAddedProviderId])
 
     // --- Event Handlers ---
-    const handleSave = () => {
+    const handleApply = () => {
         onSave({
             profiles,
             aiProviders: providers,
             defaultProviderId
         })
+        // Show success toast
+        setShowToast(true)
+        // Don't close - that's the key difference from handleSave
+    }
+
+    const handleSave = () => {
+        handleApply()
         onClose()
     }
 
@@ -212,8 +223,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     <button
                         onClick={() => setActiveTab('general')}
                         className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'general'
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                                : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
                             }`}
                     >
                         General
@@ -221,8 +232,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     <button
                         onClick={() => setActiveTab('profiles')}
                         className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'profiles'
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                                : 'text-gray-400 hover:text-white hover:bg-[#18181b]'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            : 'text-gray-400 hover:text-white hover:bg-[#18181b]'
                             }`}
                     >
                         Profiles
@@ -230,8 +241,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     <button
                         onClick={() => setActiveTab('providers')}
                         className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'providers'
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                                : 'text-gray-400 hover:text-white hover:bg-[#18181b]'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            : 'text-gray-400 hover:text-white hover:bg-[#18181b]'
                             }`}
                     >
                         AI Providers
@@ -291,12 +302,22 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     <button onClick={handleClose} className="px-5 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#3e3e42] transition-all font-medium">
                         Cancel
                     </button>
+                    <button onClick={handleApply} className="px-5 py-2 rounded-lg text-sm bg-gray-700 hover:bg-gray-600 text-white font-medium transition-all">
+                        Apply
+                    </button>
                     <button onClick={handleSave} className="px-5 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2 font-medium transition-all shadow-lg shadow-blue-600/20">
                         <Save size={16} />
-                        Save Changes
+                        Save & Close
                     </button>
                 </div>
             </div>
+
+            {/* Toast notification */}
+            <Toast
+                message="Settings applied successfully!"
+                isVisible={showToast}
+                onClose={() => setShowToast(false)}
+            />
         </div>
     )
 }

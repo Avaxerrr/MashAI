@@ -7,6 +7,25 @@ const INJECTED_CSS = `
         display: none !important; 
     }
     body { padding-top: 0 !important; }
+    
+    /* Modern scrollbar styling for all webviews */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 5px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #52525b;
+        border-radius: 5px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #71717a;
+    }
 `;
 
 class TabManager {
@@ -53,9 +72,18 @@ class TabManager {
 
         view.webContents.loadURL(finalUrl);
 
-        view.webContents.on('did-finish-load', () => {
-            view.webContents.insertCSS(INJECTED_CSS);
-        });
+        // Inject CSS on multiple events for persistent styling with minimal flash
+        const injectCSS = () => {
+            view.webContents.insertCSS(INJECTED_CSS, { cssOrigin: 'user' }).catch(() => {
+                // Silently fail if CSS injection fails
+            });
+        };
+
+        // Inject on multiple events to ensure persistence
+        view.webContents.on('will-navigate', injectCSS);
+        view.webContents.on('did-start-loading', injectCSS);
+        view.webContents.on('did-navigate', injectCSS);
+        view.webContents.on('did-finish-load', injectCSS);
 
         view.webContents.on('page-title-updated', (e, title) => {
             const tab = this.tabs.get(id);

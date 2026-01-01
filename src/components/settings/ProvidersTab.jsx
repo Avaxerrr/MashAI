@@ -42,7 +42,7 @@ export default function ProvidersTab({
             <div className="flex items-center justify-between mb-2">
                 <div>
                     <h3 className="text-white font-semibold text-lg">AI Providers</h3>
-                    <p className="text-sm text-gray-500 mt-1">Click the star to set as default for new tabs</p>
+                    <p className="text-sm text-gray-400 mt-1">Click the star to set as default for new tabs</p>
                 </div>
                 <button
                     onClick={addProvider}
@@ -50,6 +50,16 @@ export default function ProvidersTab({
                 >
                     <Plus size={16} /> Add AI
                 </button>
+            </div>
+
+            {/* Helpful hints with intentional design */}
+            <div className="flex items-start gap-3 px-4 py-3 bg-[#1e293b] border-l-2 border-blue-500 rounded-r-lg -mt-3">
+                <svg className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-xs text-gray-300 leading-relaxed">
+                    Drag to reorder • Customize tab colors • Reset button restores defaults
+                </p>
             </div>
             <div ref={providersListRef} className="space-y-3">
                 {providers.map((provider, idx) => {
@@ -160,8 +170,8 @@ export default function ProvidersTab({
                                     value={provider.name}
                                     onChange={(e) => updateProvider(provider.id, 'name', e.target.value)}
                                     className={`w-full bg-[#1e1e1e] text-white text-sm font-medium px-3 py-2 rounded-lg outline-none border-2 transition-all ${!provider.name.trim()
-                                            ? 'border-red-500/50 focus:ring-2 focus:ring-red-500'
-                                            : 'border-transparent focus:ring-2 focus:ring-blue-500'
+                                        ? 'border-red-500/50 focus:ring-2 focus:ring-red-500'
+                                        : 'border-transparent focus:ring-2 focus:ring-blue-500'
                                         }`}
                                     placeholder="Provider Name (required)"
                                 />
@@ -170,8 +180,8 @@ export default function ProvidersTab({
                                     value={provider.url}
                                     onChange={(e) => updateProvider(provider.id, 'url', e.target.value)}
                                     className={`w-full bg-[#1e1e1e] text-xs text-blue-400 px-3 py-2 rounded-lg outline-none border-2 transition-all ${!getHostnameSafe(provider.url)
-                                            ? 'border-red-500/50 focus:ring-2 focus:ring-red-500'
-                                            : 'border-transparent focus:ring-2 focus:ring-blue-500'
+                                        ? 'border-red-500/50 focus:ring-2 focus:ring-red-500'
+                                        : 'border-transparent focus:ring-2 focus:ring-blue-500'
                                         }`}
                                     placeholder="https://... (required)"
                                 />
