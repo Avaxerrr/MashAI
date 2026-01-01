@@ -64,6 +64,13 @@ function createSettingsWindow() {
         settingsWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: '/settings' });
     }
 
+    // Restore focus to main window when settings window closes
+    settingsWindow.on('close', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.focus();
+        }
+    });
+
     settingsWindow.on('closed', () => {
         settingsWindow = null;
     });
@@ -173,7 +180,7 @@ function createWindow() {
 
     NavigationHandlers.register({ tabManager });
 
-    ProfileHandlers.register(mainWindow, { tabManager });
+    ProfileHandlers.register(mainWindow, { tabManager, sessionManager });
 
     SettingsHandlers.register(mainWindow, {
         settingsManager,

@@ -99,12 +99,14 @@ function App() {
             })
         }
 
-        const handleProfileTabsLoaded = ({ profileId, tabs: loadedTabs }) => {
-            console.log('Profiletabs loaded for', profileId, 'count:', loadedTabs.length)
+        const handleProfileTabsLoaded = ({ profileId, tabs: loadedTabs, lastActiveTabId }) => {
+            console.log('Profile tabs loaded for', profileId, 'count:', loadedTabs.length)
             setTabs(loadedTabs)
             if (loadedTabs.length > 0) {
-                setActiveTabId(loadedTabs[0].id)
-                window.api.switchTab(loadedTabs[0].id)
+                // Use the last active tab if provided, otherwise use the first tab
+                const tabToActivate = lastActiveTabId || loadedTabs[0].id
+                setActiveTabId(tabToActivate)
+                window.api.switchTab(tabToActivate)
             } else {
                 // Profile has no tabs, create a default one
                 window.api.createTab(profileId)

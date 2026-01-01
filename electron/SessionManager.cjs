@@ -9,6 +9,7 @@ class SessionManager {
     constructor(tabManager) {
         this.tabManager = tabManager;
         this.currentWindowState = { width: 1200, height: 800, isMaximized: false };
+        this.activeTabByProfile = {}; // Track active tab per profile in memory
     }
 
     /**
@@ -39,6 +40,25 @@ class SessionManager {
             const activeTab = this.tabManager.tabs.get(this.tabManager.activeTabId);
             if (activeTab) {
                 lastActiveProfileId = activeTab.profileId;
+                // Update in-memory tracking for the current profile
+                this.activeTabByProfile[activeTab.profileId] = this.tabManager.activeTabId;
+            }
+        }
+
+        // Clean up only if saved tab no longer exists
+        for (const profileId of Object.keys(this.activeTabByProfile)) {
+            const savedTabId = this.activeTabByProfile[profileId];
+            const savedTab = this.tabManager.tabs.get(savedTabId);
+
+            // Only reset if the tab doesn't exist OR belongs to a different profile
+            if (!savedTab || savedTab.profileId !== profileId) {
+                // Tab was closed or moved, find another tab for this profile
+                const profileTabs = this.tabManager.getTabsForProfile(profileId);
+                if (profileTabs.length > 0) {
+                    this.activeTabByProfile[profileId] = profileTabs[0].id;
+                } else {
+                    delete this.activeTabByProfile[profileId];
+                }
             }
         }
 
@@ -51,6 +71,7 @@ class SessionManager {
             })),
             activeTabId: this.tabManager.activeTabId,
             lastActiveProfileId: lastActiveProfileId,
+            activeTabByProfile: this.activeTabByProfile, // Use in-memory map
             windowBounds: this.currentWindowState,
             isMaximized: this.currentWindowState.isMaximized
         };
@@ -74,6 +95,11 @@ class SessionManager {
             const data = JSON.parse(fs.readFileSync(this.getSessionFile(), 'utf-8'));
 
             if (!data.tabs || data.tabs.length === 0) return;
+
+            // IMPORTANT: Load activeTabByProfile into memory first
+            if (data.activeTabByProfile) {
+                this.activeTabByProfile = { ...data.activeTabByProfile };
+            }
 
             data.tabs.forEach(tabData => {
                 const id = this.tabManager.createTab(tabData.profileId, tabData.url, tabData.id);
@@ -127,6 +153,33 @@ class SessionManager {
             console.error('Failed to load window state:', e);
         }
         return {};
+    }
+
+    /**
+     * Get the last active tab for a specific profile
+     * @param {string} profileId - The profile ID
+     * @returns {string|null} The last active tab ID for this profile, or null
+     */
+    getLastActiveTabForProfile(profileId) {
+        // First check in-memory map (for runtime changes)
+        if (this.activeTabByProfile[profileId]) {
+            return this.activeTabByProfile[profileId];
+        }
+
+        // Fall back to disk (for app startup)
+        try {
+            if (fs.existsSync(this.getSessionFile())) {
+                const data = JSON.parse(fs.readFileSync(this.getSessionFile(), 'utf-8'));
+                if (data.activeTabByProfile && data.activeTabByProfile[profileId]) {
+                    // Also populate in-memory map for next time
+                    this.activeTabByProfile[profileId] = data.activeTabByProfile[profileId];
+                    return data.activeTabByProfile[profileId];
+                }
+            }
+        } catch (e) {
+            console.error('Failed to get last active tab for profile:', e);
+        }
+        return null;
     }
 }
 

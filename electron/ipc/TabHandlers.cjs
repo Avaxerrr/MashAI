@@ -51,6 +51,7 @@ function register(mainWindow, { tabManager, saveSession, updateViewBounds, close
         const success = tabManager.switchTo(tabId);
         if (success) {
             updateViewBounds();
+            saveSession(); // Save session to track active tab per profile
         }
     });
 
