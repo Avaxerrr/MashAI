@@ -1,18 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Plus, Trash2, Save, Monitor, Cpu, RotateCcw, Star, Briefcase, User, Home, Zap, Code, Globe, GripVertical } from 'lucide-react'
-import { PROVIDER_DEFAULT_COLORS, DEFAULT_PROVIDER_COLOR, PROFILE_ICONS } from '../constants'
+import { X, Save, Monitor, RotateCcw } from 'lucide-react'
+import GeneralTab from './settings/GeneralTab'
+import ProfilesTab from './settings/ProfilesTab'
+import ProvidersTab from './settings/ProvidersTab'
 
 export default function SettingsModal({ isOpen, onClose, onSave, initialSettings }) {
     if (!isOpen) return null
-
-    // Helper function to safely extract hostname from URL
-    const getHostnameSafe = (url) => {
-        try {
-            return new URL(url).hostname
-        } catch (e) {
-            return null
-        }
-    }
 
     const [activeTab, setActiveTab] = useState('general') // general, profiles, providers
     const [profiles, setProfiles] = useState([])
@@ -22,15 +15,17 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     // Refs for auto-scroll
     const profilesListRef = useRef(null)
     const providersListRef = useRef(null)
-    const contentAreaRef = useRef(null) // Ref for the scrollable content area
+    const contentAreaRef = useRef(null)
 
     // Track newly added items for pulse animation
     const [newlyAddedProfileId, setNewlyAddedProfileId] = useState(null)
     const [newlyAddedProviderId, setNewlyAddedProviderId] = useState(null)
 
-    // Drag-and-drop state
+    // Drag-and-drop state for profiles
     const [draggedProfileId, setDraggedProfileId] = useState(null)
     const [dragOverProfileId, setDragOverProfileId] = useState(null)
+
+    // Drag-and-drop state for providers
     const [draggedProviderId, setDraggedProviderId] = useState(null)
     const [dragOverProviderId, setDragOverProviderId] = useState(null)
 
@@ -54,7 +49,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [onClose])
 
-    // Auto-scroll to show newly added profile
+    // Auto-scroll when items are added
     useEffect(() => {
         if (contentAreaRef.current && profiles.length > 0) {
             setTimeout(() => {
@@ -68,7 +63,6 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         }
     }, [profiles.length])
 
-    // Auto-scroll to show newly added provider
     useEffect(() => {
         if (contentAreaRef.current && providers.length > 0) {
             setTimeout(() => {
@@ -97,6 +91,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         }
     }, [newlyAddedProviderId])
 
+    // --- Event Handlers ---
     const handleSave = () => {
         onSave({
             profiles,
@@ -112,8 +107,6 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
 
     const handleResetAll = async () => {
         if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
-            const defaults = await window.api.getSettings()
-            // Get fresh defaults from backend
             const defaultSettings = {
                 profiles: [
                     { id: 'work', name: 'Work', icon: 'briefcase', color: '#3b82f6' },
@@ -146,7 +139,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     }
 
     const deleteProfile = (id) => {
-        if (profiles.length <= 1) return // Prevent deleting last profile
+        if (profiles.length <= 1) return
         setProfiles(profiles.filter(p => p.id !== id))
     }
 
@@ -171,7 +164,6 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     const deleteProvider = (id) => {
         if (providers.length <= 1) return
 
-        // If deleting the default provider, set fallback to first remaining provider
         if (id === defaultProviderId) {
             const remaining = providers.filter(p => p.id !== id)
             if (remaining.length > 0) {
@@ -192,34 +184,6 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     const setAsDefault = (providerId) => {
         setDefaultProviderId(providerId)
     }
-
-    const resetProviderColor = (providerId) => {
-        const defaultColor = PROVIDER_DEFAULT_COLORS[providerId] || DEFAULT_PROVIDER_COLOR
-        updateProvider(providerId, 'color', defaultColor)
-    }
-
-    // Icon renderer for profiles
-    const renderProfileIcon = (iconName) => {
-        const iconMap = {
-            'briefcase': Briefcase,
-            'user': User,
-            'home': Home,
-            'zap': Zap,
-            'code': Code,
-            'globe': Globe
-        }
-        const IconComponent = iconMap[iconName] || User
-        return <IconComponent size={20} />
-    }
-
-    const availableIcons = [
-        { name: 'briefcase', component: Briefcase },
-        { name: 'user', component: User },
-        { name: 'home', component: Home },
-        { name: 'zap', component: Zap },
-        { name: 'code', component: Code },
-        { name: 'globe', component: Globe }
-    ]
 
     return (
         <div className="h-screen w-screen bg-[#323233] flex flex-col overflow-hidden">
@@ -248,8 +212,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     <button
                         onClick={() => setActiveTab('general')}
                         className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'general'
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                                : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
                             }`}
                     >
                         General
@@ -257,8 +221,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     <button
                         onClick={() => setActiveTab('profiles')}
                         className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'profiles'
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                            : 'text-gray-400 hover:text-white hover:bg-[#18181b]'
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                                : 'text-gray-400 hover:text-white hover:bg-[#18181b]'
                             }`}
                     >
                         Profiles
@@ -266,8 +230,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     <button
                         onClick={() => setActiveTab('providers')}
                         className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'providers'
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                            : 'text-gray-400 hover:text-white hover:bg-[#18181b]'
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                                : 'text-gray-400 hover:text-white hover:bg-[#18181b]'
                             }`}
                     >
                         AI Providers
@@ -276,310 +240,41 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
 
                 {/* Content */}
                 <div ref={contentAreaRef} className="flex-1 p-8 overflow-y-auto bg-[#323233] settings-scroll-smooth">
+                    {activeTab === 'general' && <GeneralTab />}
 
-                    {/* GENERAL TAB */}
-                    {activeTab === 'general' && (
-                        <div className="space-y-6 max-w-2xl">
-                            <div className="bg-[#252526] p-6 rounded-xl border border-[#3e3e42]">
-                                <h3 className="text-white font-semibold text-base mb-3">About MashAI</h3>
-                                <p className="text-sm text-gray-400 leading-relaxed">
-                                    A unified interface for all your AI assistants. Manage multiple AI providers and profiles in one place.
-                                </p>
-                                <div className="mt-6 pt-4 border-t border-[#3e3e42]">
-                                    <p className="text-xs text-gray-500">Version 1.0.0</p>
-                                </div>
-                            </div>
-                            <div className="bg-blue-950/20 border border-blue-900/30 rounded-xl p-4">
-                                <p className="text-sm text-blue-300">
-                                    💡 <strong className="font-medium">Tip:</strong> Set your default AI provider in the "AI Providers" tab by clicking the star icon.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* PROFILES TAB */}
                     {activeTab === 'profiles' && (
-                        <div className="space-y-6 max-w-2xl">
-                            <div className="flex items-center justify-between mb-2">
-                                <div>
-                                    <h3 className="text-white font-semibold text-lg">Manage Profiles</h3>
-                                    <p className="text-sm text-gray-500 mt-1">Organize your work with different profiles</p>
-                                </div>
-                                <button onClick={addProfile} className="flex items-center gap-2 text-sm bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-lg shadow-blue-600/20">
-                                    <Plus size={16} /> Add Profile
-                                </button>
-                            </div>
-                            <div ref={profilesListRef} className="space-y-3">
-                                {profiles.map((profile, idx) => {
-                                    const isDragging = draggedProfileId === profile.id
-                                    const isDragOver = dragOverProfileId === profile.id
-
-                                    return (
-                                        <div
-                                            key={profile.id}
-                                            draggable
-                                            onDragStart={(e) => {
-                                                setDraggedProfileId(profile.id)
-                                                e.dataTransfer.effectAllowed = 'move'
-                                            }}
-                                            onDragOver={(e) => {
-                                                e.preventDefault()
-                                                e.dataTransfer.dropEffect = 'move'
-                                                if (draggedProfileId && draggedProfileId !== profile.id) {
-                                                    setDragOverProfileId(profile.id)
-                                                }
-                                            }}
-                                            onDragLeave={(e) => {
-                                                if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget)) {
-                                                    setDragOverProfileId(null)
-                                                }
-                                            }}
-                                            onDrop={(e) => {
-                                                e.preventDefault()
-                                                if (draggedProfileId && draggedProfileId !== profile.id) {
-                                                    const draggedIndex = profiles.findIndex(p => p.id === draggedProfileId)
-                                                    const targetIndex = profiles.findIndex(p => p.id === profile.id)
-
-                                                    if (draggedIndex !== -1 && targetIndex !== -1) {
-                                                        reorderProfiles(draggedIndex, targetIndex)
-                                                    }
-                                                }
-                                                setDraggedProfileId(null)
-                                                setDragOverProfileId(null)
-                                            }}
-                                            onDragEnd={() => {
-                                                setDraggedProfileId(null)
-                                                setDragOverProfileId(null)
-                                            }}
-                                            className={`flex items-center gap-4 bg-[#252526] p-4 rounded-xl transition-all cursor-move ${newlyAddedProfileId === profile.id
-                                                ? 'neon-glow-blue'
-                                                : ''
-                                                } ${isDragOver ? 'border-l-4 border-l-blue-500' : ''}`}
-                                            style={{ opacity: isDragging ? 0.5 : 1 }}
-                                        >
-                                            {/* Drag Handle */}
-                                            <div className="text-gray-500 hover:text-gray-300 cursor-grab active:cursor-grabbing">
-                                                <GripVertical size={20} />
-                                            </div>
-                                            {/* Icon & Color Selector */}
-                                            <div className="flex flex-col gap-2 flex-shrink-0">
-                                                <div
-                                                    className="w-12 h-12 rounded-lg flex items-center justify-center text-white transition-all"
-                                                    style={{ backgroundColor: profile.color || '#3b82f6' }}
-                                                >
-                                                    {renderProfileIcon(profile.icon)}
-                                                </div>
-                                                <input
-                                                    type="color"
-                                                    value={profile.color || '#3b82f6'}
-                                                    onChange={(e) => updateProfile(profile.id, 'color', e.target.value)}
-                                                    className="w-12 h-6 rounded cursor-pointer border-0"
-                                                    title="Profile Color"
-                                                />
-                                            </div>
-
-                                            <div className="flex-1 space-y-3">
-                                                <input
-                                                    type="text"
-                                                    value={profile.name}
-                                                    onChange={(e) => updateProfile(profile.id, 'name', e.target.value)}
-                                                    className="w-full bg-[#1e1e1e] text-white text-sm px-3 py-2 rounded-lg outline-none border-0 focus:ring-2 focus:ring-blue-500 transition-all"
-                                                    placeholder="Profile Name"
-                                                />
-                                                {/* Icon Selector */}
-                                                <div className="flex gap-2">
-                                                    {availableIcons.map(({ name, component: IconComp }) => (
-                                                        <button
-                                                            key={name}
-                                                            onClick={() => updateProfile(profile.id, 'icon', name)}
-                                                            className={`p-2 rounded-lg transition-all ${profile.icon === name
-                                                                ? 'bg-blue-500/20 text-blue-400'
-                                                                : 'bg-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#2a2a2c]'
-                                                                }`}
-                                                            title={name}
-                                                        >
-                                                            <IconComp size={16} />
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => deleteProfile(profile.id)}
-                                                className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all"
-                                                title="Delete Profile"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
+                        <ProfilesTab
+                            profiles={profiles}
+                            addProfile={addProfile}
+                            updateProfile={updateProfile}
+                            deleteProfile={deleteProfile}
+                            reorderProfiles={reorderProfiles}
+                            draggedProfileId={draggedProfileId}
+                            setDraggedProfileId={setDraggedProfileId}
+                            dragOverProfileId={dragOverProfileId}
+                            setDragOverProfileId={setDragOverProfileId}
+                            newlyAddedProfileId={newlyAddedProfileId}
+                            profilesListRef={profilesListRef}
+                        />
                     )}
 
-                    {/* PROVIDERS TAB */}
                     {activeTab === 'providers' && (
-                        <div className="space-y-6 max-w-3xl">
-                            <div className="flex items-center justify-between mb-2">
-                                <div>
-                                    <h3 className="text-white font-semibold text-lg">AI Providers</h3>
-                                    <p className="text-sm text-gray-500 mt-1">Click the star to set as default for new tabs</p>
-                                </div>
-                                <button onClick={addProvider} className="flex items-center gap-2 text-sm bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-lg shadow-blue-600/20">
-                                    <Plus size={16} /> Add AI
-                                </button>
-                            </div>
-                            <div ref={providersListRef} className="space-y-3">
-                                {providers.map((provider, idx) => {
-                                    const isDefault = provider.id === defaultProviderId
-                                    const isDragging = draggedProviderId === provider.id
-                                    const isDragOver = dragOverProviderId === provider.id
-
-                                    return (
-                                        <div
-                                            key={provider.id}
-                                            draggable
-                                            onDragStart={(e) => {
-                                                setDraggedProviderId(provider.id)
-                                                e.dataTransfer.effectAllowed = 'move'
-                                            }}
-                                            onDragOver={(e) => {
-                                                e.preventDefault()
-                                                e.dataTransfer.dropEffect = 'move'
-                                                if (draggedProviderId && draggedProviderId !== provider.id) {
-                                                    setDragOverProviderId(provider.id)
-                                                }
-                                            }}
-                                            onDragLeave={(e) => {
-                                                if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget)) {
-                                                    setDragOverProviderId(null)
-                                                }
-                                            }}
-                                            onDrop={(e) => {
-                                                e.preventDefault()
-                                                if (draggedProviderId && draggedProviderId !== provider.id) {
-                                                    const draggedIndex = providers.findIndex(p => p.id === draggedProviderId)
-                                                    const targetIndex = providers.findIndex(p => p.id === provider.id)
-
-                                                    if (draggedIndex !== -1 && targetIndex !== -1) {
-                                                        reorderProviders(draggedIndex, targetIndex)
-                                                    }
-                                                }
-                                                setDraggedProviderId(null)
-                                                setDragOverProviderId(null)
-                                            }}
-                                            onDragEnd={() => {
-                                                setDraggedProviderId(null)
-                                                setDragOverProviderId(null)
-                                            }}
-                                            className={`flex items-center gap-4 p-4 rounded-xl transition-all cursor-move ${newlyAddedProviderId === provider.id
-                                                ? 'bg-[#252526] neon-glow-green'
-                                                : isDefault
-                                                    ? 'bg-[#252526] ring-2 ring-blue-500/50 shadow-lg shadow-blue-500/10'
-                                                    : 'bg-[#252526]'
-                                                } ${isDragOver ? 'border-l-4 border-l-green-500' : ''}`}
-                                            style={{ opacity: isDragging ? 0.5 : 1 }}
-                                        >
-                                            {/* Drag Handle */}
-                                            <div className="text-gray-500 hover:text-gray-300 cursor-grab active:cursor-grabbing">
-                                                <GripVertical size={20} />
-                                            </div>
-                                            {/* Star button for setting default */}
-                                            <button
-                                                onClick={() => setAsDefault(provider.id)}
-                                                className={`p-2 rounded-lg transition-all ${isDefault
-                                                    ? 'text-yellow-400 bg-yellow-500/10'
-                                                    : 'text-gray-600 hover:text-yellow-400 hover:bg-yellow-500/5'
-                                                    }`}
-                                                title={isDefault ? 'Default AI' : 'Set as default'}
-                                            >
-                                                <Star size={18} fill={isDefault ? 'currentColor' : 'none'} />
-                                            </button>
-
-                                            {/* Favicon display */}
-                                            <div className="w-[76px] h-[76px] flex-shrink-0 flex items-center justify-center rounded-lg">
-                                                {provider.faviconDataUrl ? (
-                                                    <img
-                                                        src={provider.faviconDataUrl}
-                                                        alt=""
-                                                        className="w-8 h-8"
-                                                        onError={(e) => {
-                                                            // Fallback to Google favicon service if cached favicon fails
-                                                            try {
-                                                                const urlObj = new URL(provider.url);
-                                                                e.target.src = `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
-                                                            } catch {
-                                                                e.target.style.display = 'none';
-                                                            }
-                                                        }}
-                                                    />
-                                                ) : provider.url ? (
-                                                    (() => {
-                                                        const hostname = getHostnameSafe(provider.url)
-                                                        return hostname ? (
-                                                            <img
-                                                                src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`}
-                                                                alt=""
-                                                                className="w-8 h-8"
-                                                                onError={(e) => e.target.style.display = 'none'}
-                                                            />
-                                                        ) : (
-                                                            <div className="w-8 h-8 bg-[#3e3e42] rounded" />
-                                                        )
-                                                    })()
-                                                ) : (
-                                                    <div className="w-8 h-8 bg-[#3e3e42] rounded" />
-                                                )}
-                                            </div>
-
-                                            <div className="flex-1 space-y-2">
-                                                <input
-                                                    type="text"
-                                                    value={provider.name}
-                                                    onChange={(e) => updateProvider(provider.id, 'name', e.target.value)}
-                                                    className="w-full bg-[#1e1e1e] text-white text-sm font-medium px-3 py-2 rounded-lg outline-none border-0 focus:ring-2 focus:ring-blue-500 transition-all"
-                                                    placeholder="Provider Name"
-                                                />
-                                                <input
-                                                    type="text"
-                                                    value={provider.url}
-                                                    onChange={(e) => updateProvider(provider.id, 'url', e.target.value)}
-                                                    className="w-full bg-[#1e1e1e] text-xs text-blue-400 px-3 py-2 rounded-lg outline-none border-0 focus:ring-2 focus:ring-blue-500 transition-all"
-                                                    placeholder="https://..."
-                                                />
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex flex-col items-center gap-1">
-                                                    <input
-                                                        type="color"
-                                                        value={provider.color || '#191A1A'}
-                                                        onChange={(e) => updateProvider(provider.id, 'color', e.target.value)}
-                                                        className="w-10 h-10 rounded-lg cursor-pointer border-0"
-                                                        title="Tab Background Color"
-                                                    />
-                                                    <button
-                                                        onClick={() => resetProviderColor(provider.id)}
-                                                        className="p-1 text-gray-500 hover:text-blue-400 transition-colors"
-                                                        title="Reset to default color"
-                                                    >
-                                                        <RotateCcw size={12} />
-                                                    </button>
-                                                </div>
-                                                <button
-                                                    onClick={() => deleteProvider(provider.id)}
-                                                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all"
-                                                    title="Delete provider"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                        <ProvidersTab
+                            providers={providers}
+                            addProvider={addProvider}
+                            updateProvider={updateProvider}
+                            deleteProvider={deleteProvider}
+                            reorderProviders={reorderProviders}
+                            defaultProviderId={defaultProviderId}
+                            setAsDefault={setAsDefault}
+                            draggedProviderId={draggedProviderId}
+                            setDraggedProviderId={setDraggedProviderId}
+                            dragOverProviderId={dragOverProviderId}
+                            setDragOverProviderId={setDragOverProviderId}
+                            newlyAddedProviderId={newlyAddedProviderId}
+                            providersListRef={providersListRef}
+                        />
                     )}
-
                 </div>
             </div>
 
@@ -602,6 +297,6 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     </button>
                 </div>
             </div>
-        </div >
+        </div>
     )
 }
