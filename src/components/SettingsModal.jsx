@@ -74,9 +74,9 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [onClose])
 
-    // Auto-scroll when items are added
+    // Auto-scroll when items are added (profiles only)
     useEffect(() => {
-        if (contentAreaRef.current && profiles.length > 0) {
+        if (contentAreaRef.current && profiles.length > 0 && activeTab === 'profiles') {
             setTimeout(() => {
                 if (contentAreaRef.current) {
                     contentAreaRef.current.scrollTo({
@@ -88,8 +88,9 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         }
     }, [profiles.length])
 
+    // Auto-scroll when items are added (providers only)
     useEffect(() => {
-        if (contentAreaRef.current && providers.length > 0) {
+        if (contentAreaRef.current && providers.length > 0 && activeTab === 'providers') {
             setTimeout(() => {
                 if (contentAreaRef.current) {
                     contentAreaRef.current.scrollTo({
@@ -100,6 +101,13 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
             }, 100)
         }
     }, [providers.length])
+
+    // Reset scroll position when switching tabs
+    useEffect(() => {
+        if (contentAreaRef.current) {
+            contentAreaRef.current.scrollTop = 0
+        }
+    }, [activeTab])
 
     // Clear pulse animation after 2 seconds
     useEffect(() => {

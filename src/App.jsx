@@ -13,6 +13,8 @@ function App() {
     const [aiProviders, setAiProviders] = useState([]) // New state for providers
     const [defaultProviderId, setDefaultProviderId] = useState('perplexity')
     const [tabMemory, setTabMemory] = useState({}) // Per-tab memory info
+    const [toastMessage, setToastMessage] = useState('')
+    const [showToast, setShowToast] = useState(false)
 
     // Ref to hold the latest closeTab function to avoid stale closures in listeners
     const closeTabRef = useRef()
@@ -169,6 +171,12 @@ function App() {
             window.api.getProfileTabs(profileId)
         })
 
+        // Listen for show-toast events from backend (e.g., always-on-top toggle)
+        const cleanupShowToast = window.api.onShowToast?.((message) => {
+            setToastMessage(message)
+            setShowToast(true)
+        })
+
         // Cleanup function - ACTUALLY remove listeners
         return () => {
             console.log('Cleaning up listeners')
@@ -183,6 +191,7 @@ function App() {
             if (cleanupTabClosedBackend) cleanupTabClosedBackend()
             if (cleanupSettingsUpdated) cleanupSettingsUpdated()
             if (cleanupActiveProfileChanged) cleanupActiveProfileChanged()
+            if (cleanupShowToast) cleanupShowToast()
         }
     }, [])
 
@@ -359,6 +368,9 @@ function App() {
                 onSwitchProfile={switchProfile}
                 onReorderTabs={reorderTabs}
                 aiProviders={aiProviders}
+                toastMessage={toastMessage}
+                showToast={showToast}
+                onCloseToast={() => setShowToast(false)}
             />
 
             {/* The WebContentsView will render here (controlled by Electron) */}

@@ -1,5 +1,5 @@
-import { Minus, Square, X, ChevronDown, ArrowLeft, RotateCw, Plus, Briefcase, User, Home, Zap, Code, Globe } from 'lucide-react'
-import { useState } from 'react'
+import { Minus, Square, X, ChevronDown, ArrowLeft, RotateCw, Plus, Briefcase, User, Home, Zap, Code, Globe, Check } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 export default function TitleBar({
     profiles = [],
@@ -17,7 +17,10 @@ export default function TitleBar({
     onCloseTabsToRight,
     onSwitchProfile,
     onReorderTabs,
-    aiProviders = []
+    aiProviders = [],
+    toastMessage = '',
+    showToast = false,
+    onCloseToast
 }) {
     const [isMaximized, setIsMaximized] = useState(false)
     const [draggedTab, setDraggedTab] = useState(null)
@@ -77,11 +80,32 @@ export default function TitleBar({
         return <IconComponent size={16} />
     }
 
+    // Auto-close toast after 2.5 seconds
+    useEffect(() => {
+        if (showToast && onCloseToast) {
+            const timer = setTimeout(() => {
+                onCloseToast()
+            }, 2500)
+            return () => clearTimeout(timer)
+        }
+    }, [showToast, onCloseToast])
+
     return (
         <div
-            className="h-[36px] bg-[#323233] flex items-center justify-between select-none"
+            className="h-[36px] bg-[#323233] flex items-center justify-between select-none relative"
             style={{ WebkitAppRegion: 'drag' }}
         >
+            {/* Toast Notification - inside TitleBar so it shows above WebContentsView */}
+            {showToast && toastMessage && (
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] animate-fadeIn">
+                    <div className="bg-green-600 text-white px-4 py-1.5 rounded-full shadow-lg flex items-center gap-2 border border-green-500">
+                        <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                            <Check size={10} className="text-green-600" strokeWidth={3} />
+                        </div>
+                        <span className="font-medium text-xs whitespace-nowrap">{toastMessage}</span>
+                    </div>
+                </div>
+            )}
 
             {/* Left: Profile Switcher */}
             <div className="flex items-center h-full relative" style={{ WebkitAppRegion: 'no-drag' }}>
@@ -186,7 +210,7 @@ export default function TitleBar({
                                     const mem = tabMemory[tab.id];
                                     const memStr = mem?.memory ? ` (${mem.memory} MB)` : '';
                                     if (tab.loaded === false) {
-                                        return `${tab.title} (paused)`;
+                                        return `${tab.title} (suspended)`;
                                     }
                                     return `${tab.title}${memStr}`;
                                 })()}

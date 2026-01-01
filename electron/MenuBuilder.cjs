@@ -120,6 +120,16 @@ class MenuBuilder {
                 }
             });
 
+            template.push({ type: 'separator' });
+
+            template.push({
+                label: 'Quit MashAI',
+                click: () => {
+                    const { app } = require('electron');
+                    app.quit();
+                }
+            });
+
             const menu = Menu.buildFromTemplate(template);
             menu.popup({
                 window: this.mainWindow,

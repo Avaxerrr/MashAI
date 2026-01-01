@@ -7,6 +7,7 @@ const ProfileManager = require('./ProfileManager.cjs');
 const SettingsManager = require('./SettingsManager.cjs');
 const SessionManager = require('./SessionManager.cjs');
 const MenuBuilder = require('./MenuBuilder.cjs');
+const TrayManager = require('./TrayManager.cjs');
 
 // Import IPC handlers
 const WindowHandlers = require('./ipc/WindowHandlers.cjs');
@@ -38,6 +39,7 @@ let profileManager;
 let settingsManager;
 let sessionManager;
 let menuBuilder;
+let trayManager;
 
 const closedTabs = [];
 const isDev = process.env.NODE_ENV === 'development';
@@ -184,6 +186,10 @@ function createWindow() {
     menuBuilder.registerHandlers();
     menuBuilder.createApplicationMenu();
 
+    // Initialize TrayManager for system tray functionality (before SettingsHandlers so it can receive updates)
+    trayManager = new TrayManager(mainWindow, settingsManager);
+    trayManager.setTabManager(tabManager); // Wire up tabManager for suspension functionality
+
     // Register all IPC handlers
     WindowHandlers.register(mainWindow);
 
@@ -204,8 +210,18 @@ function createWindow() {
         settingsManager,
         profileManager,
         tabManager,
+        trayManager,
         saveSession: () => sessionManager.saveSession(),
         updateViewBounds
+    });
+
+    // Intercept close event - hide to tray instead of quitting (if enabled)
+    mainWindow.on('close', (event) => {
+        if (trayManager && !trayManager.isQuitting && trayManager.isMinimizeToTrayEnabled()) {
+            event.preventDefault();
+            trayManager.hideWindow(); // Use trayManager.hideWindow() to trigger suspension scheduling
+            console.log('[main] Window hidden to tray (close intercepted)');
+        }
     });
 
     // Handle initial load
@@ -277,10 +293,19 @@ function createWindow() {
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
+    // Don't quit when windows are closed - we're hiding to tray
+    // The quit is handled by TrayManager.quitApp() or before-quit
     if (sessionManager) sessionManager.saveSession();
-    if (process.platform !== 'darwin') app.quit();
+    // Only auto-quit on macOS if trayManager says we're quitting
+    if (process.platform !== 'darwin' && trayManager?.isQuitting) {
+        app.quit();
+    }
 });
 
 app.on('before-quit', () => {
+    // Mark that we're quitting so close handler doesn't intercept
+    if (trayManager) trayManager.isQuitting = true;
     if (sessionManager) sessionManager.saveSession();
+    // Cleanup tray
+    if (trayManager) trayManager.destroy();
 });

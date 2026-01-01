@@ -7,10 +7,11 @@ const { ipcMain, app } = require('electron');
  * @param {SettingsManager} dependencies.settingsManager - Settings manager instance
  * @param {ProfileManager} dependencies.profileManager - Profile manager instance
  * @param {TabManager} dependencies.tabManager - Tab manager instance
+ * @param {TrayManager} dependencies.trayManager - Tray manager instance
  * @param {Function} dependencies.saveSession - Function to save session
  * @param {Function} dependencies.updateViewBounds - Function to update view bounds
  */
-function register(mainWindow, { settingsManager, profileManager, tabManager, saveSession, updateViewBounds }) {
+function register(mainWindow, { settingsManager, profileManager, tabManager, trayManager, saveSession, updateViewBounds }) {
     // Get current settings
     ipcMain.handle('get-settings', () => {
         return settingsManager.getSettings();
@@ -141,9 +142,37 @@ function register(mainWindow, { settingsManager, profileManager, tabManager, sav
         }
         // ===== END IMMEDIATE ENFORCEMENT =====
 
+        // Apply tray/window settings immediately
+        if (trayManager) {
+            trayManager.updateSettings(newSettings);
+        }
+
         // Broadcast to all windows (main window updates its UI) - now includes fetched favicons
         mainWindow.webContents.send('settings-updated', settingsManager.getSettings());
         return success;
+    });
+
+    // Validate a keyboard shortcut before saving
+    ipcMain.handle('validate-shortcut', async (event, shortcut) => {
+        const TrayManager = require('../TrayManager.cjs');
+
+        // First do static validation (format, reserved shortcuts)
+        const validation = TrayManager.validateShortcut(shortcut);
+        if (!validation.valid) {
+            return { valid: false, available: false, reason: validation.reason };
+        }
+
+        // Then check if it's available (not used by another app)
+        if (trayManager) {
+            const availability = trayManager.testShortcut(shortcut);
+            return {
+                valid: true,
+                available: availability.available,
+                reason: availability.reason
+            };
+        }
+
+        return { valid: true, available: true, reason: null };
     });
 
     // Get memory usage statistics using app.getAppMetrics() for accurate readings

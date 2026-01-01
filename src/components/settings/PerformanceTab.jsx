@@ -212,7 +212,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                         {memoryUsage.tabCount > 0 && (
                             <span className="text-xs text-gray-500 ml-2">
                                 ({memoryUsage.tabCount} tab{memoryUsage.tabCount !== 1 ? 's' : ''} active
-                                {memoryUsage.suspendedCount > 0 && `, ${memoryUsage.suspendedCount} paused`})
+                                {memoryUsage.suspendedCount > 0 && `, ${memoryUsage.suspendedCount} suspended`})
                             </span>
                         )}
                     </div>

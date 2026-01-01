@@ -62,7 +62,20 @@ class SettingsManager {
             },
             general: {
                 hardwareAcceleration: true,
-                rememberWindowPosition: true
+                rememberWindowPosition: true,
+                // System settings
+                launchAtStartup: false,
+                alwaysOnTop: false,
+                alwaysOnTopShortcut: 'CommandOrControl+Shift+T', // Toggle always-on-top
+                // Tray settings
+                minimizeToTray: true,  // Default to true since we have tray functionality
+                showTrayIcon: true,
+                // Global shortcut for hide/show toggle
+                hideShortcut: 'CommandOrControl+Shift+M',
+                // Tray optimization settings
+                suspendOnHide: true,  // Suspend tabs when hidden to tray
+                keepLastActiveTab: true,  // Don't suspend the last active tab
+                suspendDelaySeconds: 5  // Delay before suspending (prevents accidental suspension)
             }
         };
     }

@@ -71,7 +71,13 @@ const IPC_EVENTS = {
 
     // Session
     RESTORE_ACTIVE: 'restore-active',
-    GET_ALL_TABS: 'get-all-tabs'
+    GET_ALL_TABS: 'get-all-tabs',
+
+    // Tray
+    TRAY_SHOW: 'tray-show',
+    TRAY_HIDE: 'tray-hide',
+    TRAY_TOGGLE: 'tray-toggle',
+    VALIDATE_SHORTCUT: 'validate-shortcut'
 };
 
 // Performance settings defaults (memory-optimized out of box)

@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('api', {
     // Settings
     getSettings: () => ipcRenderer.invoke('get-settings'),
     saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
+    validateShortcut: (shortcut) => ipcRenderer.invoke('validate-shortcut', shortcut),
     onSettingsUpdated: (callback) => {
         const handler = (e, data) => callback(data);
         ipcRenderer.on('settings-updated', handler);
@@ -104,6 +105,11 @@ contextBridge.exposeInMainWorld('api', {
         const handler = (e, profileId) => callback(profileId);
         ipcRenderer.on('active-profile-changed', handler);
         return () => ipcRenderer.removeListener('active-profile-changed', handler);
+    },
+    onShowToast: (callback) => {
+        const handler = (e, message) => callback(message);
+        ipcRenderer.on('show-toast', handler);
+        return () => ipcRenderer.removeListener('show-toast', handler);
     },
 
     // Context Menu
