@@ -1,5 +1,6 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
+const { TITLEBAR_HEIGHT, DEFAULT_WINDOW, SETTINGS_WINDOW, MAX_CLOSED_TABS } = require('./constants.cjs');
 const TabManager = require('./TabManager.cjs');
 const ProfileManager = require('./ProfileManager.cjs');
 const SettingsManager = require('./SettingsManager.cjs');
@@ -36,10 +37,10 @@ function createSettingsWindow() {
     }
 
     settingsWindow = new BrowserWindow({
-        width: 750,
-        height: 600,
-        minWidth: 750,
-        minHeight: 500,
+        width: SETTINGS_WINDOW.width,
+        height: SETTINGS_WINDOW.height,
+        minWidth: SETTINGS_WINDOW.minWidth,
+        minHeight: SETTINGS_WINDOW.minHeight,
         maximizable: false,
         resizable: true,
         backgroundColor: '#252526',
@@ -74,7 +75,6 @@ function createSettingsWindow() {
 function updateViewBounds() {
     if (!mainWindow || !tabManager) return;
     const bounds = mainWindow.getBounds();
-    const TITLEBAR_HEIGHT = 36;
     const contentBounds = {
         x: 0,
         y: TITLEBAR_HEIGHT,
@@ -114,12 +114,12 @@ function createWindow() {
 
     // Create mainWindow FIRST
     mainWindow = new BrowserWindow({
-        width: windowState.width || 1200,
-        height: windowState.height || 800,
+        width: windowState.width || DEFAULT_WINDOW.width,
+        height: windowState.height || DEFAULT_WINDOW.height,
         x: windowState.x,
         y: windowState.y,
-        minWidth: 800,
-        minHeight: 600,
+        minWidth: DEFAULT_WINDOW.minWidth,
+        minHeight: DEFAULT_WINDOW.minHeight,
         backgroundColor: '#1e1e1e',
         frame: false,
         titleBarStyle: 'hidden',

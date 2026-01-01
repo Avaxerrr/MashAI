@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Plus, Trash2, Save, Monitor, Cpu, RotateCcw, Star, Briefcase, User, Home, Zap, Code, Globe, GripVertical } from 'lucide-react'
+import { PROVIDER_DEFAULT_COLORS, DEFAULT_PROVIDER_COLOR, PROFILE_ICONS } from '../constants'
 
 export default function SettingsModal({ isOpen, onClose, onSave, initialSettings }) {
     if (!isOpen) return null
@@ -193,14 +194,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     }
 
     const resetProviderColor = (providerId) => {
-        const defaultColors = {
-            'perplexity': '#191A1A',
-            'gemini': '#000000',
-            'chatgpt': '#212121',
-            'claude': '#262624',
-            'grok': '#000000'
-        }
-        const defaultColor = defaultColors[providerId] || '#191A1A'
+        const defaultColor = PROVIDER_DEFAULT_COLORS[providerId] || DEFAULT_PROVIDER_COLOR
         updateProvider(providerId, 'color', defaultColor)
     }
 
