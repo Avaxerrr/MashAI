@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { X, Plus, Trash2, Save, Monitor, Cpu, RotateCcw, Star, Briefcase, User, Home, Zap, Code, Globe } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { X, Plus, Trash2, Save, Monitor, Cpu, RotateCcw, Star, Briefcase, User, Home, Zap, Code, Globe, GripVertical } from 'lucide-react'
 
 export default function SettingsModal({ isOpen, onClose, onSave, initialSettings }) {
     if (!isOpen) return null
@@ -17,6 +17,21 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     const [profiles, setProfiles] = useState([])
     const [providers, setProviders] = useState([])
     const [defaultProviderId, setDefaultProviderId] = useState('perplexity')
+
+    // Refs for auto-scroll
+    const profilesListRef = useRef(null)
+    const providersListRef = useRef(null)
+    const contentAreaRef = useRef(null) // Ref for the scrollable content area
+
+    // Track newly added items for pulse animation
+    const [newlyAddedProfileId, setNewlyAddedProfileId] = useState(null)
+    const [newlyAddedProviderId, setNewlyAddedProviderId] = useState(null)
+
+    // Drag-and-drop state
+    const [draggedProfileId, setDraggedProfileId] = useState(null)
+    const [dragOverProfileId, setDragOverProfileId] = useState(null)
+    const [draggedProviderId, setDraggedProviderId] = useState(null)
+    const [dragOverProviderId, setDragOverProviderId] = useState(null)
 
     // Load initial settings
     useEffect(() => {
@@ -37,6 +52,49 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [onClose])
+
+    // Auto-scroll to show newly added profile
+    useEffect(() => {
+        if (contentAreaRef.current && profiles.length > 0) {
+            setTimeout(() => {
+                if (contentAreaRef.current) {
+                    contentAreaRef.current.scrollTo({
+                        top: contentAreaRef.current.scrollHeight,
+                        behavior: 'smooth'
+                    })
+                }
+            }, 100)
+        }
+    }, [profiles.length])
+
+    // Auto-scroll to show newly added provider
+    useEffect(() => {
+        if (contentAreaRef.current && providers.length > 0) {
+            setTimeout(() => {
+                if (contentAreaRef.current) {
+                    contentAreaRef.current.scrollTo({
+                        top: contentAreaRef.current.scrollHeight,
+                        behavior: 'smooth'
+                    })
+                }
+            }, 100)
+        }
+    }, [providers.length])
+
+    // Clear pulse animation after 2 seconds
+    useEffect(() => {
+        if (newlyAddedProfileId) {
+            const timer = setTimeout(() => setNewlyAddedProfileId(null), 2000)
+            return () => clearTimeout(timer)
+        }
+    }, [newlyAddedProfileId])
+
+    useEffect(() => {
+        if (newlyAddedProviderId) {
+            const timer = setTimeout(() => setNewlyAddedProviderId(null), 2000)
+            return () => clearTimeout(timer)
+        }
+    }, [newlyAddedProviderId])
 
     const handleSave = () => {
         onSave({
@@ -79,6 +137,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     const addProfile = () => {
         const newId = 'profile-' + Date.now()
         setProfiles([...profiles, { id: newId, name: 'New Profile', icon: 'user', color: '#6366f1' }])
+        setNewlyAddedProfileId(newId)
     }
 
     const updateProfile = (id, field, value) => {
@@ -90,10 +149,18 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         setProfiles(profiles.filter(p => p.id !== id))
     }
 
+    const reorderProfiles = (fromIndex, toIndex) => {
+        const newProfiles = [...profiles]
+        const [movedProfile] = newProfiles.splice(fromIndex, 1)
+        newProfiles.splice(toIndex, 0, movedProfile)
+        setProfiles(newProfiles)
+    }
+
     // --- Provider Handlers ---
     const addProvider = () => {
         const newId = 'provider-' + Date.now()
         setProviders([...providers, { id: newId, name: 'New AI', url: 'https://', icon: 'globe', color: '#191A1A' }])
+        setNewlyAddedProviderId(newId)
     }
 
     const updateProvider = (id, field, value) => {
@@ -112,6 +179,13 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         }
 
         setProviders(providers.filter(p => p.id !== id))
+    }
+
+    const reorderProviders = (fromIndex, toIndex) => {
+        const newProviders = [...providers]
+        const [movedProvider] = newProviders.splice(fromIndex, 1)
+        newProviders.splice(toIndex, 0, movedProvider)
+        setProviders(newProviders)
     }
 
     const setAsDefault = (providerId) => {
@@ -207,7 +281,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 p-8 overflow-y-auto bg-[#323233]">
+                <div ref={contentAreaRef} className="flex-1 p-8 overflow-y-auto bg-[#323233] settings-scroll-smooth">
 
                     {/* GENERAL TAB */}
                     {activeTab === 'general' && (
@@ -241,60 +315,110 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                                     <Plus size={16} /> Add Profile
                                 </button>
                             </div>
-                            <div className="space-y-3">
-                                {profiles.map((profile, idx) => (
-                                    <div key={profile.id} className="flex items-center gap-4 bg-[#252526] p-4 rounded-xl transition-all">
-                                        {/* Icon & Color Selector */}
-                                        <div className="flex flex-col gap-2 flex-shrink-0">
-                                            <div
-                                                className="w-12 h-12 rounded-lg flex items-center justify-center text-white transition-all"
-                                                style={{ backgroundColor: profile.color || '#3b82f6' }}
-                                            >
-                                                {renderProfileIcon(profile.icon)}
-                                            </div>
-                                            <input
-                                                type="color"
-                                                value={profile.color || '#3b82f6'}
-                                                onChange={(e) => updateProfile(profile.id, 'color', e.target.value)}
-                                                className="w-12 h-6 rounded cursor-pointer border-0"
-                                                title="Profile Color"
-                                            />
-                                        </div>
+                            <div ref={profilesListRef} className="space-y-3">
+                                {profiles.map((profile, idx) => {
+                                    const isDragging = draggedProfileId === profile.id
+                                    const isDragOver = dragOverProfileId === profile.id
 
-                                        <div className="flex-1 space-y-3">
-                                            <input
-                                                type="text"
-                                                value={profile.name}
-                                                onChange={(e) => updateProfile(profile.id, 'name', e.target.value)}
-                                                className="w-full bg-[#1e1e1e] text-white text-sm px-3 py-2 rounded-lg outline-none border-0 focus:ring-2 focus:ring-blue-500 transition-all"
-                                                placeholder="Profile Name"
-                                            />
-                                            {/* Icon Selector */}
-                                            <div className="flex gap-2">
-                                                {availableIcons.map(({ name, component: IconComp }) => (
-                                                    <button
-                                                        key={name}
-                                                        onClick={() => updateProfile(profile.id, 'icon', name)}
-                                                        className={`p-2 rounded-lg transition-all ${profile.icon === name
-                                                            ? 'bg-blue-500/20 text-blue-400'
-                                                            : 'bg-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#2a2a2c]'
-                                                            }`}
-                                                        title={name}
-                                                    >
-                                                        <IconComp size={16} />
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => deleteProfile(profile.id)}
-                                            className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all"
-                                            title="Delete Profile"
+                                    return (
+                                        <div
+                                            key={profile.id}
+                                            draggable
+                                            onDragStart={(e) => {
+                                                setDraggedProfileId(profile.id)
+                                                e.dataTransfer.effectAllowed = 'move'
+                                            }}
+                                            onDragOver={(e) => {
+                                                e.preventDefault()
+                                                e.dataTransfer.dropEffect = 'move'
+                                                if (draggedProfileId && draggedProfileId !== profile.id) {
+                                                    setDragOverProfileId(profile.id)
+                                                }
+                                            }}
+                                            onDragLeave={(e) => {
+                                                if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget)) {
+                                                    setDragOverProfileId(null)
+                                                }
+                                            }}
+                                            onDrop={(e) => {
+                                                e.preventDefault()
+                                                if (draggedProfileId && draggedProfileId !== profile.id) {
+                                                    const draggedIndex = profiles.findIndex(p => p.id === draggedProfileId)
+                                                    const targetIndex = profiles.findIndex(p => p.id === profile.id)
+
+                                                    if (draggedIndex !== -1 && targetIndex !== -1) {
+                                                        reorderProfiles(draggedIndex, targetIndex)
+                                                    }
+                                                }
+                                                setDraggedProfileId(null)
+                                                setDragOverProfileId(null)
+                                            }}
+                                            onDragEnd={() => {
+                                                setDraggedProfileId(null)
+                                                setDragOverProfileId(null)
+                                            }}
+                                            className={`flex items-center gap-4 bg-[#252526] p-4 rounded-xl transition-all cursor-move ${newlyAddedProfileId === profile.id
+                                                ? 'neon-glow-blue'
+                                                : ''
+                                                } ${isDragOver ? 'border-l-4 border-l-blue-500' : ''}`}
+                                            style={{ opacity: isDragging ? 0.5 : 1 }}
                                         >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
-                                ))}
+                                            {/* Drag Handle */}
+                                            <div className="text-gray-500 hover:text-gray-300 cursor-grab active:cursor-grabbing">
+                                                <GripVertical size={20} />
+                                            </div>
+                                            {/* Icon & Color Selector */}
+                                            <div className="flex flex-col gap-2 flex-shrink-0">
+                                                <div
+                                                    className="w-12 h-12 rounded-lg flex items-center justify-center text-white transition-all"
+                                                    style={{ backgroundColor: profile.color || '#3b82f6' }}
+                                                >
+                                                    {renderProfileIcon(profile.icon)}
+                                                </div>
+                                                <input
+                                                    type="color"
+                                                    value={profile.color || '#3b82f6'}
+                                                    onChange={(e) => updateProfile(profile.id, 'color', e.target.value)}
+                                                    className="w-12 h-6 rounded cursor-pointer border-0"
+                                                    title="Profile Color"
+                                                />
+                                            </div>
+
+                                            <div className="flex-1 space-y-3">
+                                                <input
+                                                    type="text"
+                                                    value={profile.name}
+                                                    onChange={(e) => updateProfile(profile.id, 'name', e.target.value)}
+                                                    className="w-full bg-[#1e1e1e] text-white text-sm px-3 py-2 rounded-lg outline-none border-0 focus:ring-2 focus:ring-blue-500 transition-all"
+                                                    placeholder="Profile Name"
+                                                />
+                                                {/* Icon Selector */}
+                                                <div className="flex gap-2">
+                                                    {availableIcons.map(({ name, component: IconComp }) => (
+                                                        <button
+                                                            key={name}
+                                                            onClick={() => updateProfile(profile.id, 'icon', name)}
+                                                            className={`p-2 rounded-lg transition-all ${profile.icon === name
+                                                                ? 'bg-blue-500/20 text-blue-400'
+                                                                : 'bg-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#2a2a2c]'
+                                                                }`}
+                                                            title={name}
+                                                        >
+                                                            <IconComp size={16} />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => deleteProfile(profile.id)}
+                                                className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all"
+                                                title="Delete Profile"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </div>
                     )}
@@ -311,17 +435,61 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                                     <Plus size={16} /> Add AI
                                 </button>
                             </div>
-                            <div className="space-y-3">
-                                {providers.map((provider) => {
-                                    const isDefault = provider.id === defaultProviderId;
+                            <div ref={providersListRef} className="space-y-3">
+                                {providers.map((provider, idx) => {
+                                    const isDefault = provider.id === defaultProviderId
+                                    const isDragging = draggedProviderId === provider.id
+                                    const isDragOver = dragOverProviderId === provider.id
+
                                     return (
                                         <div
                                             key={provider.id}
-                                            className={`flex items-center gap-4 p-4 rounded-xl transition-all ${isDefault
-                                                ? 'bg-[#252526] ring-2 ring-blue-500/50 shadow-lg shadow-blue-500/10'
-                                                : 'bg-[#252526]'
-                                                }`}
+                                            draggable
+                                            onDragStart={(e) => {
+                                                setDraggedProviderId(provider.id)
+                                                e.dataTransfer.effectAllowed = 'move'
+                                            }}
+                                            onDragOver={(e) => {
+                                                e.preventDefault()
+                                                e.dataTransfer.dropEffect = 'move'
+                                                if (draggedProviderId && draggedProviderId !== provider.id) {
+                                                    setDragOverProviderId(provider.id)
+                                                }
+                                            }}
+                                            onDragLeave={(e) => {
+                                                if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget)) {
+                                                    setDragOverProviderId(null)
+                                                }
+                                            }}
+                                            onDrop={(e) => {
+                                                e.preventDefault()
+                                                if (draggedProviderId && draggedProviderId !== provider.id) {
+                                                    const draggedIndex = providers.findIndex(p => p.id === draggedProviderId)
+                                                    const targetIndex = providers.findIndex(p => p.id === provider.id)
+
+                                                    if (draggedIndex !== -1 && targetIndex !== -1) {
+                                                        reorderProviders(draggedIndex, targetIndex)
+                                                    }
+                                                }
+                                                setDraggedProviderId(null)
+                                                setDragOverProviderId(null)
+                                            }}
+                                            onDragEnd={() => {
+                                                setDraggedProviderId(null)
+                                                setDragOverProviderId(null)
+                                            }}
+                                            className={`flex items-center gap-4 p-4 rounded-xl transition-all cursor-move ${newlyAddedProviderId === provider.id
+                                                ? 'bg-[#252526] neon-glow-green'
+                                                : isDefault
+                                                    ? 'bg-[#252526] ring-2 ring-blue-500/50 shadow-lg shadow-blue-500/10'
+                                                    : 'bg-[#252526]'
+                                                } ${isDragOver ? 'border-l-4 border-l-green-500' : ''}`}
+                                            style={{ opacity: isDragging ? 0.5 : 1 }}
                                         >
+                                            {/* Drag Handle */}
+                                            <div className="text-gray-500 hover:text-gray-300 cursor-grab active:cursor-grabbing">
+                                                <GripVertical size={20} />
+                                            </div>
                                             {/* Star button for setting default */}
                                             <button
                                                 onClick={() => setAsDefault(provider.id)}
@@ -440,6 +608,6 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     )
 }

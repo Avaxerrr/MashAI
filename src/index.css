@@ -76,3 +76,41 @@ input[type="color"]::-moz-color-swatch {
     border: none;
     border-radius: 8px;
 }
+
+/* Neon glow animation for newly added items */
+@keyframes neon-glow-blue {
+
+    0%,
+    100% {
+        box-shadow: 0 0 3px #3b82f6, 0 0 7px #3b82f6, 0 0 14px #3b82f6, 0 0 28px #3b82f6;
+    }
+
+    50% {
+        box-shadow: 0 0 7px #60a5fa, 0 0 14px #60a5fa, 0 0 28px #60a5fa, 0 0 42px #60a5fa;
+    }
+}
+
+@keyframes neon-glow-green {
+
+    0%,
+    100% {
+        box-shadow: 0 0 3px #22c55e, 0 0 7px #22c55e, 0 0 14px #22c55e, 0 0 28px #22c55e;
+    }
+
+    50% {
+        box-shadow: 0 0 7px #4ade80, 0 0 14px #4ade80, 0 0 28px #4ade80, 0 0 42px #4ade80;
+    }
+}
+
+.neon-glow-blue {
+    animation: neon-glow-blue 1s ease-in-out infinite;
+}
+
+.neon-glow-green {
+    animation: neon-glow-green 1s ease-in-out infinite;
+}
+
+/* Smooth scrolling for settings content */
+.settings-scroll-smooth {
+    scroll-behavior: smooth;
+}
