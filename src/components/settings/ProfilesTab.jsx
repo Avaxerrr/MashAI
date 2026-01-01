@@ -128,8 +128,11 @@ export default function ProfilesTab({
                                     type="text"
                                     value={profile.name}
                                     onChange={(e) => updateProfile(profile.id, 'name', e.target.value)}
-                                    className="w-full bg-[#1e1e1e] text-white text-sm px-3 py-2 rounded-lg outline-none border-0 focus:ring-2 focus:ring-blue-500 transition-all"
-                                    placeholder="Profile Name"
+                                    className={`w-full bg-[#1e1e1e] text-white text-sm px-3 py-2 rounded-lg outline-none border-2 transition-all ${!profile.name.trim()
+                                            ? 'border-red-500/50 focus:ring-2 focus:ring-red-500'
+                                            : 'border-transparent focus:ring-2 focus:ring-blue-500'
+                                        }`}
+                                    placeholder="Profile Name (required)"
                                 />
                                 {/* Icon Selector */}
                                 <div className="flex gap-2">
@@ -138,8 +141,8 @@ export default function ProfilesTab({
                                             key={name}
                                             onClick={() => updateProfile(profile.id, 'icon', name)}
                                             className={`p-2 rounded-lg transition-all ${profile.icon === name
-                                                    ? 'bg-blue-500/20 text-blue-400'
-                                                    : 'bg-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#2a2a2c]'
+                                                ? 'bg-blue-500/20 text-blue-400'
+                                                : 'bg-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#2a2a2c]'
                                                 }`}
                                             title={name}
                                         >

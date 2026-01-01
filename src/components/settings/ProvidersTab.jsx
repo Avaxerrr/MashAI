@@ -95,10 +95,10 @@ export default function ProvidersTab({
                                 setDragOverProviderId(null)
                             }}
                             className={`flex items-center gap-4 p-4 rounded-xl transition-all cursor-move ${newlyAddedProviderId === provider.id
-                                    ? 'bg-[#252526] neon-glow-green'
-                                    : isDefault
-                                        ? 'bg-[#252526] ring-2 ring-blue-500/50 shadow-lg shadow-blue-500/10'
-                                        : 'bg-[#252526]'
+                                ? 'bg-[#252526] neon-glow-green'
+                                : isDefault
+                                    ? 'bg-[#252526] ring-2 ring-blue-500/50 shadow-lg shadow-blue-500/10'
+                                    : 'bg-[#252526]'
                                 } ${isDragOver ? 'border-l-4 border-l-green-500' : ''}`}
                             style={{ opacity: isDragging ? 0.5 : 1 }}
                         >
@@ -110,8 +110,8 @@ export default function ProvidersTab({
                             <button
                                 onClick={() => setAsDefault(provider.id)}
                                 className={`p-2 rounded-lg transition-all ${isDefault
-                                        ? 'text-yellow-400 bg-yellow-500/10'
-                                        : 'text-gray-600 hover:text-yellow-400 hover:bg-yellow-500/5'
+                                    ? 'text-yellow-400 bg-yellow-500/10'
+                                    : 'text-gray-600 hover:text-yellow-400 hover:bg-yellow-500/5'
                                     }`}
                                 title={isDefault ? 'Default AI' : 'Set as default'}
                             >
@@ -159,15 +159,21 @@ export default function ProvidersTab({
                                     type="text"
                                     value={provider.name}
                                     onChange={(e) => updateProvider(provider.id, 'name', e.target.value)}
-                                    className="w-full bg-[#1e1e1e] text-white text-sm font-medium px-3 py-2 rounded-lg outline-none border-0 focus:ring-2 focus:ring-blue-500 transition-all"
-                                    placeholder="Provider Name"
+                                    className={`w-full bg-[#1e1e1e] text-white text-sm font-medium px-3 py-2 rounded-lg outline-none border-2 transition-all ${!provider.name.trim()
+                                            ? 'border-red-500/50 focus:ring-2 focus:ring-red-500'
+                                            : 'border-transparent focus:ring-2 focus:ring-blue-500'
+                                        }`}
+                                    placeholder="Provider Name (required)"
                                 />
                                 <input
                                     type="text"
                                     value={provider.url}
                                     onChange={(e) => updateProvider(provider.id, 'url', e.target.value)}
-                                    className="w-full bg-[#1e1e1e] text-xs text-blue-400 px-3 py-2 rounded-lg outline-none border-0 focus:ring-2 focus:ring-blue-500 transition-all"
-                                    placeholder="https://..."
+                                    className={`w-full bg-[#1e1e1e] text-xs text-blue-400 px-3 py-2 rounded-lg outline-none border-2 transition-all ${!getHostnameSafe(provider.url)
+                                            ? 'border-red-500/50 focus:ring-2 focus:ring-red-500'
+                                            : 'border-transparent focus:ring-2 focus:ring-blue-500'
+                                        }`}
+                                    placeholder="https://... (required)"
                                 />
                             </div>
                             <div className="flex items-center gap-3">

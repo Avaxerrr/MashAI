@@ -154,11 +154,6 @@ class TabManager {
         return orderedTabs;
     }
 
-    getAllTabs() {
-        return Array.from(this.tabs.values())
-            .map(tab => ({ id: tab.id, title: tab.title, url: tab.url, profileId: tab.profileId }));
-    }
-
     getActiveView() {
         if (!this.activeTabId) return null;
         const tab = this.tabs.get(this.activeTabId);
