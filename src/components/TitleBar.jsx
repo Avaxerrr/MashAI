@@ -6,6 +6,7 @@ export default function TitleBar({
     activeProfile,
     tabs = [],
     activeTabId,
+    tabMemory = {},
     onCreateTab,
     onCreateTabWithUrl,
     onSwitchTab,
@@ -179,12 +180,20 @@ export default function TitleBar({
                                         ${!isActive ? 'bg-[#2d2d2d] hover:bg-[#2a2a2a]' : ''}
                                         min-w-[40px] max-w-[160px] flex-1 transition-all duration-200
                                         ${isDragOver ? 'border-l-2 border-l-blue-500' : ''}
+                                        ${tab.loaded === false ? 'opacity-50' : ''}
                                     `}
-                                title={tab.title}
+                                title={(() => {
+                                    const mem = tabMemory[tab.id];
+                                    const memStr = mem?.memory ? ` (${mem.memory} MB)` : '';
+                                    if (tab.loaded === false) {
+                                        return `${tab.title} (paused)`;
+                                    }
+                                    return `${tab.title}${memStr}`;
+                                })()}
                                 style={{
                                     WebkitAppRegion: 'no-drag',
                                     backgroundColor: isActive ? activeBg : undefined,
-                                    opacity: isDragging ? 0.5 : 1
+                                    opacity: isDragging ? 0.5 : (tab.loaded === false ? 0.5 : 1)
                                 }}
                             >
                                 <img

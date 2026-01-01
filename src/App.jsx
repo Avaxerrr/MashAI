@@ -12,6 +12,7 @@ function App() {
 
     const [aiProviders, setAiProviders] = useState([]) // New state for providers
     const [defaultProviderId, setDefaultProviderId] = useState('perplexity')
+    const [tabMemory, setTabMemory] = useState({}) // Per-tab memory info
 
     // Ref to hold the latest closeTab function to avoid stale closures in listeners
     const closeTabRef = useRef()
@@ -75,13 +76,22 @@ function App() {
             setActiveTabId(tab.id)
         }
 
-        const handleTabUpdated = ({ id, title, url }) => {
+        const handleTabUpdated = ({ id, title, url, loaded, suspended }) => {
             setTabs(prev => prev.map(tab =>
                 tab.id === id ? {
                     ...tab,
                     ...(title !== undefined && { title }),
-                    ...(url !== undefined && { url })
+                    ...(url !== undefined && { url }),
+                    ...(loaded !== undefined && { loaded }),
+                    ...(suspended !== undefined && { suspended })
                 } : tab
+            ))
+        }
+
+        const handleTabLoading = ({ id }) => {
+            // Mark tab as loading (for UI spinner)
+            setTabs(prev => prev.map(tab =>
+                tab.id === id ? { ...tab, loading: true } : tab
             ))
         }
 
@@ -117,6 +127,7 @@ function App() {
         const cleanupProfilesLoaded = window.api.onProfilesLoaded(handleProfilesLoaded)
         const cleanupTabCreated = window.api.onTabCreated(handleTabCreated)
         const cleanupTabUpdated = window.api.onTabUpdated(handleTabUpdated)
+        const cleanupTabLoading = window.api.onTabLoading ? window.api.onTabLoading(handleTabLoading) : null
         const cleanupRestoreActive = window.api.onRestoreActive(handleRestoreActive)
         const cleanupProfileTabsLoaded = window.api.onProfileTabsLoaded(handleProfileTabsLoaded)
 
@@ -164,6 +175,7 @@ function App() {
             if (cleanupProfilesLoaded) cleanupProfilesLoaded()
             if (cleanupTabCreated) cleanupTabCreated()
             if (cleanupTabUpdated) cleanupTabUpdated()
+            if (cleanupTabLoading) cleanupTabLoading()
             if (cleanupRestoreActive) cleanupRestoreActive()
             if (cleanupProfileTabsLoaded) cleanupProfileTabsLoaded()
             if (cleanupSwitchProfileRequest) cleanupSwitchProfileRequest()
@@ -172,6 +184,23 @@ function App() {
             if (cleanupSettingsUpdated) cleanupSettingsUpdated()
             if (cleanupActiveProfileChanged) cleanupActiveProfileChanged()
         }
+    }, [])
+
+    // Fetch tab memory periodically for tooltips
+    useEffect(() => {
+        const fetchTabMemory = async () => {
+            if (window.api?.getAllTabsMemory) {
+                try {
+                    const memory = await window.api.getAllTabsMemory()
+                    setTabMemory(memory)
+                } catch (e) {
+                    // API not ready yet
+                }
+            }
+        }
+        fetchTabMemory()
+        const interval = setInterval(fetchTabMemory, 10000) // Every 10 seconds
+        return () => clearInterval(interval)
     }, [])
 
     const createTab = () => {
@@ -255,6 +284,10 @@ function App() {
     }
 
     const switchProfile = (profileId) => {
+        // Notify backend to handle suspension/closing of old profile's tabs
+        // Backend determines the "from" profile from the current active tab
+        window.api.switchProfile(profileId)
+
         setActiveProfileId(profileId)
         // Save to localStorage cache
         localStorage.setItem('lastActiveProfileId', profileId)
@@ -314,6 +347,7 @@ function App() {
                 activeProfile={profiles.find(p => p.id === activeProfileId)}
                 tabs={currentTabs}
                 activeTabId={activeTabId}
+                tabMemory={tabMemory}
                 onCreateTab={createTab}
                 onCreateTabWithUrl={createTabWithUrl}
                 onSwitchTab={switchTab}

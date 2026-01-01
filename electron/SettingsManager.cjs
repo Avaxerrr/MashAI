@@ -53,7 +53,17 @@ class SettingsManager {
                     color: '#000000'
                 }
             ],
-            defaultProviderId: 'perplexity'
+            defaultProviderId: 'perplexity',
+            performance: {
+                tabLoadingStrategy: 'lastActiveOnly',
+                autoSuspendEnabled: true,
+                autoSuspendMinutes: 30,
+                profileSwitchBehavior: 'suspend'
+            },
+            general: {
+                hardwareAcceleration: true,
+                rememberWindowPosition: true
+            }
         };
     }
 

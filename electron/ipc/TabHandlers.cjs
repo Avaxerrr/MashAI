@@ -5,11 +5,13 @@ const { ipcMain } = require('electron');
  * @param {BrowserWindow} mainWindow - The main application window
  * @param {Object} dependencies - Required dependencies
  * @param {TabManager} dependencies.tabManager - Tab manager instance
+ * @param {SettingsManager} dependencies.settingsManager - Settings manager instance
+ * @param {SessionManager} dependencies.sessionManager - Session manager instance
  * @param {Function} dependencies.saveSession - Function to save session
  * @param {Function} dependencies.updateViewBounds - Function to update view bounds
  * @param {Array} dependencies.closedTabs - Array to track closed tabs
  */
-function register(mainWindow, { tabManager, saveSession, updateViewBounds, closedTabs }) {
+function register(mainWindow, { tabManager, settingsManager, sessionManager, saveSession, updateViewBounds, closedTabs }) {
     // Create new tab
     ipcMain.on('create-tab', (event, profileId) => {
         const id = tabManager.createTab(profileId);
@@ -143,6 +145,65 @@ function register(mainWindow, { tabManager, saveSession, updateViewBounds, close
     // Reorder tabs
     ipcMain.on('reorder-tabs', (event, tabOrder) => {
         tabManager.reorderTabs(tabOrder);
+        saveSession();
+    });
+
+    // Switch profile with suspension logic
+    // NOTE: We determine the "from" profile from the backend's active tab,
+    // not from the frontend, because React state may be stale
+    ipcMain.on('switch-profile', (event, { toProfileId }) => {
+        if (!toProfileId) {
+            return;
+        }
+
+        // Determine the current profile from the active tab
+        let fromProfileId = null;
+        if (tabManager.activeTabId) {
+            const activeTab = tabManager.tabs.get(tabManager.activeTabId);
+            if (activeTab) {
+                fromProfileId = activeTab.profileId;
+            }
+        }
+
+        // If no active tab or switching to the same profile, skip
+        if (!fromProfileId || fromProfileId === toProfileId) {
+            console.log(`[TabHandlers] No profile switch needed (from: ${fromProfileId}, to: ${toProfileId})`);
+            return;
+        }
+
+        // Get the profile switch behavior setting
+        const settings = settingsManager.getSettings();
+        const behavior = settings.performance?.profileSwitchBehavior || 'suspend';
+
+        console.log(`[TabHandlers] Switching from profile ${fromProfileId} to ${toProfileId}, behavior: ${behavior}`);
+
+        // Get all tabs from the old profile
+        const oldProfileTabs = tabManager.getTabsForProfile(fromProfileId);
+        console.log(`[TabHandlers] Old profile has ${oldProfileTabs.length} tabs`);
+
+        if (behavior === 'suspend') {
+            // Suspend (unload) all tabs from the old profile
+            oldProfileTabs.forEach(tab => {
+                if (tabManager.isTabLoaded(tab.id)) {
+                    console.log(`[TabHandlers] Suspending tab ${tab.id} (${tab.title})`);
+                    tabManager.unloadTab(tab.id);
+                }
+            });
+        } else if (behavior === 'close') {
+            // Close all tabs from the old profile
+            oldProfileTabs.forEach(tab => {
+                console.log(`[TabHandlers] Closing tab ${tab.id} (${tab.title})`);
+                tabManager.closeTab(tab.id);
+                mainWindow.webContents.send('tab-closed-backend', tab.id);
+            });
+        }
+        // 'keep' behavior does nothing - tabs stay loaded
+
+        // Update session tracking for the old profile
+        if (sessionManager && tabManager.activeTabId) {
+            sessionManager.setActiveTabForProfile(fromProfileId, tabManager.activeTabId);
+        }
+
         saveSession();
     });
 }

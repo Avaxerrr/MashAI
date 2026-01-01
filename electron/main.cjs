@@ -1,5 +1,6 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { TITLEBAR_HEIGHT, DEFAULT_WINDOW, SETTINGS_WINDOW, MAX_CLOSED_TABS } = require('./constants.cjs');
 const TabManager = require('./TabManager.cjs');
 const ProfileManager = require('./ProfileManager.cjs');
@@ -13,6 +14,21 @@ const TabHandlers = require('./ipc/TabHandlers.cjs');
 const NavigationHandlers = require('./ipc/NavigationHandlers.cjs');
 const ProfileHandlers = require('./ipc/ProfileHandlers.cjs');
 const SettingsHandlers = require('./ipc/SettingsHandlers.cjs');
+
+// Check hardware acceleration setting BEFORE app is ready
+// This must be done synchronously before app.whenReady()
+try {
+    const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+    if (fs.existsSync(settingsPath)) {
+        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+        if (settings.general?.hardwareAcceleration === false) {
+            console.log('[main] Hardware acceleration disabled by user setting');
+            app.disableHardwareAcceleration();
+        }
+    }
+} catch (e) {
+    console.warn('[main] Could not read settings for hardware acceleration:', e.message);
+}
 
 // Global references
 let mainWindow;
@@ -153,7 +169,7 @@ function createWindow() {
 
     // NOW initialize TabManager and SessionManager with the valid mainWindow
     tabManager = new TabManager(mainWindow, settingsManager);
-    sessionManager = new SessionManager(tabManager);
+    sessionManager = new SessionManager(tabManager, settingsManager);  // Pass settingsManager for lazy loading
 
     // Initialize menu builder and register handlers
     menuBuilder = new MenuBuilder(mainWindow, {
@@ -173,6 +189,8 @@ function createWindow() {
 
     TabHandlers.register(mainWindow, {
         tabManager,
+        settingsManager,
+        sessionManager,
         saveSession: () => sessionManager.saveSession(),
         updateViewBounds,
         closedTabs

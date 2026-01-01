@@ -74,6 +74,22 @@ const IPC_EVENTS = {
     GET_ALL_TABS: 'get-all-tabs'
 };
 
+// Performance settings defaults (memory-optimized out of box)
+const PERFORMANCE_DEFAULTS = {
+    // 'all' | 'activeProfile' | 'lastActiveOnly'
+    tabLoadingStrategy: 'lastActiveOnly',
+    // Auto-suspend inactive tabs
+    autoSuspendEnabled: true,
+    autoSuspendMinutes: 30,
+    excludeActiveProfile: true,  // Don't auto-suspend tabs in the active profile
+    // Profile switch behavior: 'keep' | 'suspend' | 'close'
+    profileSwitchBehavior: 'suspend',
+    // Hardware acceleration
+    hardwareAcceleration: true,
+    // Remember window position
+    rememberWindowPosition: true
+};
+
 // Default provider
 const DEFAULT_PROVIDER_ID = 'perplexity';
 
@@ -84,5 +100,6 @@ module.exports = {
     MAX_CLOSED_TABS,
     SESSION_RESTORE_DELAY_MS,
     IPC_EVENTS,
+    PERFORMANCE_DEFAULTS,
     DEFAULT_PROVIDER_ID
 };

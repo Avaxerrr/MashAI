@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Save, Monitor, RotateCcw } from 'lucide-react'
 import GeneralTab from './settings/GeneralTab'
+import PerformanceTab from './settings/PerformanceTab'
 import ProfilesTab from './settings/ProfilesTab'
 import ProvidersTab from './settings/ProvidersTab'
 import Toast from './Toast'
@@ -12,6 +13,20 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     const [profiles, setProfiles] = useState([])
     const [providers, setProviders] = useState([])
     const [defaultProviderId, setDefaultProviderId] = useState('perplexity')
+
+    // Performance settings state
+    const [performanceSettings, setPerformanceSettings] = useState({
+        tabLoadingStrategy: 'lastActiveOnly',
+        autoSuspendEnabled: true,
+        autoSuspendMinutes: 30,
+        profileSwitchBehavior: 'suspend'
+    })
+
+    // General settings state
+    const [generalSettings, setGeneralSettings] = useState({
+        hardwareAcceleration: true,
+        rememberWindowPosition: true
+    })
 
     // Refs for auto-scroll
     const profilesListRef = useRef(null)
@@ -39,6 +54,12 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
             setProfiles(initialSettings.profiles || [])
             setProviders(initialSettings.aiProviders || [])
             setDefaultProviderId(initialSettings.defaultProviderId || 'perplexity')
+            if (initialSettings.performance) {
+                setPerformanceSettings(prev => ({ ...prev, ...initialSettings.performance }))
+            }
+            if (initialSettings.general) {
+                setGeneralSettings(prev => ({ ...prev, ...initialSettings.general }))
+            }
         }
     }, [initialSettings])
 
@@ -100,7 +121,9 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         onSave({
             profiles,
             aiProviders: providers,
-            defaultProviderId
+            defaultProviderId,
+            performance: performanceSettings,
+            general: generalSettings
         })
         // Show success toast
         setShowToast(true)
@@ -242,16 +265,37 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                         onClick={() => setActiveTab('providers')}
                         className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'providers'
                             ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                            : 'text-gray-400 hover:text-white hover:bg-[#18181b]'
+                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
                             }`}
                     >
                         AI Providers
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('performance')}
+                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'performance'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
+                            }`}
+                    >
+                        Performance
                     </button>
                 </div>
 
                 {/* Content */}
                 <div ref={contentAreaRef} className="flex-1 p-8 overflow-y-auto bg-[#323233] settings-scroll-smooth">
-                    {activeTab === 'general' && <GeneralTab />}
+                    {activeTab === 'general' && (
+                        <GeneralTab
+                            generalSettings={generalSettings}
+                            onGeneralChange={setGeneralSettings}
+                        />
+                    )}
+
+                    {activeTab === 'performance' && (
+                        <PerformanceTab
+                            performanceSettings={performanceSettings}
+                            onPerformanceChange={setPerformanceSettings}
+                        />
+                    )}
 
                     {activeTab === 'profiles' && (
                         <ProfilesTab

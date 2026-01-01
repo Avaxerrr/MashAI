@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('api', {
 
     // Profile
     getProfileTabs: (profileId) => ipcRenderer.send('get-profile-tabs', profileId),
+    switchProfile: (toProfileId) => ipcRenderer.send('switch-profile', { toProfileId }),
     getAllTabs: () => ipcRenderer.invoke('get-all-tabs'),
 
     // Settings
@@ -32,6 +33,10 @@ contextBridge.exposeInMainWorld('api', {
         ipcRenderer.on('settings-updated', handler);
         return () => ipcRenderer.removeListener('settings-updated', handler);
     },
+
+    // Memory Usage
+    getMemoryUsage: () => ipcRenderer.invoke('get-memory-usage'),
+    getAllTabsMemory: () => ipcRenderer.invoke('get-all-tabs-memory'),
 
 
     // Navigation
@@ -54,6 +59,11 @@ contextBridge.exposeInMainWorld('api', {
         const handler = (e, data) => callback(data);
         ipcRenderer.on('tab-updated', handler);
         return () => ipcRenderer.removeListener('tab-updated', handler);
+    },
+    onTabLoading: (callback) => {
+        const handler = (e, data) => callback(data);
+        ipcRenderer.on('tab-loading', handler);
+        return () => ipcRenderer.removeListener('tab-loading', handler);
     },
     onRestoreActive: (callback) => {
         const handler = (e, id) => callback(id);

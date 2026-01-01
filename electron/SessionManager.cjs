@@ -4,10 +4,12 @@ const fs = require('fs');
 
 /**
  * Manages session persistence (tabs, window state, etc.)
+ * Supports lazy loading based on performance settings
  */
 class SessionManager {
-    constructor(tabManager) {
+    constructor(tabManager, settingsManager) {
         this.tabManager = tabManager;
+        this.settingsManager = settingsManager;
         this.currentWindowState = { width: 1200, height: 800, isMaximized: false };
         this.activeTabByProfile = {}; // Track active tab per profile in memory
     }
@@ -26,6 +28,20 @@ class SessionManager {
      */
     updateWindowState(state) {
         this.currentWindowState = { ...this.currentWindowState, ...state };
+    }
+
+    /**
+     * Get the tab loading strategy from settings
+     * @returns {string} 'all' | 'activeProfile' | 'lastActiveOnly'
+     */
+    getTabLoadingStrategy() {
+        if (this.settingsManager) {
+            const settings = this.settingsManager.getSettings();
+            if (settings.performance && settings.performance.tabLoadingStrategy) {
+                return settings.performance.tabLoadingStrategy;
+            }
+        }
+        return 'lastActiveOnly'; // Default to memory-optimized
     }
 
     /**
@@ -84,7 +100,7 @@ class SessionManager {
     }
 
     /**
-     * Restore session from disk
+     * Restore session from disk with lazy loading support
      * @param {BrowserWindow} mainWindow - The main window to send events to
      * @param {Function} updateViewBounds - Function to update view bounds
      */
@@ -101,26 +117,102 @@ class SessionManager {
                 this.activeTabByProfile = { ...data.activeTabByProfile };
             }
 
+            const strategy = this.getTabLoadingStrategy();
+            const lastActiveProfileId = data.lastActiveProfileId;
+            const activeTabId = data.activeTabId;
+
+            console.log(`[SessionManager] Restoring session with strategy: ${strategy}`);
+            console.log(`[SessionManager] Found ${data.tabs.length} tabs to restore`);
+
+            // Determine which tabs should be loaded immediately
+            let tabsToLoad = new Set();
+
+            switch (strategy) {
+                case 'all':
+                    // Load all tabs (original behavior - high memory)
+                    console.log('[SessionManager] Strategy: all - loading all tabs');
+                    data.tabs.forEach(t => tabsToLoad.add(t.id));
+                    break;
+
+                case 'activeProfile':
+                    // Load only tabs from the last active profile
+                    console.log(`[SessionManager] Strategy: activeProfile - loading tabs for profile ${lastActiveProfileId}`);
+                    data.tabs.forEach(t => {
+                        if (t.profileId === lastActiveProfileId) {
+                            tabsToLoad.add(t.id);
+                        }
+                    });
+                    break;
+
+                case 'lastActiveOnly':
+                default:
+                    // Load only the last active tab (lowest memory)
+                    console.log(`[SessionManager] Strategy: lastActiveOnly - loading only tab ${activeTabId}`);
+                    if (activeTabId) {
+                        tabsToLoad.add(activeTabId);
+                    } else if (lastActiveProfileId) {
+                        // Fallback: load the last active tab for the profile
+                        const profileActiveTab = this.activeTabByProfile[lastActiveProfileId];
+                        if (profileActiveTab) {
+                            tabsToLoad.add(profileActiveTab);
+                        } else if (data.tabs.length > 0) {
+                            // Last resort: load the first tab
+                            tabsToLoad.add(data.tabs[0].id);
+                        }
+                    }
+                    break;
+            }
+
+            console.log(`[SessionManager] Will load ${tabsToLoad.size} tabs immediately, ${data.tabs.length - tabsToLoad.size} will be lazy-loaded`);
+
+            // Register or create tabs based on whether they should be loaded
             data.tabs.forEach(tabData => {
-                const id = this.tabManager.createTab(tabData.profileId, tabData.url, tabData.id);
-                mainWindow.webContents.send('tab-created', {
-                    id,
-                    profileId: tabData.profileId,
-                    title: tabData.title || 'Restored'
-                });
+                const shouldLoad = tabsToLoad.has(tabData.id);
+
+                if (shouldLoad) {
+                    // Create tab with WebContentsView immediately
+                    console.log(`[SessionManager] Creating tab ${tabData.id} with view (immediate load)`);
+                    const id = this.tabManager.createTab(tabData.profileId, tabData.url, tabData.id);
+                    mainWindow.webContents.send('tab-created', {
+                        id,
+                        profileId: tabData.profileId,
+                        title: tabData.title || 'Restored',
+                        loaded: true
+                    });
+                } else {
+                    // Register metadata only - lazy load later
+                    console.log(`[SessionManager] Registering tab ${tabData.id} as metadata (lazy)`);
+                    this.tabManager.registerTabMetadata({
+                        id: tabData.id,
+                        profileId: tabData.profileId,
+                        url: tabData.url,
+                        title: tabData.title || 'Restored'
+                    });
+                    mainWindow.webContents.send('tab-created', {
+                        id: tabData.id,
+                        profileId: tabData.profileId,
+                        title: tabData.title || 'Restored',
+                        loaded: false  // Frontend knows this tab isn't loaded yet
+                    });
+                }
             });
 
-            // Try to restore the exact active tab first
-            if (data.activeTabId && this.tabManager.tabs.has(data.activeTabId)) {
+            // Log stats
+            const stats = this.tabManager.getLoadStats();
+            console.log(`[SessionManager] Tab stats: ${stats.loaded} loaded, ${stats.unloaded} unloaded, ${stats.total} total`);
+
+            // Switch to the active tab
+            if (activeTabId && this.tabManager.tabs.has(activeTabId)) {
                 setTimeout(() => {
-                    this.tabManager.switchTo(data.activeTabId);
-                    mainWindow.webContents.send('restore-active', data.activeTabId);
+                    // switchTo() will load the tab if needed
+                    this.tabManager.switchTo(activeTabId);
+                    mainWindow.webContents.send('restore-active', activeTabId);
                     updateViewBounds();
                 }, 500);
-            } else if (data.lastActiveProfileId) {
+            } else if (lastActiveProfileId) {
                 // If we can't restore the exact tab, switch to the last active profile
                 setTimeout(() => {
-                    const profileTabs = this.tabManager.getTabsForProfile(data.lastActiveProfileId);
+                    const profileTabs = this.tabManager.getTabsForProfile(lastActiveProfileId);
                     if (profileTabs.length > 0) {
                         // Switch to the first tab of the last active profile
                         this.tabManager.switchTo(profileTabs[0].id);
@@ -180,6 +272,15 @@ class SessionManager {
             console.error('Failed to get last active tab for profile:', e);
         }
         return null;
+    }
+
+    /**
+     * Update the active tab for a profile (for tracking purposes)
+     * @param {string} profileId - The profile ID
+     * @param {string} tabId - The tab ID
+     */
+    setActiveTabForProfile(profileId, tabId) {
+        this.activeTabByProfile[profileId] = tabId;
     }
 }
 
