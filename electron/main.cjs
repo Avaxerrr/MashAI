@@ -1,25 +1,33 @@
-const { app, BrowserWindow, ipcMain, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow } = require('electron');
 const path = require('path');
-const fs = require('fs');
 const TabManager = require('./TabManager.cjs');
 const ProfileManager = require('./ProfileManager.cjs');
 const SettingsManager = require('./SettingsManager.cjs');
+const SessionManager = require('./SessionManager.cjs');
+const MenuBuilder = require('./MenuBuilder.cjs');
 
+// Import IPC handlers
+const WindowHandlers = require('./ipc/WindowHandlers.cjs');
+const TabHandlers = require('./ipc/TabHandlers.cjs');
+const NavigationHandlers = require('./ipc/NavigationHandlers.cjs');
+const ProfileHandlers = require('./ipc/ProfileHandlers.cjs');
+const SettingsHandlers = require('./ipc/SettingsHandlers.cjs');
+
+// Global references
 let mainWindow;
 let settingsWindow;
 let tabManager;
 let profileManager;
 let settingsManager;
-let currentWindowState = { width: 1200, height: 800, isMaximized: false }; // Track state
+let sessionManager;
+let menuBuilder;
+
 const closedTabs = [];
 const isDev = process.env.NODE_ENV === 'development';
 
-// Lazy getter for SESSION_FILE to avoid calling app.getPath before app is ready
-function getSessionFile() {
-    return path.join(app.getPath('userData'), 'session.json');
-}
-
-
+/**
+ * Create the settings window
+ */
 function createSettingsWindow() {
     // Prevent multiple settings windows
     if (settingsWindow) {
@@ -60,18 +68,51 @@ function createSettingsWindow() {
     });
 }
 
+/**
+ * Update view bounds for the active tab
+ */
+function updateViewBounds() {
+    if (!mainWindow || !tabManager) return;
+    const bounds = mainWindow.getBounds();
+    const TITLEBAR_HEIGHT = 36;
+    const contentBounds = {
+        x: 0,
+        y: TITLEBAR_HEIGHT,
+        width: bounds.width,
+        height: bounds.height - TITLEBAR_HEIGHT
+    };
+    tabManager.resizeActiveView(contentBounds);
+}
+
+/**
+ * Create the main application window
+ */
 function createWindow() {
+    // Initialize settings and profile managers first (don't need mainWindow)
+    settingsManager = new SettingsManager();
+    profileManager = new ProfileManager(settingsManager);
+
+    // Pre-fetch favicons for providers that don't have them cached
+    settingsManager.ensureProvidersFavicons().catch(err => {
+        console.error('Failed to fetch provider favicons:', err);
+    });
+
+    // Load window state from previous session (SessionManager can load state before tabManager exists)
+    const sessionPath = require('path').join(app.getPath('userData'), 'session.json');
     let windowState = {};
     try {
-        if (fs.existsSync(getSessionFile())) {
-            const data = JSON.parse(fs.readFileSync(getSessionFile(), 'utf-8'));
-            if (data.windowBounds) windowState = data.windowBounds;
-            if (data.isMaximized) windowState.isMaximized = true;
+        const fs = require('fs');
+        if (fs.existsSync(sessionPath)) {
+            const data = JSON.parse(fs.readFileSync(sessionPath, 'utf-8'));
+            if (data.windowBounds) {
+                windowState = { ...data.windowBounds, isMaximized: data.isMaximized || false };
+            }
         }
     } catch (e) {
         console.error('Failed to load window state:', e);
     }
 
+    // Create mainWindow FIRST
     mainWindow = new BrowserWindow({
         width: windowState.width || 1200,
         height: windowState.height || 800,
@@ -103,38 +144,55 @@ function createWindow() {
         mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
     }
 
-    settingsManager = new SettingsManager();
-    // Initialize ProfileManager with settings
-    profileManager = new ProfileManager(settingsManager);
+    // NOW initialize TabManager and SessionManager with the valid mainWindow
+    tabManager = new TabManager(mainWindow, settingsManager);
+    sessionManager = new SessionManager(tabManager);
 
-    // Pre-fetch favicons for providers that don't have them cached
-    settingsManager.ensureProvidersFavicons().catch(err => {
-        console.error('Failed to fetch provider favicons:', err);
+    // Initialize menu builder and register handlers
+    menuBuilder = new MenuBuilder(mainWindow, {
+        tabManager,
+        profileManager,
+        settingsManager,
+        closedTabs,
+        saveSession: () => sessionManager.saveSession(),
+        updateViewBounds,
+        createSettingsWindow
+    });
+    menuBuilder.registerHandlers();
+    menuBuilder.createApplicationMenu();
+
+    // Register all IPC handlers
+    WindowHandlers.register(mainWindow);
+
+    TabHandlers.register(mainWindow, {
+        tabManager,
+        saveSession: () => sessionManager.saveSession(),
+        updateViewBounds,
+        closedTabs
     });
 
-    tabManager = new TabManager(mainWindow, settingsManager);
+    NavigationHandlers.register({ tabManager });
 
+    ProfileHandlers.register(mainWindow, { tabManager });
 
+    SettingsHandlers.register(mainWindow, {
+        settingsManager,
+        profileManager,
+        tabManager,
+        saveSession: () => sessionManager.saveSession(),
+        updateViewBounds
+    });
 
+    // Handle initial load
     mainWindow.webContents.once('did-finish-load', () => {
         mainWindow.webContents.send('profiles-loaded', profileManager.getAllProfiles());
 
-        // Try to restore session first
-        let sessionData = null;
-        try {
-            if (fs.existsSync(getSessionFile())) {
-                sessionData = JSON.parse(fs.readFileSync(getSessionFile(), 'utf-8'));
-            }
-        } catch (e) {
-            console.error('Failed to load session for fallback:', e);
-        }
-
-        restoreSession();
+        // Restore session
+        sessionManager.restoreSession(mainWindow, updateViewBounds);
 
         // Ensure at least one tab exists if restore failed or was empty
         if (tabManager.tabs.size === 0) {
-            // Use last active profile if available, otherwise default to first profile
-            const defaultProfile = sessionData?.lastActiveProfileId || profileManager.getAllProfiles()[0]?.id || 'work';
+            const defaultProfile = profileManager.getAllProfiles()[0]?.id || 'work';
             const id = tabManager.createTab(defaultProfile);
             tabManager.switchTo(id);
             mainWindow.webContents.send('tab-created', {
@@ -143,7 +201,7 @@ function createWindow() {
                 title: 'New Thread'
             });
             updateViewBounds();
-            saveSession();
+            sessionManager.saveSession();
         }
     });
 
@@ -151,663 +209,53 @@ function createWindow() {
     mainWindow.webContents.on('before-input-event', (event, input) => {
         if (input.type === 'keyDown' && input.control && input.key.toLowerCase() === 'r') {
             event.preventDefault();
-            // Reload the active tab's web content
             tabManager.reload();
         }
     });
 
-    createApplicationMenu();
-
-    // Window Controls
-    ipcMain.on('window-minimize', () => mainWindow.minimize());
-    ipcMain.on('window-maximize', () => {
-        if (mainWindow.isMaximized()) {
-            mainWindow.unmaximize();
-        } else {
-            mainWindow.maximize();
-        }
-    });
-    ipcMain.on('window-close', () => mainWindow.close());
-
-    // Tab Management
-    ipcMain.on('create-tab', (event, profileId) => {
-        const id = tabManager.createTab(profileId);
-        const tab = tabManager.tabs.get(id);
-        const success = tabManager.switchTo(id);
-
-        if (success) {
-            mainWindow.webContents.send('tab-created', {
-                id,
-                profileId,
-                title: 'New Thread',
-                url: tab?.url || ''
-            });
-            updateViewBounds();
-            saveSession();
-        }
-    });
-
-    ipcMain.on('create-tab-with-url', (event, { profileId, url }) => {
-        const id = tabManager.createTab(profileId, url);
-        const tab = tabManager.tabs.get(id);
-        const success = tabManager.switchTo(id);
-
-        if (success) {
-            mainWindow.webContents.send('tab-created', {
-                id,
-                profileId,
-                title: 'New Thread',
-                url: tab?.url || url || ''
-            });
-            updateViewBounds();
-            saveSession();
-        }
-    });
-
-    ipcMain.on('switch-tab', (event, tabId) => {
-        const success = tabManager.switchTo(tabId);
-        if (success) {
-            updateViewBounds();
-        }
-    });
-
-    ipcMain.on('close-tab', (event, tabId) => {
-        // Prevent closing the last tab
-        if (tabManager.tabs.size <= 1) {
-            return;
-        }
-
-        const tab = tabManager.tabs.get(tabId);
-        if (tab) {
-            closedTabs.push({
-                profileId: tab.profileId,
-                url: tab.url,
-                title: tab.title
-            });
-            if (closedTabs.length > 10) closedTabs.shift();
-        }
-
-        tabManager.closeTab(tabId);
-        saveSession();
-    });
-
-    ipcMain.on('duplicate-tab', (event, tabId) => {
-        const tab = tabManager.tabs.get(tabId);
-        if (!tab) return;
-
-        const newId = tabManager.createTab(tab.profileId, tab.url);
-        tabManager.switchTo(newId);
-        mainWindow.webContents.send('tab-created', {
-            id: newId,
-            profileId: tab.profileId,
-            title: tab.title
-        });
-        updateViewBounds();
-        saveSession();
-    });
-
-    ipcMain.on('reload-tab', (event, tabId) => {
-        const tab = tabManager.tabs.get(tabId);
-        if (tab && tab.view) {
-            tab.view.webContents.reload();
-        }
-    });
-
-    ipcMain.on('reopen-closed-tab', () => {
-        if (closedTabs.length === 0) return;
-
-        const lastClosed = closedTabs.pop();
-        const id = tabManager.createTab(lastClosed.profileId, lastClosed.url);
-        tabManager.switchTo(id);
-        mainWindow.webContents.send('tab-created', {
-            id,
-            profileId: lastClosed.profileId,
-            title: lastClosed.title
-        });
-        updateViewBounds();
-        saveSession();
-    });
-
-    ipcMain.on('close-other-tabs', (event, { tabId, profileId }) => {
-        const tabs = tabManager.getTabsForProfile(profileId);
-        tabs.forEach(tab => {
-            if (tab.id !== tabId) {
-                tabManager.closeTab(tab.id);
-            }
-        });
-        saveSession();
-    });
-
-    ipcMain.on('close-tabs-to-right', (event, { tabId, profileId }) => {
-        const tabs = tabManager.getTabsForProfile(profileId);
-        const targetIndex = tabs.findIndex(t => t.id === tabId);
-
-        if (targetIndex >= 0) {
-            tabs.slice(targetIndex + 1).forEach(tab => {
-                tabManager.closeTab(tab.id);
-            });
-        }
-        saveSession();
-    });
-
-    ipcMain.on('reorder-tabs', (event, tabOrder) => {
-        tabManager.reorderTabs(tabOrder);
-        saveSession();
-    });
-
-    ipcMain.on('show-context-menu', (event, { tabId }) => {
-        const tab = tabManager.tabs.get(tabId);
-        if (!tab) return;
-
-        const template = [
-            {
-                label: 'Reload',
-                accelerator: 'CmdOrCtrl+R',
-                click: () => {
-                    if (tab.view) tab.view.webContents.reload();
-                }
-            },
-            {
-                label: 'Duplicate',
-                click: () => {
-                    const newId = tabManager.createTab(tab.profileId, tab.url);
-                    tabManager.switchTo(newId);
-                    mainWindow.webContents.send('tab-created', {
-                        id: newId,
-                        profileId: tab.profileId,
-                        title: tab.title
-                    });
-                    updateViewBounds();
-                    saveSession();
-                }
-            },
-            { type: 'separator' },
-            {
-                label: 'Close Tab',
-                accelerator: 'CmdOrCtrl+W',
-                click: () => {
-                    // Use frontend logic for safety
-                    mainWindow.webContents.send('request-close-tab', tabId);
-                }
-            },
-            {
-                label: 'Close Other Tabs',
-                click: () => {
-                    // We need to implement this logic safely and update frontend.
-                    // Since frontend holds state, let's ask frontend to do it, OR do it here and push update.
-                    // Doing it here matches existing IPC pattern 'close-other-tabs'.
-                    // We just need to make sure frontend updates its list.
-                    const tabs = tabManager.getTabsForProfile(tab.profileId);
-                    tabs.forEach(t => {
-                        if (t.id !== tabId) {
-                            tabManager.closeTab(t.id);
-                            mainWindow.webContents.send('tab-closed-backend', t.id); // New event helper
-                        }
-                    });
-                    saveSession();
-                }
-            },
-            {
-                label: 'Close Tabs to Right',
-                click: () => {
-                    const tabs = tabManager.getTabsForProfile(tab.profileId);
-                    const idx = tabs.findIndex(t => t.id === tabId);
-                    if (idx !== -1) {
-                        tabs.slice(idx + 1).forEach(t => {
-                            tabManager.closeTab(t.id);
-                            mainWindow.webContents.send('tab-closed-backend', t.id);
-                        });
-                        saveSession();
-                    }
-                }
-            }
-        ];
-
-        const menu = Menu.buildFromTemplate(template);
-        menu.popup({ window: mainWindow });
-    });
-
-    ipcMain.on('show-profile-menu', (event, { x, y, activeProfileId }) => {
-        const profiles = profileManager.getAllProfiles();
-        // Native Menu Template
-        const template = profiles.map(profile => ({
-            label: profile.name,
-            // Add checkmark if active
-            type: 'radio',
-            checked: profile.id === activeProfileId,
-            click: () => {
-                // Tell frontend to switch
-                mainWindow.webContents.send('switch-profile-request', profile.id);
-                // Also trigger backend switch if needed, but frontend flow drives it
-                // 'get-profile-tabs' is called by frontend in handleSwitchProfile
-            },
-            icon: null // TODO: Can we use emoji here? System menus usually support text.
-        }));
-
-        template.push({ type: 'separator' });
-
-        let settingsIcon = null;
-        try {
-            const iconPath = path.join(__dirname, '../src/assets/settings.png');
-            settingsIcon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
-        } catch (e) {
-            console.error('Failed to load settings icon:', e);
-        }
-
-        template.push({
-            label: 'Settings',
-            icon: settingsIcon,
-            click: () => {
-                createSettingsWindow();
-            }
-        });
-
-        const menu = Menu.buildFromTemplate(template);
-        menu.popup({
-            window: mainWindow,
-            x: x,
-            y: y
-        });
-    });
-
-    ipcMain.on('show-new-tab-menu', (event, { x, y, profileId }) => {
-        const providers = settingsManager.getProviders();
-
-        const template = providers.map(provider => {
-            // Convert cached data URL to NativeImage (synchronous, instant)
-            let icon = null;
-            if (provider.faviconDataUrl) {
-                try {
-                    const img = nativeImage.createFromDataURL(provider.faviconDataUrl);
-                    // Resize to 16x16 for menu (standard menu icon size)
-                    icon = img.resize({ width: 16, height: 16 });
-                } catch (err) {
-                    console.warn(`Failed to load cached favicon for ${provider.name}:`, err.message);
-                }
-            }
-
-            return {
-                label: provider.name,
-                icon: icon, // Will be null if not cached or failed
-                click: () => {
-                    // Create a new tab with this provider's URL
-                    const id = tabManager.createTab(profileId, provider.url);
-                    const success = tabManager.switchTo(id);
-
-                    if (success) {
-                        mainWindow.webContents.send('tab-created', {
-                            id,
-                            profileId,
-                            title: 'New Thread',
-                            url: provider.url
-                        });
-                        updateViewBounds();
-                        saveSession();
-                    }
-                }
-            };
-        });
-
-        const menu = Menu.buildFromTemplate(template);
-        menu.popup({
-            window: mainWindow,
-            x: x,
-            y: y
-        });
-    });
-
-    ipcMain.on('get-profile-tabs', (event, profileId) => {
-        const tabs = tabManager.getTabsForProfile(profileId);
-        event.reply('profile-tabs-loaded', { profileId, tabs });
-    });
-
-    ipcMain.handle('get-all-tabs', () => {
-        return {
-            tabs: tabManager.getAllTabs(),
-            activeTabId: tabManager.activeTabId
-        };
-    });
-
-    // Settings Management
-    ipcMain.handle('get-settings', () => {
-        return settingsManager.getSettings();
-    });
-
-    ipcMain.handle('save-settings', async (event, newSettings) => {
-        const oldSettings = settingsManager.getSettings();
-        const success = settingsManager.saveSettings(newSettings);
-
-        // Reload profiles in ProfileManager to sync with new settings
-        if (profileManager) {
-            profileManager.loadProfiles();
-        }
-
-        // Clean up tabs for deleted profiles
-        if (tabManager && newSettings.profiles) {
-            const newProfileIds = new Set(newSettings.profiles.map(p => p.id));
-            const oldProfileIds = new Set(oldSettings.profiles.map(p => p.id));
-
-            // Find deleted profile IDs
-            const deletedProfileIds = Array.from(oldProfileIds).filter(id => !newProfileIds.has(id));
-
-            if (deletedProfileIds.length > 0) {
-                // Track if we need to switch profiles
-                let needsProfileSwitch = false;
-                let currentActiveProfileId = null;
-
-                // Get current active profile from active tab
-                if (tabManager.activeTabId) {
-                    const activeTab = tabManager.tabs.get(tabManager.activeTabId);
-                    if (activeTab) {
-                        currentActiveProfileId = activeTab.profileId;
-                        if (deletedProfileIds.includes(currentActiveProfileId)) {
-                            needsProfileSwitch = true;
-                        }
-                    }
-                }
-
-                // Close all tabs belonging to deleted profiles
-                deletedProfileIds.forEach(profileId => {
-                    const tabsToDelete = tabManager.getTabsForProfile(profileId);
-                    tabsToDelete.forEach(tab => {
-                        tabManager.closeTab(tab.id);
-                        mainWindow.webContents.send('tab-closed-backend', tab.id);
-                    });
-                });
-
-                // If active profile was deleted, switch to first remaining profile
-                if (needsProfileSwitch && newSettings.profiles.length > 0) {
-                    const newActiveProfile = newSettings.profiles[0];
-                    const profileTabs = tabManager.getTabsForProfile(newActiveProfile.id);
-
-                    if (profileTabs.length > 0) {
-                        // Switch to first tab of the new active profile
-                        tabManager.switchTo(profileTabs[0].id);
-                        mainWindow.webContents.send('restore-active', profileTabs[0].id);
-                    } else {
-                        // Create a new tab for this profile
-                        const newTabId = tabManager.createTab(newActiveProfile.id);
-                        tabManager.switchTo(newTabId);
-                        mainWindow.webContents.send('tab-created', {
-                            id: newTabId,
-                            profileId: newActiveProfile.id,
-                            title: 'New Thread',
-                            url: tabManager.tabs.get(newTabId)?.url || ''
-                        });
-                        updateViewBounds();
-                    }
-
-                    // Notify frontend to update its active profile state
-                    mainWindow.webContents.send('active-profile-changed', newActiveProfile.id);
-                }
-
-                saveSession();
-            }
-        }
-
-        // Fetch favicons for any new providers that don't have them cached
-        // This is async but we await it to ensure the favicon is ready before broadcasting
-        await settingsManager.ensureProvidersFavicons();
-
-        // Broadcast to all windows (main window updates its UI) - now includes fetched favicons
-        mainWindow.webContents.send('settings-updated', settingsManager.getSettings());
-        return success;
-    });
-
-    // Navigation
-    ipcMain.on('nav-back', () => tabManager.goBack());
-    ipcMain.on('nav-forward', () => tabManager.goForward());
-    ipcMain.on('nav-reload', () => tabManager.reload());
-
+    // Window event handlers
     mainWindow.on('resize', () => {
         updateViewBounds();
         if (!mainWindow.isMaximized() && !mainWindow.isMinimized()) {
             const bounds = mainWindow.getBounds();
-            currentWindowState.width = bounds.width;
-            currentWindowState.height = bounds.height;
-            currentWindowState.x = bounds.x;
-            currentWindowState.y = bounds.y;
+            sessionManager.updateWindowState({
+                width: bounds.width,
+                height: bounds.height,
+                x: bounds.x,
+                y: bounds.y
+            });
         }
     });
 
     mainWindow.on('move', () => {
         if (!mainWindow.isMaximized() && !mainWindow.isMinimized()) {
             const bounds = mainWindow.getBounds();
-            currentWindowState.x = bounds.x;
-            currentWindowState.y = bounds.y;
+            sessionManager.updateWindowState({
+                x: bounds.x,
+                y: bounds.y
+            });
         }
     });
 
     mainWindow.on('maximize', () => {
-        currentWindowState.isMaximized = true;
+        sessionManager.updateWindowState({ isMaximized: true });
         mainWindow.webContents.send('window-maximized', true);
     });
+
     mainWindow.on('unmaximize', () => {
-        currentWindowState.isMaximized = false;
+        sessionManager.updateWindowState({ isMaximized: false });
         mainWindow.webContents.send('window-maximized', false);
     });
 }
 
-function createApplicationMenu() {
-    const isMac = process.platform === 'darwin';
-
-    const template = [
-        ...(isMac ? [{
-            label: app.name,
-            submenu: [
-                { role: 'about' },
-                { type: 'separator' },
-                { role: 'services' },
-                { type: 'separator' },
-                { role: 'hide' },
-                { role: 'hideOthers' },
-                { role: 'unhide' },
-                { type: 'separator' },
-                { role: 'quit' }
-            ]
-        }] : []),
-        {
-            label: 'File',
-            submenu: [
-                {
-                    label: 'New Tab',
-                    accelerator: 'CmdOrCtrl+T',
-                    click: () => {
-                        if (mainWindow && tabManager) {
-                            let profileId = 'work';
-                            if (tabManager.activeTabId) {
-                                const tab = tabManager.tabs.get(tabManager.activeTabId);
-                                if (tab) profileId = tab.profileId;
-                            }
-
-                            const id = tabManager.createTab(profileId);
-                            const success = tabManager.switchTo(id);
-
-                            if (success) {
-                                mainWindow.webContents.send('tab-created', {
-                                    id,
-                                    profileId,
-                                    title: 'New Thread'
-                                });
-                                updateViewBounds();
-                                saveSession();
-                            }
-                        }
-                    }
-                },
-                {
-                    label: 'Close Tab',
-                    accelerator: 'CmdOrCtrl+W',
-                    click: () => {
-                        if (mainWindow && tabManager && tabManager.activeTabId) {
-                            // Send request to frontend to close it, so frontend logic (state update + min tab check) runs there
-                            mainWindow.webContents.send('request-close-tab', tabManager.activeTabId);
-                        }
-                    }
-                },
-                {
-                    label: 'Reopen Closed Tab',
-                    accelerator: 'CmdOrCtrl+Shift+T',
-                    click: () => {
-                        if (closedTabs.length > 0 && tabManager) {
-                            const lastClosed = closedTabs.pop();
-                            const id = tabManager.createTab(lastClosed.profileId, lastClosed.url);
-                            tabManager.switchTo(id);
-                            mainWindow.webContents.send('tab-created', {
-                                id,
-                                profileId: lastClosed.profileId,
-                                title: lastClosed.title
-                            });
-                            updateViewBounds();
-                            saveSession();
-                        }
-                    }
-                },
-                { type: 'separator' },
-                { role: 'quit' }
-            ]
-        },
-        {
-            label: 'Edit',
-            submenu: [
-                { role: 'undo' },
-                { role: 'redo' },
-                { type: 'separator' },
-                { role: 'cut' },
-                { role: 'copy' },
-                { role: 'paste' },
-                { role: 'delete' },
-                { role: 'selectAll' }
-            ]
-        },
-        {
-            label: 'View',
-            submenu: [
-                { role: 'reload' },
-                { role: 'forceReload' },
-                { role: 'toggleDevTools' },
-                { type: 'separator' },
-                { role: 'resetZoom' },
-                { role: 'zoomIn' },
-                { role: 'zoomOut' },
-                { type: 'separator' },
-                { role: 'togglefullscreen' }
-            ]
-        },
-        {
-            label: 'Window',
-            submenu: [
-                { role: 'minimize' },
-                { role: 'zoom' },
-                ...(isMac ? [
-                    { type: 'separator' },
-                    { role: 'front' },
-                    { type: 'separator' },
-                    { role: 'window' }
-                ] : [
-                    { label: 'Close Window', accelerator: 'Alt+F4', click: () => { if (mainWindow) mainWindow.close(); } }
-                ])
-            ]
-        }
-    ];
-
-    const menu = Menu.buildFromTemplate(template);
-    Menu.setApplicationMenu(menu);
-}
-
-function updateViewBounds() {
-    if (!mainWindow || !tabManager) return;
-    const bounds = mainWindow.getBounds();
-    const TITLEBAR_HEIGHT = 36; // Height of React titlebar
-    const contentBounds = {
-        x: 0,
-        y: TITLEBAR_HEIGHT,
-        width: bounds.width,
-        height: bounds.height - TITLEBAR_HEIGHT
-    };
-    tabManager.resizeActiveView(contentBounds);
-}
-
-function saveSession() {
-    if (!tabManager) return;
-
-    // Derive the last active profile from the active tab
-    let lastActiveProfileId = null;
-    if (tabManager.activeTabId) {
-        const activeTab = tabManager.tabs.get(tabManager.activeTabId);
-        if (activeTab) {
-            lastActiveProfileId = activeTab.profileId;
-        }
-    }
-
-    const sessionData = {
-        tabs: Array.from(tabManager.tabs.values()).map(t => ({
-            id: t.id,
-            profileId: t.profileId,
-            url: t.url,
-            title: t.title
-        })),
-        activeTabId: tabManager.activeTabId,
-        lastActiveProfileId: lastActiveProfileId,
-        windowBounds: currentWindowState,
-        isMaximized: currentWindowState.isMaximized
-    };
-
-    try {
-        fs.writeFileSync(getSessionFile(), JSON.stringify(sessionData, null, 2));
-    } catch (e) {
-        console.error('Failed to save session:', e);
-    }
-}
-
-function restoreSession() {
-    try {
-        if (!fs.existsSync(getSessionFile())) return;
-
-        const data = JSON.parse(fs.readFileSync(getSessionFile(), 'utf-8'));
-
-        if (!data.tabs || data.tabs.length === 0) return;
-
-        data.tabs.forEach(tabData => {
-            const id = tabManager.createTab(tabData.profileId, tabData.url, tabData.id);
-            mainWindow.webContents.send('tab-created', {
-                id,
-                profileId: tabData.profileId,
-                title: tabData.title || 'Restored'
-            });
-        });
-
-        // Try to restore the exact active tab first
-        if (data.activeTabId && tabManager.tabs.has(data.activeTabId)) {
-            setTimeout(() => {
-                tabManager.switchTo(data.activeTabId);
-                mainWindow.webContents.send('restore-active', data.activeTabId);
-                updateViewBounds();
-            }, 500);
-        } else if (data.lastActiveProfileId) {
-            // If we can't restore the exact tab, switch to the last active profile
-            setTimeout(() => {
-                const profileTabs = tabManager.getTabsForProfile(data.lastActiveProfileId);
-                if (profileTabs.length > 0) {
-                    // Switch to the first tab of the last active profile
-                    tabManager.switchTo(profileTabs[0].id);
-                    mainWindow.webContents.send('restore-active', profileTabs[0].id);
-                    updateViewBounds();
-                }
-            }, 500);
-        }
-    } catch (e) {
-        console.error('Failed to restore session:', e);
-    }
-}
-
+// App lifecycle
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
-    saveSession();
+    if (sessionManager) sessionManager.saveSession();
     if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('before-quit', () => {
-    saveSession();
+    if (sessionManager) sessionManager.saveSession();
 });
