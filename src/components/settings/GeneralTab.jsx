@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Info, Keyboard, AlertCircle, Check } from 'lucide-react'
+import { Settings, Keyboard, AlertCircle, Check } from 'lucide-react'
 
 /**
  * GeneralTab - System settings, tray settings, and general app settings
@@ -166,7 +166,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
             {/* Header */}
             <div>
                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                    <Info size={20} className="text-blue-400" />
+                    <Settings size={20} className="text-blue-400" />
                     General
                 </h2>
                 <p className="text-sm text-gray-400 mt-1">

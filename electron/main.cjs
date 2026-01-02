@@ -277,35 +277,8 @@ function createWindow() {
             return;
         }
 
-        // Ctrl+Tab - Next tab
-        if (input.control && !input.shift && input.key === 'Tab') {
-            event.preventDefault();
-            const tabs = Array.from(tabManager.tabs.values());
-            if (tabs.length <= 1) return;
-
-            const currentIndex = tabs.findIndex(tab => tab.id === tabManager.activeTabId);
-            const nextIndex = (currentIndex + 1) % tabs.length;
-            const nextTab = tabs[nextIndex];
-
-            tabManager.switchTo(nextTab.id);
-            updateViewBounds();
-            return;
-        }
-
-        // Ctrl+Shift+Tab - Previous tab
-        if (input.control && input.shift && input.key === 'Tab') {
-            event.preventDefault();
-            const tabs = Array.from(tabManager.tabs.values());
-            if (tabs.length <= 1) return;
-
-            const currentIndex = tabs.findIndex(tab => tab.id === tabManager.activeTabId);
-            const prevIndex = currentIndex - 1 < 0 ? tabs.length - 1 : currentIndex - 1;
-            const prevTab = tabs[prevIndex];
-
-            tabManager.switchTo(prevTab.id);
-            updateViewBounds();
-            return;
-        }
+        // Note: Ctrl+Tab and Ctrl+Shift+Tab are handled by Menu accelerators
+        // in MenuBuilder.cjs for app-wide functionality
     });
 
     // Window event handlers

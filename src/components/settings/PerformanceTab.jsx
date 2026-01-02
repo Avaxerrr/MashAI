@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Zap, Gauge } from 'lucide-react'
+import { Gauge } from 'lucide-react'
 
 /**
  * PerformanceTab - Memory and performance optimization settings
@@ -76,7 +76,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
             {/* Header */}
             <div>
                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                    <Zap size={20} className="text-yellow-400" />
+                    <Gauge size={20} className="text-blue-400" />
                     Performance
                 </h2>
                 <p className="text-sm text-gray-400 mt-1">

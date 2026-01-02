@@ -261,6 +261,64 @@ class MenuBuilder {
                             }
                         }
                     },
+                    {
+                        label: 'Next Tab',
+                        accelerator: 'Ctrl+Tab',
+                        click: () => {
+                            if (!this.tabManager || !this.tabManager.activeTabId) return;
+
+                            // Get active tab's profile
+                            const activeTab = this.tabManager.tabs.get(this.tabManager.activeTabId);
+                            if (!activeTab) return;
+
+                            const activeProfileId = activeTab.profileId;
+
+                            // Get only tabs from the active profile
+                            const profileTabs = Array.from(this.tabManager.tabs.values())
+                                .filter(tab => tab.profileId === activeProfileId);
+
+                            if (profileTabs.length <= 1) return;
+
+                            const currentIndex = profileTabs.findIndex(tab => tab.id === this.tabManager.activeTabId);
+                            const nextIndex = (currentIndex + 1) % profileTabs.length;
+                            const nextTab = profileTabs[nextIndex];
+
+                            this.tabManager.switchTo(nextTab.id);
+                            this.updateViewBounds();
+
+                            // Notify frontend to update active tab state
+                            this.mainWindow.webContents.send('restore-active', nextTab.id);
+                        }
+                    },
+                    {
+                        label: 'Previous Tab',
+                        accelerator: 'Ctrl+Shift+Tab',
+                        click: () => {
+                            if (!this.tabManager || !this.tabManager.activeTabId) return;
+
+                            // Get active tab's profile
+                            const activeTab = this.tabManager.tabs.get(this.tabManager.activeTabId);
+                            if (!activeTab) return;
+
+                            const activeProfileId = activeTab.profileId;
+
+                            // Get only tabs from the active profile
+                            const profileTabs = Array.from(this.tabManager.tabs.values())
+                                .filter(tab => tab.profileId === activeProfileId);
+
+                            if (profileTabs.length <= 1) return;
+
+                            const currentIndex = profileTabs.findIndex(tab => tab.id === this.tabManager.activeTabId);
+                            const prevIndex = currentIndex - 1 < 0 ? profileTabs.length - 1 : currentIndex - 1;
+                            const prevTab = profileTabs[prevIndex];
+
+                            this.tabManager.switchTo(prevTab.id);
+                            this.updateViewBounds();
+
+                            // Notify frontend to update active tab state
+                            this.mainWindow.webContents.send('restore-active', prevTab.id);
+                        }
+                    },
                     { type: 'separator' },
                     { role: 'quit' }
                 ]

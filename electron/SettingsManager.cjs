@@ -66,7 +66,7 @@ class SettingsManager {
                 // System settings
                 launchAtStartup: false,
                 alwaysOnTop: false,
-                alwaysOnTopShortcut: 'CommandOrControl+Shift+T', // Toggle always-on-top
+                alwaysOnTopShortcut: 'CommandOrControl+Shift+A', // Toggle always-on-top
                 // Tray settings
                 minimizeToTray: true,  // Default to true since we have tray functionality
                 showTrayIcon: true,

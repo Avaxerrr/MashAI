@@ -163,14 +163,6 @@ function App() {
             }
         })
 
-        // Listen for active profile changes from backend (e.g., after deletion)
-        const cleanupActiveProfileChanged = window.api.onActiveProfileChanged((profileId) => {
-            setActiveProfileId(profileId)
-            localStorage.setItem('lastActiveProfileId', profileId)
-            // Load the new profile's tabs so they appear in the UI
-            window.api.getProfileTabs(profileId)
-        })
-
         // Listen for show-toast events from backend (e.g., always-on-top toggle)
         const cleanupShowToast = window.api.onShowToast?.((message) => {
             setToastMessage(message)
@@ -190,7 +182,6 @@ function App() {
             if (cleanupRequestCloseTab) cleanupRequestCloseTab()
             if (cleanupTabClosedBackend) cleanupTabClosedBackend()
             if (cleanupSettingsUpdated) cleanupSettingsUpdated()
-            if (cleanupActiveProfileChanged) cleanupActiveProfileChanged()
             if (cleanupShowToast) cleanupShowToast()
         }
     }, [])

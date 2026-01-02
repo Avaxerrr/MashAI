@@ -89,14 +89,10 @@ class TrayManager {
             this._unregisterShortcut('hide');
         }
 
-        // Register always-on-top toggle shortcut (only if alwaysOnTop is enabled)
-        if (general.alwaysOnTop) {
-            const aotShortcut = general.alwaysOnTopShortcut || '';
-            this._registerShortcut(aotShortcut, 'alwaysOnTop');
-        } else {
-            // Unregister always-on-top shortcut if the feature is disabled
-            this._unregisterShortcut('alwaysOnTop');
-        }
+        // Register always-on-top toggle shortcut (always available, regardless of current state)
+        // This allows users to toggle always-on-top anytime via the shortcut
+        const aotShortcut = general.alwaysOnTopShortcut || '';
+        this._registerShortcut(aotShortcut, 'alwaysOnTop');
     }
 
     /**

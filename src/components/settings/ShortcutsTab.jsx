@@ -111,16 +111,6 @@ export default function ShortcutsTab({ generalSettings }) {
                 </div>
             </div>
 
-            {/* Development */}
-            <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
-                    <h3 className="text-white font-medium text-sm">Development</h3>
-                </div>
-                <div className="p-5 space-y-2">
-                    <ShortcutRow keys="F12" description="Toggle Developer Tools" />
-                    <ShortcutRow keys="F5" description="Force Reload" />
-                </div>
-            </div>
 
             {/* Note */}
             <div className="bg-[#1e2a1e] rounded-lg border border-[#3a523a] p-4">

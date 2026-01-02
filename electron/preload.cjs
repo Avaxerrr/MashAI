@@ -102,11 +102,6 @@ contextBridge.exposeInMainWorld('api', {
         ipcRenderer.on('open-settings-modal', handler);
         return () => ipcRenderer.removeListener('open-settings-modal', handler);
     },
-    onActiveProfileChanged: (callback) => {
-        const handler = (e, profileId) => callback(profileId);
-        ipcRenderer.on('active-profile-changed', handler);
-        return () => ipcRenderer.removeListener('active-profile-changed', handler);
-    },
     onShowToast: (callback) => {
         const handler = (e, message) => callback(message);
         ipcRenderer.on('show-toast', handler);

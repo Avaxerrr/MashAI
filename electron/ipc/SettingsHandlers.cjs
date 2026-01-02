@@ -47,21 +47,6 @@ function register(mainWindow, { settingsManager, profileManager, tabManager, tra
             const deletedProfileIds = Array.from(oldProfileIds).filter(id => !newProfileIds.has(id));
 
             if (deletedProfileIds.length > 0) {
-                // Track if we need to switch profiles
-                let needsProfileSwitch = false;
-                let currentActiveProfileId = null;
-
-                // Get current active profile from active tab
-                if (tabManager.activeTabId) {
-                    const activeTab = tabManager.tabs.get(tabManager.activeTabId);
-                    if (activeTab) {
-                        currentActiveProfileId = activeTab.profileId;
-                        if (deletedProfileIds.includes(currentActiveProfileId)) {
-                            needsProfileSwitch = true;
-                        }
-                    }
-                }
-
                 // Close all tabs belonging to deleted profiles
                 deletedProfileIds.forEach(profileId => {
                     const tabsToDelete = tabManager.getTabsForProfile(profileId);
@@ -99,32 +84,6 @@ function register(mainWindow, { settingsManager, profileManager, tabManager, tra
                         console.error(`[SettingsHandlers] Failed to clear partition data for ${profileId}:`, error);
                         // Continue with other profiles even if one fails
                     }
-                }
-
-                // If active profile was deleted, switch to first remaining profile
-                if (needsProfileSwitch && newSettings.profiles.length > 0) {
-                    const newActiveProfile = newSettings.profiles[0];
-                    const profileTabs = tabManager.getTabsForProfile(newActiveProfile.id);
-
-                    if (profileTabs.length > 0) {
-                        // Switch to first tab of the new active profile
-                        tabManager.switchTo(profileTabs[0].id);
-                        mainWindow.webContents.send('restore-active', profileTabs[0].id);
-                    } else {
-                        // Create a new tab for this profile
-                        const newTabId = tabManager.createTab(newActiveProfile.id);
-                        tabManager.switchTo(newTabId);
-                        mainWindow.webContents.send('tab-created', {
-                            id: newTabId,
-                            profileId: newActiveProfile.id,
-                            title: 'New Thread',
-                            url: tabManager.tabs.get(newTabId)?.url || ''
-                        });
-                        updateViewBounds();
-                    }
-
-                    // Notify frontend to update its active profile state
-                    mainWindow.webContents.send('active-profile-changed', newActiveProfile.id);
                 }
 
                 saveSession();

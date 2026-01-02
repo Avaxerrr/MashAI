@@ -52,7 +52,6 @@ const IPC_EVENTS = {
     PROFILE_TABS_LOADED: 'profile-tabs-loaded',
     PROFILES_LOADED: 'profiles-loaded',
     SWITCH_PROFILE_REQUEST: 'switch-profile-request',
-    ACTIVE_PROFILE_CHANGED: 'active-profile-changed',
 
     // Settings
     GET_SETTINGS: 'get-settings',
