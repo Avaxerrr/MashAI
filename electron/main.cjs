@@ -15,6 +15,7 @@ const TabHandlers = require('./ipc/TabHandlers.cjs');
 const NavigationHandlers = require('./ipc/NavigationHandlers.cjs');
 const ProfileHandlers = require('./ipc/ProfileHandlers.cjs');
 const SettingsHandlers = require('./ipc/SettingsHandlers.cjs');
+const PrivacyHandlers = require('./ipc/PrivacyHandlers.cjs');
 
 // Check hardware acceleration setting BEFORE app is ready
 // This must be done synchronously before app.whenReady()
@@ -215,12 +216,31 @@ function createWindow() {
         updateViewBounds
     });
 
+    // Register privacy handlers
+    const privacyHandlers = new PrivacyHandlers({
+        sessionManager,
+        tabManager
+    });
+    privacyHandlers.register();
+
     // Intercept close event - hide to tray instead of quitting (if enabled)
     mainWindow.on('close', (event) => {
-        if (trayManager && !trayManager.isQuitting && trayManager.isMinimizeToTrayEnabled()) {
+        const settings = settingsManager.getSettings();
+        const showTray = settings.general?.showTrayIcon !== false;
+        const minimizeToTray = settings.general?.minimizeToTray !== false;
+        const isEnabled = trayManager?.isMinimizeToTrayEnabled() || false;
+
+        console.log('[main] Close event triggered');
+        console.log(`[main] Settings - showTrayIcon: ${showTray}, minimizeToTray: ${minimizeToTray}`);
+        console.log(`[main] isMinimizeToTrayEnabled(): ${isEnabled}`);
+        console.log(`[main] trayManager.isQuitting: ${trayManager?.isQuitting}`);
+
+        if (trayManager && !trayManager.isQuitting && isEnabled) {
             event.preventDefault();
-            trayManager.hideWindow(); // Use trayManager.hideWindow() to trigger suspension scheduling
+            trayManager.hideWindow();
             console.log('[main] Window hidden to tray (close intercepted)');
+        } else {
+            console.log('[main] Allowing window to close (quitting app)');
         }
     });
 
@@ -246,11 +266,45 @@ function createWindow() {
         }
     });
 
-    // Intercept Ctrl+R to reload active tab, not the React app
+    // Intercept keyboard shortcuts for tab operations
     mainWindow.webContents.on('before-input-event', (event, input) => {
-        if (input.type === 'keyDown' && input.control && input.key.toLowerCase() === 'r') {
+        if (input.type !== 'keyDown') return;
+
+        // Ctrl+R - Reload active tab (not the React app)
+        if (input.control && !input.shift && input.key.toLowerCase() === 'r') {
             event.preventDefault();
             tabManager.reload();
+            return;
+        }
+
+        // Ctrl+Tab - Next tab
+        if (input.control && !input.shift && input.key === 'Tab') {
+            event.preventDefault();
+            const tabs = Array.from(tabManager.tabs.values());
+            if (tabs.length <= 1) return;
+
+            const currentIndex = tabs.findIndex(tab => tab.id === tabManager.activeTabId);
+            const nextIndex = (currentIndex + 1) % tabs.length;
+            const nextTab = tabs[nextIndex];
+
+            tabManager.switchTo(nextTab.id);
+            updateViewBounds();
+            return;
+        }
+
+        // Ctrl+Shift+Tab - Previous tab
+        if (input.control && input.shift && input.key === 'Tab') {
+            event.preventDefault();
+            const tabs = Array.from(tabManager.tabs.values());
+            if (tabs.length <= 1) return;
+
+            const currentIndex = tabs.findIndex(tab => tab.id === tabManager.activeTabId);
+            const prevIndex = currentIndex - 1 < 0 ? tabs.length - 1 : currentIndex - 1;
+            const prevTab = tabs[prevIndex];
+
+            tabManager.switchTo(prevTab.id);
+            updateViewBounds();
+            return;
         }
     });
 
@@ -293,12 +347,23 @@ function createWindow() {
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
-    // Don't quit when windows are closed - we're hiding to tray
-    // The quit is handled by TrayManager.quitApp() or before-quit
+    // Save session before any quit
     if (sessionManager) sessionManager.saveSession();
-    // Only auto-quit on macOS if trayManager says we're quitting
-    if (process.platform !== 'darwin' && trayManager?.isQuitting) {
+
+    // Check if we should stay alive (tray mode) or quit
+    const shouldStayAlive = trayManager?.isMinimizeToTrayEnabled() && !trayManager?.isQuitting;
+
+    console.log('[main] window-all-closed event');
+    console.log(`[main] isMinimizeToTrayEnabled: ${trayManager?.isMinimizeToTrayEnabled()}`);
+    console.log(`[main] isQuitting: ${trayManager?.isQuitting}`);
+    console.log(`[main] shouldStayAlive: ${shouldStayAlive}`);
+
+    if (!shouldStayAlive) {
+        // Tray is disabled or we've been told to quit - actually quit the app
+        console.log('[main] Quitting app (tray disabled or explicit quit)');
         app.quit();
+    } else {
+        console.log('[main] Staying alive in tray mode');
     }
 });
 

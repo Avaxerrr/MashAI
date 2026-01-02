@@ -1,4 +1,4 @@
-const { ipcMain, app } = require('electron');
+const { ipcMain, app, session } = require('electron');
 
 /**
  * Registers settings management IPC handlers
@@ -15,6 +15,17 @@ function register(mainWindow, { settingsManager, profileManager, tabManager, tra
     // Get current settings
     ipcMain.handle('get-settings', () => {
         return settingsManager.getSettings();
+    });
+
+    // Get the current active profile ID (for deletion validation)
+    ipcMain.handle('get-active-profile-id', () => {
+        if (tabManager && tabManager.activeTabId) {
+            const activeTab = tabManager.tabs.get(tabManager.activeTabId);
+            if (activeTab) {
+                return activeTab.profileId;
+            }
+        }
+        return null;
     });
 
     // Save settings
@@ -59,6 +70,36 @@ function register(mainWindow, { settingsManager, profileManager, tabManager, tra
                         mainWindow.webContents.send('tab-closed-backend', tab.id);
                     });
                 });
+
+                // Clear partition data for deleted profiles (auto-cleanup)
+                // TODO: Thorough testing needed for profile deletion auto-cleanup:
+                // - [ ] Verify partition data is actually deleted (check AppData folder)
+                // - [ ] Verify no ghost data remains after profile deletion
+                // - [ ] Test deleting multiple profiles at once
+                // - [ ] Test what happens if clearStorageData fails midway
+                // - [ ] Verify UI correctly removes tabs and switches profile
+                for (const profileId of deletedProfileIds) {
+                    const partitionName = `persist:${profileId}`;
+                    console.log(`[SettingsHandlers] Clearing partition data for deleted profile: ${profileId}`);
+                    console.log(`[SettingsHandlers] Partition: ${partitionName}`);
+
+                    try {
+                        const profileSession = session.fromPartition(partitionName);
+
+                        // Clear all storage data for this partition
+                        await profileSession.clearStorageData();
+                        console.log(`[SettingsHandlers] Cleared storage data for ${profileId}`);
+
+                        // Clear cache for this partition
+                        await profileSession.clearCache();
+                        console.log(`[SettingsHandlers] Cleared cache for ${profileId}`);
+
+                        console.log(`[SettingsHandlers] Successfully cleaned up all data for deleted profile: ${profileId}`);
+                    } catch (error) {
+                        console.error(`[SettingsHandlers] Failed to clear partition data for ${profileId}:`, error);
+                        // Continue with other profiles even if one fails
+                    }
+                }
 
                 // If active profile was deleted, switch to first remaining profile
                 if (needsProfileSwitch && newSettings.profiles.length > 0) {

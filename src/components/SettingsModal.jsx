@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Save, Settings, RotateCcw } from 'lucide-react'
+import { X, Save, Settings, RotateCcw, Shield, Keyboard, Info, Users, Bot, Gauge } from 'lucide-react'
 import GeneralTab from './settings/GeneralTab'
+import PrivacyTab from './settings/PrivacyTab'
 import PerformanceTab from './settings/PerformanceTab'
 import ProfilesTab from './settings/ProfilesTab'
 import ProvidersTab from './settings/ProvidersTab'
+import ShortcutsTab from './settings/ShortcutsTab'
+import AboutTab from './settings/AboutTab'
 import Toast from './Toast'
 
 export default function SettingsModal({ isOpen, onClose, onSave, initialSettings }) {
@@ -48,6 +51,9 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     // Toast notification state
     const [showToast, setShowToast] = useState(false)
 
+    // Active profile ID (for deletion validation)
+    const [activeProfileId, setActiveProfileId] = useState(null)
+
     // Load initial settings
     useEffect(() => {
         if (initialSettings) {
@@ -59,6 +65,13 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
             }
             if (initialSettings.general) {
                 setGeneralSettings(prev => ({ ...prev, ...initialSettings.general }))
+            }
+
+            // Fetch active profile ID for deletion validation
+            if (window.api?.getActiveProfileId) {
+                window.api.getActiveProfileId().then(id => {
+                    if (id) setActiveProfileId(id)
+                })
             }
         }
     }, [initialSettings])
@@ -180,9 +193,41 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         setProfiles(profiles.map(p => p.id === id ? { ...p, [field]: value } : p))
     }
 
+    // TODO: Thorough testing needed for profile deletion:
+    // - [ ] Verify active profile cannot be deleted
+    // - [ ] Verify confirmation dialog appears with correct warning
+    // - [ ] Verify partition data is cleaned up (check console logs)
+    // - [ ] Verify tabs are closed for deleted profile
+    // - [ ] Test deleting profile that has open tabs
     const deleteProfile = (id) => {
-        if (profiles.length <= 1) return
-        setProfiles(profiles.filter(p => p.id !== id))
+        if (profiles.length <= 1) {
+            alert('Cannot delete the last profile. At least one profile is required.')
+            return
+        }
+
+        // Prevent deleting the active profile
+        if (id === activeProfileId) {
+            alert('Cannot delete the active profile. Please switch to another profile first.')
+            return
+        }
+
+        // Get profile name for confirmation
+        const profileToDelete = profiles.find(p => p.id === id)
+        const profileName = profileToDelete?.name || 'this profile'
+
+        // Show confirmation dialog with warning about data deletion
+        const confirmed = confirm(
+            `Delete "${profileName}"?\n\n` +
+            `This will permanently delete:\n` +
+            `• All tabs in this profile\n` +
+            `• All cached data and cookies\n` +
+            `• All AI chat history stored locally\n\n` +
+            `This cannot be undone.`
+        )
+
+        if (confirmed) {
+            setProfiles(profiles.filter(p => p.id !== id))
+        }
     }
 
     const reorderProfiles = (fromIndex, toIndex) => {
@@ -253,39 +298,73 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                 <div className="w-56 border-r border-[#3e3e42] bg-[#252526] p-3 flex flex-col gap-2">
                     <button
                         onClick={() => setActiveTab('general')}
-                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'general'
+                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'general'
                             ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
                             : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
                             }`}
                     >
+                        <Settings size={16} />
                         General
                     </button>
                     <button
+                        onClick={() => setActiveTab('privacy')}
+                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'privacy'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
+                            }`}
+                    >
+                        <Shield size={16} />
+                        Privacy
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('performance')}
+                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'performance'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
+                            }`}
+                    >
+                        <Gauge size={16} />
+                        Performance
+                    </button>
+                    <button
                         onClick={() => setActiveTab('profiles')}
-                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'profiles'
+                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'profiles'
                             ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
                             : 'text-gray-400 hover:text-white hover:bg-[#18181b]'
                             }`}
                     >
+                        <Users size={16} />
                         Profiles
                     </button>
                     <button
                         onClick={() => setActiveTab('providers')}
-                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'providers'
+                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'providers'
                             ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
                             : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
                             }`}
                     >
+                        <Bot size={16} />
                         AI Providers
                     </button>
                     <button
-                        onClick={() => setActiveTab('performance')}
-                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all ${activeTab === 'performance'
+                        onClick={() => setActiveTab('shortcuts')}
+                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'shortcuts'
                             ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
                             : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
                             }`}
                     >
-                        Performance
+                        <Keyboard size={16} />
+                        Shortcuts
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('about')}
+                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'about'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
+                            }`}
+                    >
+                        <Info size={16} />
+                        About
                     </button>
                 </div>
 
@@ -295,6 +374,12 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                         <GeneralTab
                             generalSettings={generalSettings}
                             onGeneralChange={setGeneralSettings}
+                        />
+                    )}
+
+                    {activeTab === 'privacy' && (
+                        <PrivacyTab
+                            profiles={profiles}
                         />
                     )}
 
@@ -337,6 +422,16 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                             newlyAddedProviderId={newlyAddedProviderId}
                             providersListRef={providersListRef}
                         />
+                    )}
+
+                    {activeTab === 'shortcuts' && (
+                        <ShortcutsTab
+                            generalSettings={generalSettings}
+                        />
+                    )}
+
+                    {activeTab === 'about' && (
+                        <AboutTab />
                     )}
                 </div>
             </div>

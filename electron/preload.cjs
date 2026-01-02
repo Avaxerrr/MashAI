@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('api', {
     getSettings: () => ipcRenderer.invoke('get-settings'),
     saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
     validateShortcut: (shortcut) => ipcRenderer.invoke('validate-shortcut', shortcut),
+    getActiveProfileId: () => ipcRenderer.invoke('get-active-profile-id'),
     onSettingsUpdated: (callback) => {
         const handler = (e, data) => callback(data);
         ipcRenderer.on('settings-updated', handler);
@@ -115,6 +116,12 @@ contextBridge.exposeInMainWorld('api', {
     // Context Menu
     showContextMenu: (tabId) => ipcRenderer.send('show-context-menu', { tabId }),
     showProfileMenu: (x, y, activeProfileId) => ipcRenderer.send('show-profile-menu', { x, y, activeProfileId }),
-    showNewTabMenu: (x, y, profileId) => ipcRenderer.send('show-new-tab-menu', { x, y, profileId })
+    showNewTabMenu: (x, y, profileId) => ipcRenderer.send('show-new-tab-menu', { x, y, profileId }),
+
+    // Privacy & Data Management
+    clearPrivacyData: (options) => ipcRenderer.invoke('clear-privacy-data', options),
+
+    // External Links
+    openExternal: (url) => ipcRenderer.invoke('open-external', url)
 });
 

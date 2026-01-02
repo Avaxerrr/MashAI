@@ -325,10 +325,15 @@ class TrayManager {
 
     /**
      * Check if minimize-to-tray is enabled
+     * Returns true only if BOTH showTrayIcon and minimizeToTray are enabled
      */
     isMinimizeToTrayEnabled() {
         const settings = this.settingsManager.getSettings();
-        return settings.general?.minimizeToTray !== false;
+        const showTray = settings.general?.showTrayIcon !== false;
+        const minimizeToTray = settings.general?.minimizeToTray !== false;
+
+        // Can only minimize to tray if the tray icon is visible
+        return showTray && minimizeToTray;
     }
 
     /**

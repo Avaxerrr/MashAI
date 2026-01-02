@@ -10,7 +10,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
         hardwareAcceleration: true,
         launchAtStartup: false,
         alwaysOnTop: false,
-        alwaysOnTopShortcut: 'CommandOrControl+Shift+T',
+        alwaysOnTopShortcut: 'CommandOrControl+Shift+A',
         minimizeToTray: true,
         showTrayIcon: true,
         hideShortcut: 'CommandOrControl+Shift+M',
@@ -27,7 +27,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
     const [isRecording, setIsRecording] = useState(null) // 'hide' | 'aot' | null
 
     const DEFAULT_HIDE_SHORTCUT = 'CommandOrControl+Shift+M'
-    const DEFAULT_AOT_SHORTCUT = 'CommandOrControl+Shift+T'
+    const DEFAULT_AOT_SHORTCUT = 'CommandOrControl+Shift+A'
 
     useEffect(() => {
         setHideShortcutInput(settings.hideShortcut || '')
@@ -358,19 +358,6 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                             Uses your graphics card to make the app faster and smoother. Disable this if you experience display issues, flickering, or high GPU usage.
                         </p>
                     </div>
-                </div>
-            </div>
-
-            {/* About Section */}
-            <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
-                    <h3 className="text-white font-medium text-sm">About MashAI</h3>
-                </div>
-                <div className="p-5">
-                    <p className="text-sm text-gray-400">
-                        A unified interface for all your AI assistants. Manage multiple AI providers and profiles in one place.
-                    </p>
-                    <p className="text-xs text-gray-500 mt-3">Version 1.0.0</p>
                 </div>
             </div>
         </div>

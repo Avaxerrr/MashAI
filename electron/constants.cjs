@@ -13,9 +13,9 @@ const DEFAULT_WINDOW = {
 };
 
 const SETTINGS_WINDOW = {
-    width: 750,
+    width: 790,
     height: 600,
-    minWidth: 750,
+    minWidth: 790,
     minHeight: 500
 };
 
