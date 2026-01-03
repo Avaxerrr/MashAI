@@ -1,30 +1,45 @@
 import { useState, useEffect } from 'react'
 import { Settings, Keyboard, AlertCircle, Check } from 'lucide-react'
+import type { GeneralSettings } from '../../types'
+
+interface GeneralTabProps {
+    generalSettings: GeneralSettings;
+    onGeneralChange: (settings: GeneralSettings) => void;
+}
+
+interface ShortcutInputProps {
+    type: 'hide' | 'aot';
+    value: string;
+    label: string;
+    description: string;
+}
 
 /**
  * GeneralTab - System settings, tray settings, and general app settings
  */
-export default function GeneralTab({ generalSettings, onGeneralChange }) {
-    const settings = {
-        rememberWindowPosition: true,
-        hardwareAcceleration: true,
-        launchAtStartup: false,
-        alwaysOnTop: false,
-        alwaysOnTopShortcut: 'CommandOrControl+Shift+A',
-        minimizeToTray: true,
-        showTrayIcon: true,
-        hideShortcut: 'CommandOrControl+Shift+M',
-        suspendOnHide: true,
-        keepLastActiveTab: true,
-        suspendDelaySeconds: 5,
+export default function GeneralTab({ generalSettings, onGeneralChange }: GeneralTabProps) {
+    const settings: GeneralSettings = {
+        ...{
+            rememberWindowPosition: true,
+            hardwareAcceleration: true,
+            launchAtStartup: false,
+            alwaysOnTop: false,
+            alwaysOnTopShortcut: 'CommandOrControl+Shift+A',
+            minimizeToTray: true,
+            showTrayIcon: true,
+            hideShortcut: 'CommandOrControl+Shift+M',
+            suspendOnHide: true,
+            keepLastActiveTab: true,
+            suspendDelaySeconds: 5,
+        },
         ...generalSettings
     }
 
     const [hideShortcutInput, setHideShortcutInput] = useState(settings.hideShortcut || '')
     const [aotShortcutInput, setAotShortcutInput] = useState(settings.alwaysOnTopShortcut || '')
-    const [shortcutError, setShortcutError] = useState(null)
+    const [shortcutError, setShortcutError] = useState<string | null>(null)
     const [shortcutValid, setShortcutValid] = useState(true)
-    const [isRecording, setIsRecording] = useState(null) // 'hide' | 'aot' | null
+    const [isRecording, setIsRecording] = useState<'hide' | 'aot' | null>(null)
 
     const DEFAULT_HIDE_SHORTCUT = 'CommandOrControl+Shift+M'
     const DEFAULT_AOT_SHORTCUT = 'CommandOrControl+Shift+A'
@@ -37,20 +52,19 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
         setAotShortcutInput(settings.alwaysOnTopShortcut || '')
     }, [generalSettings?.alwaysOnTopShortcut])
 
-    const updateSetting = (key, value) => {
+    const updateSetting = <K extends keyof GeneralSettings>(key: K, value: GeneralSettings[K]) => {
         if (onGeneralChange) {
             onGeneralChange({ ...settings, [key]: value })
         }
     }
 
-    // Handle shortcut recording for either type
-    const handleShortcutKeyDown = async (e, type) => {
+    const handleShortcutKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>, type: 'hide' | 'aot') => {
         if (isRecording !== type) return
 
         e.preventDefault()
         e.stopPropagation()
 
-        const parts = []
+        const parts: string[] = []
         if (e.ctrlKey) parts.push('Ctrl')
         if (e.altKey) parts.push('Alt')
         if (e.shiftKey) parts.push('Shift')
@@ -78,7 +92,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
         }
     }
 
-    const clearShortcut = (type) => {
+    const clearShortcut = (type: 'hide' | 'aot') => {
         if (type === 'hide') {
             setHideShortcutInput('')
             updateSetting('hideShortcut', '')
@@ -90,7 +104,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
         setShortcutValid(true)
     }
 
-    const resetShortcut = (type) => {
+    const resetShortcut = (type: 'hide' | 'aot') => {
         if (type === 'hide') {
             setHideShortcutInput(DEFAULT_HIDE_SHORTCUT)
             updateSetting('hideShortcut', DEFAULT_HIDE_SHORTCUT)
@@ -102,12 +116,10 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
         setShortcutValid(true)
     }
 
-    // When tray icon is disabled, also disable minimize-to-tray to prevent lockout
-    const handleShowTrayIconChange = (checked) => {
+    const handleShowTrayIconChange = (checked: boolean) => {
         if (checked) {
             updateSetting('showTrayIcon', true)
         } else {
-            // When disabling tray icon, also disable minimize-to-tray
             onGeneralChange({
                 ...settings,
                 showTrayIcon: false,
@@ -116,8 +128,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
         }
     }
 
-    // Shortcut input component for reuse
-    const ShortcutInput = ({ type, value, label, description }) => (
+    const ShortcutInput = ({ type, value, label, description }: ShortcutInputProps) => (
         <div className="space-y-2 pt-2">
             <label className="flex items-center gap-2 text-sm text-white">
                 <Keyboard size={16} className="text-gray-400" />
@@ -146,7 +157,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                 <button
                     onClick={() => resetShortcut(type)}
                     className="px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm rounded-lg transition-colors"
-                    title={`Reset to default`}
+                    title="Reset to default"
                 >
                     Reset
                 </button>
@@ -205,7 +216,6 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                         </div>
                     </label>
 
-                    {/* Always-on-top shortcut - only show when enabled */}
                     {settings.alwaysOnTop && (
                         <div className="pl-7">
                             <ShortcutInput
@@ -238,7 +248,6 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                         </div>
                     </label>
 
-                    {/* Options that only show when tray icon is enabled */}
                     {settings.showTrayIcon && (
                         <>
                             <label className="flex items-center gap-3 cursor-pointer">
@@ -254,7 +263,6 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                                 </div>
                             </label>
 
-                            {/* Hide/Show shortcut */}
                             <ShortcutInput
                                 type="hide"
                                 value={hideShortcutInput}
@@ -266,7 +274,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                 </div>
             </div>
 
-            {/* Tray Optimization Settings - only show when tray icon is enabled */}
+            {/* Tray Optimization Settings */}
             {settings.showTrayIcon && (
                 <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
                     <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">

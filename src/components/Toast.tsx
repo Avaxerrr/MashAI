@@ -1,7 +1,13 @@
 import { useEffect } from 'react'
 import { Check } from 'lucide-react'
 
-export default function Toast({ message, isVisible, onClose }) {
+interface ToastProps {
+    message: string;
+    isVisible: boolean;
+    onClose: () => void;
+}
+
+export default function Toast({ message, isVisible, onClose }: ToastProps) {
     useEffect(() => {
         if (isVisible) {
             const timer = setTimeout(() => {

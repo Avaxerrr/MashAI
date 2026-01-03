@@ -9,7 +9,12 @@ export const TITLEBAR_HEIGHT = 36;
 export const DEFAULT_PROVIDER_ID = 'perplexity';
 
 // Available profile icons
-export const PROFILE_ICONS = [
+export interface ProfileIcon {
+    name: string;
+    label: string;
+}
+
+export const PROFILE_ICONS: ProfileIcon[] = [
     { name: 'briefcase', label: 'Briefcase' },
     { name: 'user', label: 'User' },
     { name: 'home', label: 'Home' },
@@ -23,7 +28,7 @@ export const DEFAULT_PROFILE_COLOR = '#8b5cf6';
 export const DEFAULT_PROVIDER_COLOR = '#191A1A';
 
 // Provider default colors (for reset functionality)
-export const PROVIDER_DEFAULT_COLORS = {
+export const PROVIDER_DEFAULT_COLORS: Record<string, string> = {
     'perplexity': '#191A1A',
     'gemini': '#000000',
     'chatgpt': '#212121',

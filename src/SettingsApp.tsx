@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import SettingsModal from './components/SettingsModal'
+import type { Settings } from './types'
 
 function SettingsApp() {
-    const [settings, setSettings] = useState(null)
+    const [settings, setSettings] = useState<Settings | null>(null)
 
     useEffect(() => {
-        // Load initial settings from main process
         const loadSettings = async () => {
             const data = await window.api.getSettings()
             setSettings(data)
@@ -13,9 +13,8 @@ function SettingsApp() {
         loadSettings()
     }, [])
 
-    const handleSave = async (newSettings) => {
+    const handleSave = async (newSettings: Settings) => {
         await window.api.saveSettings(newSettings)
-        // Don't auto-close - let the modal component decide when to close
     }
 
     const handleClose = () => {

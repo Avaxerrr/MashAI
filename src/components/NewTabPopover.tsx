@@ -1,9 +1,15 @@
 import { Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useState, SyntheticEvent } from 'react'
+import type { AIProvider } from '../types'
 
-export default function NewTabPopover({ providers = [], onSelectProvider, profileId }) {
-    // Helper function to safely extract hostname from URL
-    const getHostnameSafe = (url) => {
+interface NewTabPopoverProps {
+    providers?: AIProvider[];
+    onSelectProvider: (profileId: string, url: string) => void;
+    profileId: string;
+}
+
+export default function NewTabPopover({ providers = [], onSelectProvider, profileId }: NewTabPopoverProps) {
+    const getHostnameSafe = (url: string): string | null => {
         try {
             return new URL(url).hostname
         } catch (e) {
@@ -12,29 +18,27 @@ export default function NewTabPopover({ providers = [], onSelectProvider, profil
     }
 
     const [isOpen, setIsOpen] = useState(false)
+    const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 })
 
-    const handleSelect = (provider) => {
-        // Don't restore view here - let the new tab creation handle it
+    const handleSelect = (provider: AIProvider) => {
         onSelectProvider(profileId, provider.url)
         setIsOpen(false)
     }
 
-    const handleOpen = (e) => {
+    const handleOpen = (e: React.MouseEvent<HTMLButtonElement>) => {
         const rect = e.currentTarget.getBoundingClientRect()
         setDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
-        window.api.hideWebView() // Hide view to show popover
+        window.api.hideWebView()
         setIsOpen(true)
     }
 
     const handleClose = () => {
-        window.api.showWebView() // Restore view
+        window.api.showWebView()
         setIsOpen(false)
     }
 
-    const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 })
-
     return (
-        <div className="relative" style={{ WebkitAppRegion: 'no-drag' }}>
+        <div className="relative" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
             <button
                 onClick={handleOpen}
                 className="h-10 px-3 hover:bg-[#2a2a2a] transition-colors flex items-center flex-shrink-0 border-l border-[#1e1e1e]"
@@ -51,7 +55,7 @@ export default function NewTabPopover({ providers = [], onSelectProvider, profil
                         onClick={handleClose}
                     />
 
-                    {/* Dropdown - Fixed position to avoid being clipped */}
+                    {/* Dropdown */}
                     <div
                         className="fixed bg-[#252526] border border-[#3e3e42] rounded-lg shadow-xl min-w-[200px] z-[9999] py-1 overflow-hidden"
                         style={{ top: dropdownPos.top, right: dropdownPos.right }}
@@ -66,17 +70,15 @@ export default function NewTabPopover({ providers = [], onSelectProvider, profil
                                 className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-[#2a2d2e] text-white text-sm text-left transition-colors"
                             >
                                 {(() => {
-                                    // Prefer cached favicon, fallback to Google service
                                     if (provider.faviconDataUrl) {
                                         return (
                                             <img
                                                 src={provider.faviconDataUrl}
                                                 className="w-5 h-5"
                                                 alt=""
-                                                onError={(e) => {
-                                                    // Fallback to Google service if cached fails
+                                                onError={(e: SyntheticEvent<HTMLImageElement>) => {
                                                     const hostname = getHostnameSafe(provider.url)
-                                                    e.target.src = hostname
+                                                    e.currentTarget.src = hostname
                                                         ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`
                                                         : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10"/></svg>'
                                                 }}
@@ -92,7 +94,9 @@ export default function NewTabPopover({ providers = [], onSelectProvider, profil
                                             }
                                             className="w-5 h-5"
                                             alt=""
-                                            onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10"/></svg>' }}
+                                            onError={(e: SyntheticEvent<HTMLImageElement>) => {
+                                                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10"/></svg>'
+                                            }}
                                         />
                                     )
                                 })()}

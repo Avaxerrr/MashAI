@@ -1,7 +1,9 @@
-import { Plus, Trash2, GripVertical, Briefcase, User, Home, Zap, Code, Globe } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Briefcase, User, Home, Zap, Code, Globe, LucideIcon } from 'lucide-react'
+import { RefObject, DragEvent } from 'react'
+import type { Profile } from '../../types'
 
 // Icon map for rendering profile icons
-const iconMap = {
+const iconMap: Record<string, LucideIcon> = {
     'briefcase': Briefcase,
     'user': User,
     'home': Home,
@@ -10,7 +12,12 @@ const iconMap = {
     'globe': Globe
 }
 
-const availableIcons = [
+interface AvailableIcon {
+    name: string;
+    component: LucideIcon;
+}
+
+const availableIcons: AvailableIcon[] = [
     { name: 'briefcase', component: Briefcase },
     { name: 'user', component: User },
     { name: 'home', component: Home },
@@ -18,6 +25,20 @@ const availableIcons = [
     { name: 'code', component: Code },
     { name: 'globe', component: Globe }
 ]
+
+interface ProfilesTabProps {
+    profiles: Profile[];
+    addProfile: () => void;
+    updateProfile: (id: string, field: keyof Profile, value: string) => void;
+    deleteProfile: (id: string) => void;
+    reorderProfiles: (fromIndex: number, toIndex: number) => void;
+    draggedProfileId: string | null;
+    setDraggedProfileId: (id: string | null) => void;
+    dragOverProfileId: string | null;
+    setDragOverProfileId: (id: string | null) => void;
+    newlyAddedProfileId: string | null;
+    profilesListRef: RefObject<HTMLDivElement>;
+}
 
 /**
  * ProfilesTab - Profile management section
@@ -28,16 +49,14 @@ export default function ProfilesTab({
     updateProfile,
     deleteProfile,
     reorderProfiles,
-    // Drag state
     draggedProfileId,
     setDraggedProfileId,
     dragOverProfileId,
     setDragOverProfileId,
-    // Animation
     newlyAddedProfileId,
     profilesListRef
-}) {
-    const renderProfileIcon = (iconName) => {
+}: ProfilesTabProps) {
+    const renderProfileIcon = (iconName: string) => {
         const IconComponent = iconMap[iconName] || User
         return <IconComponent size={20} />
     }
@@ -60,7 +79,7 @@ export default function ProfilesTab({
                 </button>
             </div>
 
-            {/* Helpful hints with intentional design */}
+            {/* Helpful hints */}
             <div className="flex items-start gap-3 px-4 py-3 bg-[#1e293b] border-l-2 border-violet-500 rounded-r-lg -mt-3">
                 <svg className="w-4 h-4 text-violet-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -78,23 +97,23 @@ export default function ProfilesTab({
                         <div
                             key={profile.id}
                             draggable
-                            onDragStart={(e) => {
+                            onDragStart={(e: DragEvent<HTMLDivElement>) => {
                                 setDraggedProfileId(profile.id)
                                 e.dataTransfer.effectAllowed = 'move'
                             }}
-                            onDragOver={(e) => {
+                            onDragOver={(e: DragEvent<HTMLDivElement>) => {
                                 e.preventDefault()
                                 e.dataTransfer.dropEffect = 'move'
                                 if (draggedProfileId && draggedProfileId !== profile.id) {
                                     setDragOverProfileId(profile.id)
                                 }
                             }}
-                            onDragLeave={(e) => {
-                                if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget)) {
+                            onDragLeave={(e: DragEvent<HTMLDivElement>) => {
+                                if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
                                     setDragOverProfileId(null)
                                 }
                             }}
-                            onDrop={(e) => {
+                            onDrop={(e: DragEvent<HTMLDivElement>) => {
                                 e.preventDefault()
                                 if (draggedProfileId && draggedProfileId !== profile.id) {
                                     const draggedIndex = profiles.findIndex(p => p.id === draggedProfileId)

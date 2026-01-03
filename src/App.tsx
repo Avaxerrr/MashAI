@@ -1,53 +1,57 @@
 import { useState, useEffect, useRef } from 'react'
 import TitleBar from './components/TitleBar'
+import type { Profile, AIProvider, Settings, TabCreatedEvent, TabUpdatedEvent, ProfileTabsLoadedEvent, TabMemoryInfo } from './types'
+
+interface TabState {
+    id: string;
+    profileId: string;
+    url: string;
+    title: string;
+    loaded: boolean;
+    suspended?: boolean;
+    loading?: boolean;
+}
 
 function App() {
-    const [profiles, setProfiles] = useState([])
-    const [tabs, setTabs] = useState([])
-    const [activeProfileId, setActiveProfileId] = useState(() => {
-        // Read from localStorage for instant startup (zero flicker)
+    const [profiles, setProfiles] = useState<Profile[]>([])
+    const [tabs, setTabs] = useState<TabState[]>([])
+    const [activeProfileId, setActiveProfileId] = useState<string>(() => {
         return localStorage.getItem('lastActiveProfileId') || 'work'
     })
-    const [activeTabId, setActiveTabId] = useState(null)
+    const [activeTabId, setActiveTabId] = useState<string | null>(null)
 
-    const [aiProviders, setAiProviders] = useState([]) // New state for providers
-    const [defaultProviderId, setDefaultProviderId] = useState('perplexity')
-    const [tabMemory, setTabMemory] = useState({}) // Per-tab memory info
-    const [toastMessage, setToastMessage] = useState('')
-    const [showToast, setShowToast] = useState(false)
+    const [aiProviders, setAiProviders] = useState<AIProvider[]>([])
+    const [defaultProviderId, setDefaultProviderId] = useState<string>('perplexity')
+    const [tabMemory, setTabMemory] = useState<Record<string, TabMemoryInfo>>({})
+    const [toastMessage, setToastMessage] = useState<string>('')
+    const [showToast, setShowToast] = useState<boolean>(false)
 
-    // Ref to hold the latest closeTab function to avoid stale closures in listeners
-    const closeTabRef = useRef()
+    const closeTabRef = useRef<((tabId: string) => void) | null>(null)
 
     useEffect(() => {
-        // Safety check
         if (!window.api) {
             console.error('window.api is undefined - preload script failed to load!')
             return
         }
 
-        // Initial Data Load
         const loadInitialData = async () => {
             try {
-                const settings = await window.api.getSettings();
+                const settings: Settings = await window.api.getSettings();
                 if (settings) {
                     if (settings.aiProviders) setAiProviders(settings.aiProviders);
                     if (settings.defaultProviderId) setDefaultProviderId(settings.defaultProviderId);
                 }
 
-                // Restore tabs from backend (important for Ctrl+R reload)
-                const tabData = await window.api.getAllTabs();
-                if (tabData && tabData.tabs) {
-                    setTabs(tabData.tabs);
-                    if (tabData.activeTabId) {
-                        setActiveTabId(tabData.activeTabId);
-
-                        // IMPORTANT: Set the active profile based on the active tab
-                        const activeTab = tabData.tabs.find(t => t.id === tabData.activeTabId);
-                        if (activeTab && activeTab.profileId) {
-                            setActiveProfileId(activeTab.profileId);
-                            // Keep localStorage in sync with backend's truth
-                            localStorage.setItem('lastActiveProfileId', activeTab.profileId);
+                const tabData = await window.api.getAllTabs() as TabState[];
+                if (tabData && tabData.length > 0) {
+                    setTabs(tabData);
+                    // Find the first tab to set as active
+                    const firstTab = tabData[0];
+                    if (firstTab) {
+                        setActiveTabId(firstTab.id);
+                        if (firstTab.profileId) {
+                            setActiveProfileId(firstTab.profileId);
+                            localStorage.setItem('lastActiveProfileId', firstTab.profileId);
                         }
                     }
                 }
@@ -57,28 +61,23 @@ function App() {
         }
         loadInitialData();
 
-        // Event handlers
-        const handleProfilesLoaded = (profileList) => {
+        const handleProfilesLoaded = (profileList: Profile[]) => {
             console.log('App: Profiles loaded', profileList)
             setProfiles(profileList)
         }
 
-        const handleTabCreated = (tab) => {
+        const handleTabCreated = (tab: TabCreatedEvent) => {
             console.log('App: Tab created', tab)
-            console.log('Current activeProfileId:', activeProfileId)
             setTabs(prev => {
-                // Prevent duplicates
                 if (prev.some(t => t.id === tab.id)) {
                     return prev
                 }
-                return [...prev, tab]
+                return [...prev, { ...tab, url: '', loaded: tab.loaded ?? false }]
             })
-            // If this tab was just created for the active profile, switch to it?
-            // Actually, main process handles switching most of the time.
             setActiveTabId(tab.id)
         }
 
-        const handleTabUpdated = ({ id, title, url, loaded, suspended }) => {
+        const handleTabUpdated = ({ id, title, url, loaded, suspended }: TabUpdatedEvent) => {
             setTabs(prev => prev.map(tab =>
                 tab.id === id ? {
                     ...tab,
@@ -90,42 +89,36 @@ function App() {
             ))
         }
 
-        const handleTabLoading = ({ id }) => {
-            // Mark tab as loading (for UI spinner)
+        const handleTabLoading = ({ id }: { id: string }) => {
             setTabs(prev => prev.map(tab =>
                 tab.id === id ? { ...tab, loading: true } : tab
             ))
         }
 
-        const handleRestoreActive = (tabId) => {
+        const handleRestoreActive = (tabId: string) => {
             setActiveTabId(tabId)
-            // Also update the active profile to match the restored tab
             setTabs(prev => {
                 const restoredTab = prev.find(t => t.id === tabId);
                 if (restoredTab && restoredTab.profileId) {
                     setActiveProfileId(restoredTab.profileId);
-                    // Save to localStorage cache
                     localStorage.setItem('lastActiveProfileId', restoredTab.profileId);
                 }
                 return prev;
             })
         }
 
-        const handleProfileTabsLoaded = ({ profileId, tabs: loadedTabs, lastActiveTabId }) => {
+        const handleProfileTabsLoaded = ({ profileId, tabs: loadedTabs, lastActiveTabId }: ProfileTabsLoadedEvent) => {
             console.log('Profile tabs loaded for', profileId, 'count:', loadedTabs.length)
             setTabs(loadedTabs)
             if (loadedTabs.length > 0) {
-                // Use the last active tab if provided, otherwise use the first tab
                 const tabToActivate = lastActiveTabId || loadedTabs[0].id
                 setActiveTabId(tabToActivate)
                 window.api.switchTab(tabToActivate)
             } else {
-                // Profile has no tabs, create a default one
                 window.api.createTab(profileId)
             }
         }
 
-        // Register listeners and store cleanup functions
         const cleanupProfilesLoaded = window.api.onProfilesLoaded(handleProfilesLoaded)
         const cleanupTabCreated = window.api.onTabCreated(handleTabCreated)
         const cleanupTabUpdated = window.api.onTabUpdated(handleTabUpdated)
@@ -133,24 +126,21 @@ function App() {
         const cleanupRestoreActive = window.api.onRestoreActive(handleRestoreActive)
         const cleanupProfileTabsLoaded = window.api.onProfileTabsLoaded(handleProfileTabsLoaded)
 
-        // Listen for Menu events
-        const cleanupSwitchProfileRequest = window.api.onSwitchProfileRequest((id) => {
+        const cleanupSwitchProfileRequest = window.api.onSwitchProfileRequest((id: string) => {
             switchProfile(id)
         })
 
-        const cleanupRequestCloseTab = window.api.onRequestCloseTab((tabId) => {
+        const cleanupRequestCloseTab = window.api.onRequestCloseTab((tabId: string) => {
             if (closeTabRef.current) {
                 closeTabRef.current(tabId)
             }
         })
 
-        // Listen for backend-initiated closures (Context Menu)
-        const cleanupTabClosedBackend = window.api.onTabClosedBackend((tabId) => {
+        const cleanupTabClosedBackend = window.api.onTabClosedBackend((tabId: string) => {
             setTabs(prev => prev.filter(tab => tab.id !== tabId))
         })
 
-        // Listen for settings updates (when user changes settings in the Settings window)
-        const cleanupSettingsUpdated = window.api.onSettingsUpdated((newSettings) => {
+        const cleanupSettingsUpdated = window.api.onSettingsUpdated((newSettings: Settings) => {
             console.log('App: Settings updated', newSettings)
             if (newSettings.profiles) {
                 setProfiles(newSettings.profiles)
@@ -163,13 +153,11 @@ function App() {
             }
         })
 
-        // Listen for show-toast events from backend (e.g., always-on-top toggle)
-        const cleanupShowToast = window.api.onShowToast?.((message) => {
+        const cleanupShowToast = window.api.onShowToast?.((message: string) => {
             setToastMessage(message)
             setShowToast(true)
         })
 
-        // Cleanup function - ACTUALLY remove listeners
         return () => {
             console.log('Cleaning up listeners')
             if (cleanupProfilesLoaded) cleanupProfilesLoaded()
@@ -186,20 +174,23 @@ function App() {
         }
     }, [])
 
-    // Fetch tab memory periodically for tooltips
     useEffect(() => {
         const fetchTabMemory = async () => {
             if (window.api?.getAllTabsMemory) {
                 try {
                     const memory = await window.api.getAllTabsMemory()
-                    setTabMemory(memory)
+                    const memoryMap: Record<string, TabMemoryInfo> = {}
+                    if (Array.isArray(memory)) {
+                        memory.forEach((m) => { memoryMap[m.tabId] = m })
+                    }
+                    setTabMemory(memoryMap)
                 } catch (e) {
                     // API not ready yet
                 }
             }
         }
         fetchTabMemory()
-        const interval = setInterval(fetchTabMemory, 10000) // Every 10 seconds
+        const interval = setInterval(fetchTabMemory, 10000)
         return () => clearInterval(interval)
     }, [])
 
@@ -207,25 +198,22 @@ function App() {
         window.api.createTab(activeProfileId)
     }
 
-    const createTabWithUrl = (profileId, url) => {
+    const createTabWithUrl = (profileId: string, url: string) => {
         window.api.createTabWithUrl(profileId, url)
     }
 
-    const switchTab = (tabId) => {
+    const switchTab = (tabId: string) => {
         setActiveTabId(tabId)
         window.api.switchTab(tabId)
 
-        // Update active profile if switching to a tab from a different profile
         const targetTab = tabs.find(t => t.id === tabId);
         if (targetTab && targetTab.profileId && targetTab.profileId !== activeProfileId) {
             setActiveProfileId(targetTab.profileId);
-            // Save to localStorage cache
             localStorage.setItem('lastActiveProfileId', targetTab.profileId);
         }
     }
 
-    const closeTab = (tabId) => {
-        // Prevent closing the last tab for the current profile
+    const closeTab = (tabId: string) => {
         const activeProfileTabs = tabs.filter(t => t.profileId === activeProfileId)
         if (activeProfileTabs.length <= 1) {
             return
@@ -235,9 +223,7 @@ function App() {
         setTabs(prev => {
             const filtered = prev.filter(tab => tab.id !== tabId)
 
-            // If we closed the active tab, switch to another
             if (tabId === activeTabId && filtered.length > 0) {
-                // We need to find a tab that belongs to the current profile
                 const currentProfileFiltered = filtered.filter(t => t.profileId === activeProfileId)
 
                 if (currentProfileFiltered.length > 0) {
@@ -253,16 +239,15 @@ function App() {
         })
     }
 
-    // Update ref whenever closeTab changes (which depends on state)
     useEffect(() => {
         closeTabRef.current = closeTab
-    }, [closeTab])
+    }, [tabs, activeTabId, activeProfileId])
 
-    const duplicateTab = (tabId) => {
+    const duplicateTab = (tabId: string) => {
         window.api.duplicateTab(tabId)
     }
 
-    const reloadTab = (tabId) => {
+    const reloadTab = (tabId: string) => {
         window.api.reloadTab(tabId)
     }
 
@@ -270,12 +255,12 @@ function App() {
         window.api.reopenClosedTab()
     }
 
-    const closeOtherTabs = (tabId) => {
+    const closeOtherTabs = (tabId: string) => {
         window.api.closeOtherTabs(tabId, activeProfileId)
         setTabs(prev => prev.filter(tab => tab.id === tabId))
     }
 
-    const closeTabsToRight = (tabId) => {
+    const closeTabsToRight = (tabId: string) => {
         window.api.closeTabsToRight(tabId, activeProfileId)
         setTabs(prev => {
             const index = prev.findIndex(t => t.id === tabId)
@@ -283,19 +268,14 @@ function App() {
         })
     }
 
-    const switchProfile = (profileId) => {
-        // Notify backend to handle suspension/closing of old profile's tabs
-        // Backend determines the "from" profile from the current active tab
+    const switchProfile = (profileId: string) => {
         window.api.switchProfile(profileId)
-
         setActiveProfileId(profileId)
-        // Save to localStorage cache
         localStorage.setItem('lastActiveProfileId', profileId)
         window.api.getProfileTabs(profileId)
     }
 
-    const reorderTabs = (fromIndex, toIndex) => {
-        // Get the current profile's tabs to find the actual tab IDs
+    const reorderTabs = (fromIndex: number, toIndex: number) => {
         const profileTabs = tabs.filter(t => t.profileId === activeProfileId);
 
         if (fromIndex < 0 || fromIndex >= profileTabs.length ||
@@ -308,35 +288,25 @@ function App() {
 
         setTabs(prev => {
             const newTabs = [...prev];
-
-            // Find actual indices in the full array
             const actualFromIndex = newTabs.findIndex(t => t.id === movedTabId);
             const actualToIndex = newTabs.findIndex(t => t.id === targetTabId);
 
             if (actualFromIndex === -1 || actualToIndex === -1) return prev;
 
-            // Remove the moved tab and insert at new position
             const [movedTab] = newTabs.splice(actualFromIndex, 1);
-
-            // Recalculate target index since array changed after splice
             const newTargetIndex = newTabs.findIndex(t => t.id === targetTabId);
             if (newTargetIndex === -1) {
-                // Target was removed, insert at end
                 newTabs.push(movedTab);
             } else {
-                // Insert at or after the target position
                 newTabs.splice(actualFromIndex < actualToIndex ? newTargetIndex + 1 : newTargetIndex, 0, movedTab);
             }
 
-            // Send new order to backend
             const tabOrder = newTabs.map(t => t.id);
             window.api.reorderTabs(tabOrder);
 
             return newTabs;
         });
     }
-
-    // Removed useKeyboardShortcuts - handled by Electron Main Menu now
 
     const currentTabs = tabs.filter(t => t.profileId === activeProfileId)
 
@@ -364,7 +334,6 @@ function App() {
                 onCloseToast={() => setShowToast(false)}
             />
 
-            {/* The WebContentsView will render here (controlled by Electron) */}
             <div className="flex-1" />
         </div>
     )

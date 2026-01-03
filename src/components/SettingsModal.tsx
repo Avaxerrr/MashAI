@@ -8,53 +8,62 @@ import ProvidersTab from './settings/ProvidersTab'
 import ShortcutsTab from './settings/ShortcutsTab'
 import AboutTab from './settings/AboutTab'
 import Toast from './Toast'
+import type { Profile, AIProvider, Settings as SettingsType, PerformanceSettings, GeneralSettings } from '../types'
 
-export default function SettingsModal({ isOpen, onClose, onSave, initialSettings }) {
+type TabName = 'general' | 'privacy' | 'profiles' | 'providers' | 'performance' | 'shortcuts' | 'about';
+
+interface SettingsModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (settings: SettingsType) => void;
+    initialSettings: SettingsType | null;
+}
+
+export default function SettingsModal({ isOpen, onClose, onSave, initialSettings }: SettingsModalProps) {
     if (!isOpen) return null
 
-    const [activeTab, setActiveTab] = useState('general') // general, profiles, providers
-    const [profiles, setProfiles] = useState([])
-    const [providers, setProviders] = useState([])
-    const [defaultProviderId, setDefaultProviderId] = useState('perplexity')
+    const [activeTab, setActiveTab] = useState<TabName>('general')
+    const [profiles, setProfiles] = useState<Profile[]>([])
+    const [providers, setProviders] = useState<AIProvider[]>([])
+    const [defaultProviderId, setDefaultProviderId] = useState<string>('perplexity')
 
-    // Performance settings state
-    const [performanceSettings, setPerformanceSettings] = useState({
+    const [performanceSettings, setPerformanceSettings] = useState<PerformanceSettings>({
         tabLoadingStrategy: 'lastActiveOnly',
         autoSuspendEnabled: true,
         autoSuspendMinutes: 30,
         profileSwitchBehavior: 'suspend'
     })
 
-    // General settings state
-    const [generalSettings, setGeneralSettings] = useState({
+    const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
         hardwareAcceleration: true,
-        rememberWindowPosition: true
+        rememberWindowPosition: true,
+        launchAtStartup: false,
+        alwaysOnTop: false,
+        alwaysOnTopShortcut: '',
+        minimizeToTray: true,
+        showTrayIcon: true,
+        hideShortcut: '',
+        suspendOnHide: true,
+        keepLastActiveTab: true,
+        suspendDelaySeconds: 5
     })
 
-    // Refs for auto-scroll
-    const profilesListRef = useRef(null)
-    const providersListRef = useRef(null)
-    const contentAreaRef = useRef(null)
+    const profilesListRef = useRef<HTMLDivElement>(null)
+    const providersListRef = useRef<HTMLDivElement>(null)
+    const contentAreaRef = useRef<HTMLDivElement>(null)
 
-    // Track newly added items for pulse animation
-    const [newlyAddedProfileId, setNewlyAddedProfileId] = useState(null)
-    const [newlyAddedProviderId, setNewlyAddedProviderId] = useState(null)
+    const [newlyAddedProfileId, setNewlyAddedProfileId] = useState<string | null>(null)
+    const [newlyAddedProviderId, setNewlyAddedProviderId] = useState<string | null>(null)
 
-    // Drag-and-drop state for profiles
-    const [draggedProfileId, setDraggedProfileId] = useState(null)
-    const [dragOverProfileId, setDragOverProfileId] = useState(null)
+    const [draggedProfileId, setDraggedProfileId] = useState<string | null>(null)
+    const [dragOverProfileId, setDragOverProfileId] = useState<string | null>(null)
 
-    // Drag-and-drop state for providers
-    const [draggedProviderId, setDraggedProviderId] = useState(null)
-    const [dragOverProviderId, setDragOverProviderId] = useState(null)
+    const [draggedProviderId, setDraggedProviderId] = useState<string | null>(null)
+    const [dragOverProviderId, setDragOverProviderId] = useState<string | null>(null)
 
-    // Toast notification state
     const [showToast, setShowToast] = useState(false)
+    const [activeProfileId, setActiveProfileId] = useState<string | null>(null)
 
-    // Active profile ID (for deletion validation)
-    const [activeProfileId, setActiveProfileId] = useState(null)
-
-    // Load initial settings
     useEffect(() => {
         if (initialSettings) {
             setProfiles(initialSettings.profiles || [])
@@ -67,7 +76,6 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                 setGeneralSettings(prev => ({ ...prev, ...initialSettings.general }))
             }
 
-            // Fetch active profile ID for deletion validation
             if (window.api?.getActiveProfileId) {
                 window.api.getActiveProfileId().then(id => {
                     if (id) setActiveProfileId(id)
@@ -76,9 +84,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         }
     }, [initialSettings])
 
-    // ESC key to close
     useEffect(() => {
-        const handleKeyDown = (e) => {
+        const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 onClose()
             }
@@ -87,7 +94,6 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [onClose])
 
-    // Auto-scroll when items are added (profiles only)
     useEffect(() => {
         if (contentAreaRef.current && profiles.length > 0 && activeTab === 'profiles') {
             setTimeout(() => {
@@ -99,9 +105,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                 }
             }, 100)
         }
-    }, [profiles.length])
+    }, [profiles.length, activeTab])
 
-    // Auto-scroll when items are added (providers only)
     useEffect(() => {
         if (contentAreaRef.current && providers.length > 0 && activeTab === 'providers') {
             setTimeout(() => {
@@ -113,16 +118,14 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                 }
             }, 100)
         }
-    }, [providers.length])
+    }, [providers.length, activeTab])
 
-    // Reset scroll position when switching tabs
     useEffect(() => {
         if (contentAreaRef.current) {
             contentAreaRef.current.scrollTop = 0
         }
     }, [activeTab])
 
-    // Clear pulse animation after 2 seconds
     useEffect(() => {
         if (newlyAddedProfileId) {
             const timer = setTimeout(() => setNewlyAddedProfileId(null), 2000)
@@ -137,18 +140,16 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         }
     }, [newlyAddedProviderId])
 
-    // --- Event Handlers ---
     const handleApply = () => {
         onSave({
             profiles,
             aiProviders: providers,
             defaultProviderId,
+            defaultProfileId: profiles[0]?.id || 'work',
             performance: performanceSettings,
             general: generalSettings
         })
-        // Show success toast
         setShowToast(true)
-        // Don't close - that's the key difference from handleSave
     }
 
     const handleSave = () => {
@@ -172,17 +173,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     { id: 'gemini', name: 'Gemini', url: 'https://gemini.google.com', icon: 'google', color: '#000000' },
                     { id: 'chatgpt', name: 'ChatGPT', url: 'https://chatgpt.com', icon: 'openai', color: '#212121' },
                     { id: 'claude', name: 'Claude', url: 'https://claude.ai', icon: 'anthropic', color: '#262624' },
-                    { id: 'grok', name: 'Grok', url: 'https://grok.com', icon: 'x', color: '#000000' },
-                    { id: 'kling', name: 'Kling AI', url: 'https://app.klingai.com', icon: 'globe', color: '#1a1a2e' },
-                    { id: 'firefly', name: 'Adobe Firefly', url: 'https://www.adobe.com/products/firefly.html', icon: 'globe', color: '#1a0a0a' },
-                    { id: 'flux', name: 'Flux', url: 'https://flux1.ai/', icon: 'globe', color: '#0a0a0a' },
-                    { id: 'leonardo', name: 'Leonardo', url: 'https://leonardo.ai/', icon: 'globe', color: '#1a1a2e' },
-                    { id: 'runway', name: 'Runway', url: 'https://runwayml.com/', icon: 'globe', color: '#0f0f0f' },
-                    { id: 'luma', name: 'Luma', url: 'https://lumalabs.ai/', icon: 'globe', color: '#0a0a0a' },
-                    { id: 'heygen', name: 'HeyGen', url: 'https://www.heygen.com/', icon: 'globe', color: '#1a1a2e' },
-                    { id: 'elevenlabs', name: 'ElevenLabs', url: 'https://elevenlabs.io/', icon: 'globe', color: '#0f0f0f' },
-                    { id: 'udio', name: 'Udio', url: 'https://www.udio.com/', icon: 'globe', color: '#1a1a1a' },
-                    { id: 'suno', name: 'Suno', url: 'https://suno.com/home', icon: 'globe', color: '#0a0a0a' }
+                    { id: 'grok', name: 'Grok', url: 'https://grok.com', icon: 'x', color: '#000000' }
                 ],
                 defaultProviderId: 'perplexity'
             }
@@ -192,40 +183,30 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         }
     }
 
-    // --- Profile Handlers ---
     const addProfile = () => {
         const newId = 'profile-' + Date.now()
         setProfiles([...profiles, { id: newId, name: 'New Profile', icon: 'user', color: '#6366f1' }])
         setNewlyAddedProfileId(newId)
     }
 
-    const updateProfile = (id, field, value) => {
+    const updateProfile = (id: string, field: keyof Profile, value: string) => {
         setProfiles(profiles.map(p => p.id === id ? { ...p, [field]: value } : p))
     }
 
-    // TODO: Thorough testing needed for profile deletion:
-    // - [ ] Verify active profile cannot be deleted
-    // - [ ] Verify confirmation dialog appears with correct warning
-    // - [ ] Verify partition data is cleaned up (check console logs)
-    // - [ ] Verify tabs are closed for deleted profile
-    // - [ ] Test deleting profile that has open tabs
-    const deleteProfile = (id) => {
+    const deleteProfile = (id: string) => {
         if (profiles.length <= 1) {
             alert('Cannot delete the last profile. At least one profile is required.')
             return
         }
 
-        // Prevent deleting the active profile
         if (id === activeProfileId) {
             alert('Cannot delete the active profile. Please switch to another profile first.')
             return
         }
 
-        // Get profile name for confirmation
         const profileToDelete = profiles.find(p => p.id === id)
         const profileName = profileToDelete?.name || 'this profile'
 
-        // Show confirmation dialog with warning about data deletion
         const confirmed = confirm(
             `Delete "${profileName}"?\n\n` +
             `This will permanently delete:\n` +
@@ -240,25 +221,24 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         }
     }
 
-    const reorderProfiles = (fromIndex, toIndex) => {
+    const reorderProfiles = (fromIndex: number, toIndex: number) => {
         const newProfiles = [...profiles]
         const [movedProfile] = newProfiles.splice(fromIndex, 1)
         newProfiles.splice(toIndex, 0, movedProfile)
         setProfiles(newProfiles)
     }
 
-    // --- Provider Handlers ---
     const addProvider = () => {
         const newId = 'provider-' + Date.now()
         setProviders([...providers, { id: newId, name: 'New AI', url: 'https://', icon: 'globe', color: '#191A1A' }])
         setNewlyAddedProviderId(newId)
     }
 
-    const updateProvider = (id, field, value) => {
+    const updateProvider = (id: string, field: keyof AIProvider, value: string) => {
         setProviders(providers.map(p => p.id === id ? { ...p, [field]: value } : p))
     }
 
-    const deleteProvider = (id) => {
+    const deleteProvider = (id: string) => {
         if (providers.length <= 1) return
 
         if (id === defaultProviderId) {
@@ -271,24 +251,24 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         setProviders(providers.filter(p => p.id !== id))
     }
 
-    const reorderProviders = (fromIndex, toIndex) => {
+    const reorderProviders = (fromIndex: number, toIndex: number) => {
         const newProviders = [...providers]
         const [movedProvider] = newProviders.splice(fromIndex, 1)
         newProviders.splice(toIndex, 0, movedProvider)
         setProviders(newProviders)
     }
 
-    const setAsDefault = (providerId) => {
+    const setAsDefault = (providerId: string) => {
         setDefaultProviderId(providerId)
     }
 
     return (
         <div className="h-screen w-screen bg-[#323233] flex flex-col overflow-hidden">
 
-            {/* Header - Draggable */}
+            {/* Header */}
             <div
                 className="h-14 border-b border-[#3e3e42] bg-[#323233] flex items-center justify-between px-6 select-none"
-                style={{ WebkitAppRegion: 'drag' }}
+                style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
             >
                 <h2 className="text-white font-semibold text-lg flex items-center gap-3">
                     <Settings size={20} className="text-violet-400" />
@@ -297,7 +277,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                 <button
                     onClick={handleClose}
                     className="p-2 hover:bg-[#3e3e42] rounded-lg text-gray-400 hover:text-white transition-all"
-                    style={{ WebkitAppRegion: 'no-drag' }}
+                    style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
                 >
                     <X size={20} />
                 </button>
@@ -306,76 +286,40 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
             <div className="flex flex-1 overflow-hidden">
                 {/* Sidebar */}
                 <div className="w-56 border-r border-[#3e3e42] bg-[#252526] p-3 flex flex-col gap-2">
-                    <button
-                        onClick={() => setActiveTab('general')}
-                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'general'
-                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
-                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
-                            }`}
-                    >
-                        <Settings size={16} />
-                        General
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('privacy')}
-                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'privacy'
-                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
-                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
-                            }`}
-                    >
-                        <Shield size={16} />
-                        Privacy
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('profiles')}
-                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'profiles'
-                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
-                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
-                            }`}
-                    >
-                        <Users size={16} />
-                        Profiles
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('providers')}
-                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'providers'
-                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
-                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
-                            }`}
-                    >
-                        <Bot size={16} />
-                        AI Providers
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('performance')}
-                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'performance'
-                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
-                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
-                            }`}
-                    >
-                        <Gauge size={16} />
-                        Performance
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('shortcuts')}
-                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'shortcuts'
-                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
-                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
-                            }`}
-                    >
-                        <Keyboard size={16} />
-                        Shortcuts
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('about')}
-                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'about'
-                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
-                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
-                            }`}
-                    >
-                        <Info size={16} />
-                        About
-                    </button>
+                    {(['general', 'privacy', 'profiles', 'providers', 'performance', 'shortcuts', 'about'] as const).map(tab => {
+                        const icons: Record<TabName, typeof Settings> = {
+                            general: Settings,
+                            privacy: Shield,
+                            profiles: Users,
+                            providers: Bot,
+                            performance: Gauge,
+                            shortcuts: Keyboard,
+                            about: Info
+                        }
+                        const labels: Record<TabName, string> = {
+                            general: 'General',
+                            privacy: 'Privacy',
+                            profiles: 'Profiles',
+                            providers: 'AI Providers',
+                            performance: 'Performance',
+                            shortcuts: 'Shortcuts',
+                            about: 'About'
+                        }
+                        const Icon = icons[tab]
+                        return (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === tab
+                                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
+                                    : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
+                                    }`}
+                            >
+                                <Icon size={16} />
+                                {labels[tab]}
+                            </button>
+                        )
+                    })}
                 </div>
 
                 {/* Content */}

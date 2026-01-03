@@ -1,5 +1,38 @@
-import { Minus, Square, X, ChevronDown, ArrowLeft, RotateCw, Plus, Briefcase, User, Home, Zap, Code, Globe, Check } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { Minus, Square, X, ChevronDown, ArrowLeft, RotateCw, Plus, Briefcase, User, Home, Zap, Code, Globe, Check, LucideIcon } from 'lucide-react'
+import { useState, useEffect, SyntheticEvent, DragEvent } from 'react'
+import type { Profile, AIProvider, TabMemoryInfo } from '../types'
+
+interface TabState {
+    id: string;
+    profileId: string;
+    url: string;
+    title: string;
+    loaded: boolean;
+    suspended?: boolean;
+    loading?: boolean;
+}
+
+interface TitleBarProps {
+    profiles?: Profile[];
+    activeProfile?: Profile;
+    tabs?: TabState[];
+    activeTabId?: string | null;
+    tabMemory?: Record<string, TabMemoryInfo>;
+    onCreateTab: () => void;
+    onCreateTabWithUrl: (profileId: string, url: string) => void;
+    onSwitchTab: (tabId: string) => void;
+    onCloseTab: (tabId: string) => void;
+    onDuplicateTab: (tabId: string) => void;
+    onReloadTab: (tabId: string) => void;
+    onCloseOtherTabs: (tabId: string) => void;
+    onCloseTabsToRight: (tabId: string) => void;
+    onSwitchProfile: (profileId: string) => void;
+    onReorderTabs: (fromIndex: number, toIndex: number) => void;
+    aiProviders?: AIProvider[];
+    toastMessage?: string;
+    showToast?: boolean;
+    onCloseToast: () => void;
+}
 
 export default function TitleBar({
     profiles = [],
@@ -21,27 +54,23 @@ export default function TitleBar({
     toastMessage = '',
     showToast = false,
     onCloseToast
-}) {
+}: TitleBarProps) {
     const [isMaximized, setIsMaximized] = useState(false)
-    const [draggedTab, setDraggedTab] = useState(null)
-    const [dragOverTab, setDragOverTab] = useState(null)
+    const [draggedTab, setDraggedTab] = useState<string | null>(null)
+    const [dragOverTab, setDragOverTab] = useState<string | null>(null)
 
-    // ... (rest of methods)
-
-    const getProviderForTab = (tab) => {
-        if (!tab.url) return null;
+    const getProviderForTab = (tab: TabState): AIProvider | undefined => {
+        if (!tab.url) return undefined;
         return aiProviders.find(p => tab.url.includes(p.url) || (p.url && tab.url.startsWith(p.url)));
     }
 
-    const getIconForTab = (tab) => {
+    const getIconForTab = (tab: TabState): string => {
         const provider = getProviderForTab(tab);
 
-        // First priority: use pre-cached favicon from provider settings
         if (provider?.faviconDataUrl) {
             return provider.faviconDataUrl;
         }
 
-        // Second priority: Use Google favicon service for the specific URL
         if (tab.url) {
             try {
                 const urlObj = new URL(tab.url);
@@ -51,24 +80,21 @@ export default function TitleBar({
             }
         }
 
-        // Final fallback
         return 'https://www.google.com/s2/favicons?domain=perplexity.ai&sz=32';
     }
 
     const handleMaximize = () => {
-        window.api.maximizeWindow()
+        window.api.maximize()
         setIsMaximized(!isMaximized)
     }
 
-    const handleProfileClick = (e) => {
+    const handleProfileClick = (e: React.MouseEvent<HTMLButtonElement>) => {
         const rect = e.currentTarget.getBoundingClientRect()
-        // Send coordinates for menu
-        window.api.showProfileMenu(Math.round(rect.left), Math.round(rect.bottom), activeProfile?.id)
+        window.api.showProfileMenu(Math.round(rect.left), Math.round(rect.bottom), activeProfile?.id || '')
     }
 
-    // Icon renderer for profiles
-    const renderProfileIcon = (iconName) => {
-        const iconMap = {
+    const renderProfileIcon = (iconName: string) => {
+        const iconMap: Record<string, LucideIcon> = {
             'briefcase': Briefcase,
             'user': User,
             'home': Home,
@@ -80,7 +106,6 @@ export default function TitleBar({
         return <IconComponent size={16} />
     }
 
-    // Auto-close toast after 2.5 seconds
     useEffect(() => {
         if (showToast && onCloseToast) {
             const timer = setTimeout(() => {
@@ -93,9 +118,9 @@ export default function TitleBar({
     return (
         <div
             className="h-[36px] bg-[#323233] flex items-center justify-between select-none relative"
-            style={{ WebkitAppRegion: 'drag' }}
+            style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
         >
-            {/* Toast Notification - inside TitleBar so it shows above WebContentsView */}
+            {/* Toast Notification */}
             {showToast && toastMessage && (
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] animate-fadeIn">
                     <div className="bg-green-600 text-white px-4 py-1.5 rounded-full shadow-lg flex items-center gap-2 border border-green-500">
@@ -108,7 +133,7 @@ export default function TitleBar({
             )}
 
             {/* Left: Profile Switcher */}
-            <div className="flex items-center h-full relative" style={{ WebkitAppRegion: 'no-drag' }}>
+            <div className="flex items-center h-full relative" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
                 <button
                     onClick={handleProfileClick}
                     className="h-full px-2 flex items-center gap-2 hover:bg-[#2a2a2a] transition-colors outline-none focus:outline-none relative z-50"
@@ -122,8 +147,6 @@ export default function TitleBar({
                     <span className="text-sm text-white">{activeProfile?.name || 'Work'}</span>
                     <ChevronDown size={14} className="text-gray-400" />
                 </button>
-
-                {/* Navigation Buttons */}
 
                 {/* Navigation Buttons */}
                 <button
@@ -156,29 +179,28 @@ export default function TitleBar({
                             <div
                                 key={tab.id}
                                 draggable
-                                onDragStart={(e) => {
+                                onDragStart={(e: DragEvent<HTMLDivElement>) => {
                                     setDraggedTab(tab.id);
                                     e.dataTransfer.effectAllowed = 'move';
-                                    // Set a transparent drag image to avoid the default ghost image
                                     const dragImage = document.createElement('div');
                                     dragImage.style.opacity = '0';
                                     document.body.appendChild(dragImage);
                                     e.dataTransfer.setDragImage(dragImage, 0, 0);
                                     setTimeout(() => document.body.removeChild(dragImage), 0);
                                 }}
-                                onDragOver={(e) => {
+                                onDragOver={(e: DragEvent<HTMLDivElement>) => {
                                     e.preventDefault();
                                     e.dataTransfer.dropEffect = 'move';
                                     if (draggedTab && draggedTab !== tab.id) {
                                         setDragOverTab(tab.id);
                                     }
                                 }}
-                                onDragLeave={(e) => {
-                                    if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget)) {
+                                onDragLeave={(e: DragEvent<HTMLDivElement>) => {
+                                    if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
                                         setDragOverTab(null);
                                     }
                                 }}
-                                onDrop={(e) => {
+                                onDrop={(e: DragEvent<HTMLDivElement>) => {
                                     e.preventDefault();
                                     if (draggedTab && draggedTab !== tab.id && onReorderTabs) {
                                         const draggedIndex = tabs.findIndex(t => t.id === draggedTab);
@@ -209,7 +231,7 @@ export default function TitleBar({
                                     `}
                                 title={(() => {
                                     const mem = tabMemory[tab.id];
-                                    const memStr = mem?.memory ? ` (${mem.memory} MB)` : '';
+                                    const memStr = mem?.memoryKB ? ` (${Math.round(mem.memoryKB / 1024)} MB)` : '';
                                     if (tab.loaded === false) {
                                         return `${tab.title} (suspended)`;
                                     }
@@ -219,18 +241,17 @@ export default function TitleBar({
                                     WebkitAppRegion: 'no-drag',
                                     backgroundColor: isActive ? activeBg : (isDragging ? '#3e3e42' : undefined),
                                     opacity: isDragging ? 0.9 : 1
-                                }}
+                                } as React.CSSProperties}
                             >
                                 <img
                                     src={getIconForTab(tab)}
                                     className="w-4 h-4 flex-shrink-0"
                                     alt=""
-                                    onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.src = 'https://www.perplexity.ai/favicon.ico'; // Fallback to default on error
+                                    onError={(e: SyntheticEvent<HTMLImageElement>) => {
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.src = 'https://www.perplexity.ai/favicon.ico';
                                     }}
                                 />
-                                {/* Hide text if tab gets too small */}
                                 <span className="text-xs text-white truncate flex-1 text-center">
                                     {tab.title?.replace(' - Perplexity', '') || 'New Thread'}
                                 </span>
@@ -256,23 +277,23 @@ export default function TitleBar({
                 <button
                     onClick={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect()
-                        window.api.showNewTabMenu(Math.round(rect.left), Math.round(rect.bottom), activeProfile?.id)
+                        window.api.showNewTabMenu(Math.round(rect.left), Math.round(rect.bottom), activeProfile?.id || '')
                     }}
                     className="h-full px-3 hover:bg-[#2a2a2a] transition-colors flex items-center flex-shrink-0 border-l border-[#1e1e1e]"
                     title="New Tab (Ctrl+T)"
-                    style={{ WebkitAppRegion: 'no-drag' }}
+                    style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
                 >
                     <Plus size={16} className="text-gray-300" />
                 </button>
             </div>
 
-            {/* Guaranteed Drag Region - Reserved space for window dragging */}
+            {/* Guaranteed Drag Region */}
             <div className="h-full w-6 flex-shrink-0" title="Drag to move window" />
 
             {/* Right: Window Controls */}
-            <div className="flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' }}>
+            <div className="flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
                 <button
-                    onClick={() => window.api.minimizeWindow()}
+                    onClick={() => window.api.minimize()}
                     className="h-full w-12 hover:bg-[#2a2a2a] flex items-center justify-center transition-colors"
                 >
                     <Minus size={16} className="text-white" />
@@ -284,7 +305,7 @@ export default function TitleBar({
                     <Square size={14} className="text-white" />
                 </button>
                 <button
-                    onClick={() => window.api.closeWindow()}
+                    onClick={() => window.api.close()}
                     className="h-full w-12 hover:bg-red-600 flex items-center justify-center transition-colors"
                 >
                     <X size={16} className="text-white" />

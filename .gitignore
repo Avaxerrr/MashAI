@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.gitignore
+logo
+LOG_BRIEF.md
+TODO.md
+
+# Deprecated files (TypeScript migration)
+_deprecated_jsx/

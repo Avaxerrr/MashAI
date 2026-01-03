@@ -1,17 +1,29 @@
-import { Keyboard, Command } from 'lucide-react'
+import { Keyboard } from 'lucide-react'
+import type { GeneralSettings } from '../../types'
+
+interface ShortcutsTabProps {
+    generalSettings: GeneralSettings;
+}
+
+interface ShortcutRowProps {
+    keys: string;
+    description: string;
+    editable?: boolean;
+}
 
 /**
  * ShortcutsTab - Display all keyboard shortcuts
  */
-export default function ShortcutsTab({ generalSettings }) {
+export default function ShortcutsTab({ generalSettings }: ShortcutsTabProps) {
     const settings = {
-        hideShortcut: 'CommandOrControl+Shift+M',
-        alwaysOnTopShortcut: 'CommandOrControl+Shift+A',
+        ...{
+            hideShortcut: 'CommandOrControl+Shift+M',
+            alwaysOnTopShortcut: 'CommandOrControl+Shift+A',
+        },
         ...generalSettings
     }
 
-    // Format shortcuts for display
-    const formatShortcut = (shortcut) => {
+    const formatShortcut = (shortcut: string): string => {
         return shortcut
             .replace(/CommandOrControl/g, 'Ctrl')
             .replace(/CmdOrCtrl/g, 'Ctrl')
@@ -19,7 +31,7 @@ export default function ShortcutsTab({ generalSettings }) {
             .replace(/Control/g, 'Ctrl')
     }
 
-    const ShortcutRow = ({ keys, description, editable = false }) => (
+    const ShortcutRow = ({ keys, description, editable = false }: ShortcutRowProps) => (
         <div className="flex items-center justify-between py-3 px-4 bg-[#1e1e1e] rounded-lg">
             <div className="flex-1">
                 <p className="text-sm text-white">{description}</p>
@@ -48,7 +60,7 @@ export default function ShortcutsTab({ generalSettings }) {
                 </p>
             </div>
 
-            {/* Global Shortcuts (Editable) */}
+            {/* Global Shortcuts */}
             <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
                     <h3 className="text-white font-medium text-sm">Global Shortcuts</h3>
@@ -110,7 +122,6 @@ export default function ShortcutsTab({ generalSettings }) {
                     <ShortcutRow keys="Ctrl + A" description="Select All" />
                 </div>
             </div>
-
 
             {/* Note */}
             <div className="bg-[#1e2a1e] rounded-lg border border-[#3a523a] p-4">

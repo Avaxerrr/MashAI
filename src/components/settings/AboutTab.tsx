@@ -7,7 +7,7 @@ import MashAILogo from '../../assets/MashAI-logo.png'
 export default function AboutTab() {
     const appVersion = '1.0.0'
 
-    const openLink = (url) => {
+    const openLink = (url: string) => {
         window.api.openExternal(url)
     }
 

@@ -1,36 +1,64 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, ReactNode } from 'react'
 import { Gauge } from 'lucide-react'
+import type { PerformanceSettings } from '../../types'
+
+interface PerformanceTabProps {
+    performanceSettings: PerformanceSettings;
+    onPerformanceChange: (settings: PerformanceSettings) => void;
+}
+
+interface MemoryUsage {
+    total: number;
+    tabCount: number;
+    suspendedCount: number;
+}
+
+interface LocalSettings extends PerformanceSettings {
+    excludeActiveProfile?: boolean;
+}
+
+interface RadioOptionProps {
+    name: string;
+    value: string;
+    currentValue: string;
+    onChange: (value: string) => void;
+    label: string;
+    description?: ReactNode;
+    recommended?: boolean;
+}
 
 /**
  * PerformanceTab - Memory and performance optimization settings
  */
-export default function PerformanceTab({ performanceSettings, onPerformanceChange }) {
-    // Local state with fallbacks to defaults
-    const [settings, setSettings] = useState({
-        tabLoadingStrategy: 'lastActiveOnly',
-        autoSuspendEnabled: true,
-        autoSuspendMinutes: 30,
-        profileSwitchBehavior: 'keep',  // Default to 'keep' for better UX
+export default function PerformanceTab({ performanceSettings, onPerformanceChange }: PerformanceTabProps) {
+    const [settings, setSettings] = useState<LocalSettings>({
+        ...{
+            tabLoadingStrategy: 'lastActiveOnly',
+            autoSuspendEnabled: true,
+            autoSuspendMinutes: 30,
+            profileSwitchBehavior: 'keep',
+        },
         ...performanceSettings
     })
 
-    // Memory usage state
-    const [memoryUsage, setMemoryUsage] = useState({ total: 0, tabCount: 0, suspendedCount: 0 })
+    const [memoryUsage, setMemoryUsage] = useState<MemoryUsage>({ total: 0, tabCount: 0, suspendedCount: 0 })
 
-    // Sync with parent when props change
     useEffect(() => {
         if (performanceSettings) {
             setSettings(prev => ({ ...prev, ...performanceSettings }))
         }
     }, [performanceSettings])
 
-    // Fetch memory usage periodically
     useEffect(() => {
         const fetchMemory = async () => {
             if (window.api?.getMemoryUsage) {
                 try {
                     const usage = await window.api.getMemoryUsage()
-                    setMemoryUsage(usage)
+                    setMemoryUsage({
+                        total: Math.round(usage.totalKB / 1024),
+                        tabCount: usage.tabsMemory.filter(t => t.loaded).length,
+                        suspendedCount: usage.tabsMemory.filter(t => !t.loaded).length
+                    })
                 } catch (e) {
                     // API not available yet
                 }
@@ -41,7 +69,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
         return () => clearInterval(interval)
     }, [])
 
-    const updateSetting = (key, value) => {
+    const updateSetting = <K extends keyof LocalSettings>(key: K, value: LocalSettings[K]) => {
         const newSettings = { ...settings, [key]: value }
         setSettings(newSettings)
         if (onPerformanceChange) {
@@ -49,7 +77,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
         }
     }
 
-    const RadioOption = ({ name, value, currentValue, onChange, label, description, recommended }) => (
+    const RadioOption = ({ name, value, currentValue, onChange, label, description, recommended }: RadioOptionProps) => (
         <label className="flex items-start gap-3 p-3 hover:bg-[#3e3e42]/50 cursor-pointer transition-colors">
             <input
                 type="radio"
@@ -94,7 +122,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                         name="tabLoading"
                         value="all"
                         currentValue={settings.tabLoadingStrategy}
-                        onChange={(v) => updateSetting('tabLoadingStrategy', v)}
+                        onChange={(v) => updateSetting('tabLoadingStrategy', v as PerformanceSettings['tabLoadingStrategy'])}
                         label="Load all my tabs (uses more memory)"
                         description="Opens every tab from all your profiles right away. Great if you have lots of RAM and want instant access to everything."
                     />
@@ -102,7 +130,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                         name="tabLoading"
                         value="activeProfile"
                         currentValue={settings.tabLoadingStrategy}
-                        onChange={(v) => updateSetting('tabLoadingStrategy', v)}
+                        onChange={(v) => updateSetting('tabLoadingStrategy', v as PerformanceSettings['tabLoadingStrategy'])}
                         label="Load tabs from my last profile"
                         description="Only opens tabs from the profile you were using last. Balances speed and memory usage."
                     />
@@ -110,7 +138,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                         name="tabLoading"
                         value="lastActiveOnly"
                         currentValue={settings.tabLoadingStrategy}
-                        onChange={(v) => updateSetting('tabLoadingStrategy', v)}
+                        onChange={(v) => updateSetting('tabLoadingStrategy', v as PerformanceSettings['tabLoadingStrategy'])}
                         label="Load only my last tab"
                         description="Opens just the single tab you had open last. Fastest startup with minimal memory usage."
                         recommended
@@ -128,7 +156,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                         name="profileSwitch"
                         value="keep"
                         currentValue={settings.profileSwitchBehavior}
-                        onChange={(v) => updateSetting('profileSwitchBehavior', v)}
+                        onChange={(v) => updateSetting('profileSwitchBehavior', v as PerformanceSettings['profileSwitchBehavior'])}
                         label="Keep other profile's tabs running"
                         description="Tabs stay active in the background. Uses more memory but switching back is instant with no reload."
                         recommended
@@ -137,7 +165,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                         name="profileSwitch"
                         value="suspend"
                         currentValue={settings.profileSwitchBehavior}
-                        onChange={(v) => updateSetting('profileSwitchBehavior', v)}
+                        onChange={(v) => updateSetting('profileSwitchBehavior', v as PerformanceSettings['profileSwitchBehavior'])}
                         label="Suspend other profile's tabs"
                         description="Suspends tabs to free up memory while keeping your session. Tabs reload when you switch back."
                     />
@@ -145,7 +173,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                         name="profileSwitch"
                         value="close"
                         currentValue={settings.profileSwitchBehavior}
-                        onChange={(v) => updateSetting('profileSwitchBehavior', v)}
+                        onChange={(v) => updateSetting('profileSwitchBehavior', v as PerformanceSettings['profileSwitchBehavior'])}
                         label="Close other profile's tabs"
                         description={
                             <span className="text-red-400 font-medium">

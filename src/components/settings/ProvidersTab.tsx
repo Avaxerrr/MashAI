@@ -1,15 +1,33 @@
 import { Plus, Trash2, GripVertical, Star, RotateCcw, Bot } from 'lucide-react'
+import { RefObject, DragEvent, SyntheticEvent } from 'react'
 import { PROVIDER_DEFAULT_COLORS, DEFAULT_PROVIDER_COLOR } from '../../constants'
+import type { AIProvider } from '../../types'
 
 /**
  * Helper function to safely extract hostname from URL
  */
-const getHostnameSafe = (url) => {
+const getHostnameSafe = (url: string): string | null => {
     try {
         return new URL(url).hostname
     } catch (e) {
         return null
     }
+}
+
+interface ProvidersTabProps {
+    providers: AIProvider[];
+    addProvider: () => void;
+    updateProvider: (id: string, field: keyof AIProvider, value: string) => void;
+    deleteProvider: (id: string) => void;
+    reorderProviders: (fromIndex: number, toIndex: number) => void;
+    defaultProviderId: string;
+    setAsDefault: (providerId: string) => void;
+    draggedProviderId: string | null;
+    setDraggedProviderId: (id: string | null) => void;
+    dragOverProviderId: string | null;
+    setDragOverProviderId: (id: string | null) => void;
+    newlyAddedProviderId: string | null;
+    providersListRef: RefObject<HTMLDivElement>;
 }
 
 /**
@@ -23,17 +41,15 @@ export default function ProvidersTab({
     reorderProviders,
     defaultProviderId,
     setAsDefault,
-    // Drag state
     draggedProviderId,
     setDraggedProviderId,
     dragOverProviderId,
     setDragOverProviderId,
-    // Animation
     newlyAddedProviderId,
     providersListRef
-}) {
-    const resetProviderColor = (providerId) => {
-        const defaultColor = PROVIDER_DEFAULT_COLORS[providerId] || DEFAULT_PROVIDER_COLOR
+}: ProvidersTabProps) {
+    const resetProviderColor = (providerId: string) => {
+        const defaultColor = PROVIDER_DEFAULT_COLORS[providerId as keyof typeof PROVIDER_DEFAULT_COLORS] || DEFAULT_PROVIDER_COLOR
         updateProvider(providerId, 'color', defaultColor)
     }
 
@@ -55,7 +71,7 @@ export default function ProvidersTab({
                 </button>
             </div>
 
-            {/* Helpful hints with intentional design */}
+            {/* Helpful hints */}
             <div className="flex items-start gap-3 px-4 py-3 bg-[#1e293b] border-l-2 border-violet-500 rounded-r-lg -mt-3">
                 <svg className="w-4 h-4 text-violet-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -74,23 +90,23 @@ export default function ProvidersTab({
                         <div
                             key={provider.id}
                             draggable
-                            onDragStart={(e) => {
+                            onDragStart={(e: DragEvent<HTMLDivElement>) => {
                                 setDraggedProviderId(provider.id)
                                 e.dataTransfer.effectAllowed = 'move'
                             }}
-                            onDragOver={(e) => {
+                            onDragOver={(e: DragEvent<HTMLDivElement>) => {
                                 e.preventDefault()
                                 e.dataTransfer.dropEffect = 'move'
                                 if (draggedProviderId && draggedProviderId !== provider.id) {
                                     setDragOverProviderId(provider.id)
                                 }
                             }}
-                            onDragLeave={(e) => {
-                                if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget)) {
+                            onDragLeave={(e: DragEvent<HTMLDivElement>) => {
+                                if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
                                     setDragOverProviderId(null)
                                 }
                             }}
-                            onDrop={(e) => {
+                            onDrop={(e: DragEvent<HTMLDivElement>) => {
                                 e.preventDefault()
                                 if (draggedProviderId && draggedProviderId !== provider.id) {
                                     const draggedIndex = providers.findIndex(p => p.id === draggedProviderId)
@@ -138,13 +154,12 @@ export default function ProvidersTab({
                                         src={provider.faviconDataUrl}
                                         alt=""
                                         className="w-8 h-8"
-                                        onError={(e) => {
-                                            // Fallback to Google favicon service if cached favicon fails
+                                        onError={(e: SyntheticEvent<HTMLImageElement>) => {
                                             try {
                                                 const urlObj = new URL(provider.url);
-                                                e.target.src = `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
+                                                e.currentTarget.src = `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
                                             } catch {
-                                                e.target.style.display = 'none';
+                                                e.currentTarget.style.display = 'none';
                                             }
                                         }}
                                     />
@@ -156,7 +171,7 @@ export default function ProvidersTab({
                                                 src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`}
                                                 alt=""
                                                 className="w-8 h-8"
-                                                onError={(e) => e.target.style.display = 'none'}
+                                                onError={(e: SyntheticEvent<HTMLImageElement>) => e.currentTarget.style.display = 'none'}
                                             />
                                         ) : (
                                             <div className="w-8 h-8 bg-[#3e3e42] rounded" />
