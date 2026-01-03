@@ -343,7 +343,7 @@ class TrayManager {
      * Create a simple placeholder icon for the tray
      */
     private _createPlaceholderIcon() {
-        const logoPath = path.join(__dirname, '../src/assets/MashAI-logo.png');
+        const logoPath = path.join(__dirname, '../../src/assets/MashAI-logo.png');
 
         try {
             const icon = nativeImage.createFromPath(logoPath);

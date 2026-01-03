@@ -3,12 +3,13 @@
   "productName": "MashAI",
   "version": "1.0.0",
   "description": "A multi-profile AI workspace browser",
-  "main": "electron/main.cjs",
+  "main": "dist/electron/main.js",
   "type": "module",
   "scripts": {
-    "dev": "concurrently --kill-others \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development npx tsx electron/main.ts\"",
-    "dev:js": "concurrently --kill-others \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
-    "build": "vite build",
+    "build:ts": "tsc -p tsconfig.electron.json && echo {\"type\":\"commonjs\"} > dist/electron/package.json",
+    "watch:ts": "tsc -p tsconfig.electron.json --watch",
+    "dev": "npm run build:ts && concurrently --kill-others \"npm run watch:ts\" \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
+    "build": "npm run build:ts && vite build",
     "build:electron": "npm run build && electron-builder",
     "preview": "vite preview"
   },

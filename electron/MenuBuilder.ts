@@ -133,7 +133,7 @@ class MenuBuilder {
 
             let settingsIcon: Electron.NativeImage | undefined = undefined;
             try {
-                const iconPath = path.join(__dirname, '../src/assets/settings.png');
+                const iconPath = path.join(__dirname, '../../src/assets/settings.png');
                 settingsIcon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
             } catch (e) {
                 console.error('Failed to load settings icon:', e);

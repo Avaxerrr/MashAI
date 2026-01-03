@@ -9,13 +9,13 @@ import SessionManager from './SessionManager';
 import MenuBuilder from './MenuBuilder';
 import TrayManager from './TrayManager';
 
-// Import IPC handlers (still .cjs for now - migrate later)
-const WindowHandlers = require('./ipc/WindowHandlers.cjs');
-const TabHandlers = require('./ipc/TabHandlers.cjs');
-const NavigationHandlers = require('./ipc/NavigationHandlers.cjs');
-const ProfileHandlers = require('./ipc/ProfileHandlers.cjs');
-const SettingsHandlers = require('./ipc/SettingsHandlers.cjs');
-const PrivacyHandlers = require('./ipc/PrivacyHandlers.cjs');
+// Import IPC handlers
+import * as WindowHandlers from './ipc/WindowHandlers';
+import * as TabHandlers from './ipc/TabHandlers';
+import * as NavigationHandlers from './ipc/NavigationHandlers';
+import * as ProfileHandlers from './ipc/ProfileHandlers';
+import * as SettingsHandlers from './ipc/SettingsHandlers';
+import PrivacyHandlers from './ipc/PrivacyHandlers';
 
 // Check hardware acceleration setting BEFORE app is ready
 try {
@@ -73,7 +73,7 @@ function createSettingsWindow(): void {
         frame: false,
         titleBarStyle: 'hidden',
         webPreferences: {
-            preload: path.join(__dirname, 'preload.cjs'),
+            preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false
         }
@@ -84,7 +84,7 @@ function createSettingsWindow(): void {
     if (isDev) {
         settingsWindow.loadURL('http://localhost:5173/#/settings');
     } else {
-        settingsWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: '/settings' });
+        settingsWindow.loadFile(path.join(__dirname, '../../dist/index.html'), { hash: '/settings' });
     }
 
     settingsWindow.on('close', () => {
@@ -149,11 +149,11 @@ function createWindow(): void {
         minWidth: DEFAULT_WINDOW.minWidth,
         minHeight: DEFAULT_WINDOW.minHeight,
         backgroundColor: '#1e1e1e',
-        icon: path.join(__dirname, '../src/assets/MashAI-logo.png'),
+        icon: path.join(__dirname, '../../src/assets/MashAI-logo.png'),
         frame: false,
         titleBarStyle: 'hidden',
         webPreferences: {
-            preload: path.join(__dirname, 'preload.cjs'),
+            preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false
         }
@@ -168,7 +168,7 @@ function createWindow(): void {
     if (isDev) {
         mainWindow.loadURL('http://localhost:5173');
     } else {
-        mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+        mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
     }
 
     // Initialize managers with mainWindow

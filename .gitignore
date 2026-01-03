@@ -29,3 +29,6 @@ TODO.md
 
 # Deprecated files (TypeScript migration)
 _deprecated_jsx/
+
+# Compiled Electron TypeScript output
+dist/electron/

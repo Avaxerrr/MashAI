@@ -9,12 +9,11 @@ Migrate MashAI from JavaScript to TypeScript in a phased, testable approach.
 | Component | Type Checking | Runtime | Notes |
 |-----------|---------------|---------|-------|
 | React Frontend | ✅ Works | ✅ Works | Vite transpiles `.tsx` automatically |
-| Electron Managers | ✅ Works | ❌ Uses .cjs | TypeScript files exist but not executed |
-| IPC Handlers | ❌ Not done | ❌ Uses .cjs | Still JavaScript |
+| Electron Managers | ✅ Works | ✅ Works | Compiled from TypeScript |
+| IPC Handlers | ✅ Works | ✅ Works | Compiled from TypeScript |
 
 **Commands:**
-- `npm run dev:js` - Works (uses JavaScript/CommonJS)
-- `npm run dev` - ❌ Fails (tsx ESM issues with Electron)
+- `npm run dev` - ✅ Works (TypeScript compiled to CommonJS)
 
 ---
 
@@ -131,3 +130,189 @@ After each phase, verify:
 - Settings save/load correctly
 - Context menus work
 - Window controls work
+
+---
+---
+
+# Full TypeScript Migration Implementation Plan
+
+> **Goal**: Complete the migration so all Electron code runs as compiled TypeScript, eliminating all `.cjs` files.
+
+---
+
+## Overview
+
+| What Changes | What Stays The Same |
+|--------------|---------------------|
+| Source files become `.ts` | All app logic/behavior |
+| Build step compiles to JS | User-facing features |
+| `.cjs` files get deleted | React frontend (already done) |
+
+---
+
+## Phase 1: Build Pipeline Setup
+
+**Objective**: Configure TypeScript compilation for Electron main process.
+
+### 1.1 Update `tsconfig.electron.json`
+
+Configure output directory and module settings:
+- `outDir`: `"./dist/electron"`
+- `module`: `"CommonJS"` 
+- `target`: `"ES2022"`
+- `rootDir`: `"./electron"`
+
+### 1.2 Update `package.json`
+
+Add/modify scripts:
+```json
+{
+  "main": "dist/electron/main.js",
+  "scripts": {
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "dev": "npm run build:electron && concurrently \"npm run watch:electron\" \"vite\" \"wait-on tcp:5173 && electron .\"",
+    "watch:electron": "tsc -p tsconfig.electron.json --watch"
+  }
+}
+```
+
+### 1.3 Update `.gitignore`
+
+Add compiled output:
+```
+dist/electron/
+```
+
+### 1.4 Verification
+
+- [ ] `npm run build:electron` compiles without errors
+- [ ] `dist/electron/` folder is created with `.js` files
+
+---
+
+## Phase 2: Sync TypeScript Files with Current Runtime
+
+**Objective**: Ensure `.ts` files have the same logic as current `.cjs` files.
+
+### Files to Audit
+
+| TypeScript File | Compare Against |
+|-----------------|-----------------|
+| `main.ts` | `main.cjs` |
+| `SettingsManager.ts` | `SettingsManager.cjs` |
+| `TabManager.ts` | `TabManager.cjs` |
+| `SessionManager.ts` | `SessionManager.cjs` |
+| `ProfileManager.ts` | `ProfileManager.cjs` |
+| `MenuBuilder.ts` | `MenuBuilder.cjs` |
+| `TrayManager.ts` | `TrayManager.cjs` |
+| `constants.ts` | `constants.cjs` |
+
+### Verification
+
+- [ ] Each `.ts` file compiles without errors
+- [ ] Logic in `.ts` matches `.cjs` (no missing functions/exports)
+
+---
+
+## Phase 3: Migrate IPC Handlers
+
+**Objective**: Create TypeScript versions of all IPC handler files.
+
+### Files to Create
+
+| New File | From |
+|----------|------|
+| `ipc/NavigationHandlers.ts` | `ipc/NavigationHandlers.cjs` |
+| `ipc/PrivacyHandlers.ts` | `ipc/PrivacyHandlers.cjs` |
+| `ipc/ProfileHandlers.ts` | `ipc/ProfileHandlers.cjs` |
+| `ipc/SettingsHandlers.ts` | `ipc/SettingsHandlers.cjs` |
+| `ipc/TabHandlers.ts` | `ipc/TabHandlers.cjs` |
+| `ipc/WindowHandlers.ts` | `ipc/WindowHandlers.cjs` |
+| `preload.ts` | `preload.cjs` |
+
+### Verification
+
+- [ ] All new `.ts` files compile without errors
+- [ ] IPC channels remain unchanged
+
+---
+
+## Phase 4: Update Imports & Module Resolution
+
+**Objective**: Ensure all imports work correctly after compilation.
+
+### Changes
+
+1. Update all `require('./SomeManager.cjs')` to `require('./SomeManager')` or ES imports
+2. Ensure `tsconfig.electron.json` has correct `moduleResolution`
+3. Fix any path issues in compiled output
+
+### Verification
+
+- [ ] Build compiles with no import errors
+- [ ] Runtime can resolve all modules
+
+---
+
+## Phase 5: Full Integration Test
+
+**Objective**: Verify the entire app works with TypeScript build.
+
+### Test Checklist
+
+Run `npm run dev` (TypeScript build) and verify:
+
+- [ ] App launches without errors
+- [ ] All tabs work (create, switch, close, drag reorder)
+- [ ] Profile switching works
+- [ ] Settings save and load correctly
+- [ ] Context menus work on tabs
+- [ ] Tray icon and menu work
+- [ ] Keyboard shortcuts work
+- [ ] Window controls (minimize, maximize, close) work
+- [ ] New tab dropdown shows AI providers
+
+---
+
+## Phase 6: Cleanup
+
+**Objective**: Remove all deprecated JavaScript files.
+
+### Files to Delete
+
+**Electron `.cjs` files:**
+- `electron/main.cjs`
+- `electron/SettingsManager.cjs`
+- `electron/TabManager.cjs`
+- `electron/SessionManager.cjs`
+- `electron/ProfileManager.cjs`
+- `electron/MenuBuilder.cjs`
+- `electron/TrayManager.cjs`
+- `electron/constants.cjs`
+- `electron/preload.cjs`
+- `electron/ipc/*.cjs` (all 6 files)
+
+**Deprecated React folder:**
+- `_deprecated_jsx/` (entire folder)
+
+**Old npm scripts:**
+- Remove `dev:js` script from `package.json`
+
+### Verification
+
+- [ ] No `.cjs` files remain in `electron/`
+- [ ] `_deprecated_jsx/` folder is deleted
+- [ ] `npm run dev` works as the only dev command
+
+---
+
+## Summary
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 1 | Build Pipeline Setup | ✅ Complete |
+| 2 | Sync TS with CJS | ✅ Complete |
+| 3 | Migrate IPC Handlers | ✅ Complete |
+| 4 | Update Imports | ✅ Complete |
+| 5 | Integration Test | ⬜ Not Started |
+| 6 | Cleanup | ⬜ Not Started |
