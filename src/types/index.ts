@@ -27,6 +27,7 @@ export interface TabInfo {
     title: string;
     loaded: boolean;
     suspended?: boolean;
+    faviconDataUrl?: string;
 }
 
 export interface PerformanceSettings {
@@ -143,6 +144,7 @@ export interface TabCreatedEvent {
     profileId: string;
     title: string;
     loaded?: boolean;
+    faviconDataUrl?: string;
 }
 
 export interface TabUpdatedEvent {
@@ -151,6 +153,7 @@ export interface TabUpdatedEvent {
     url?: string;
     loaded?: boolean;
     suspended?: boolean;
+    faviconDataUrl?: string;
 }
 
 export interface ProfileTabsLoadedEvent {

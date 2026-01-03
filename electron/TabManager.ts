@@ -40,6 +40,7 @@ interface TabEntry {
     loaded: boolean;
     suspended?: boolean;
     lastActiveTime: number;
+    faviconDataUrl?: string;
 }
 
 interface TabMetadata {
@@ -47,6 +48,7 @@ interface TabMetadata {
     profileId: string;
     url: string;
     title?: string;
+    faviconDataUrl?: string;
 }
 
 interface ViewBounds {
@@ -176,7 +178,7 @@ class TabManager {
      * Used for lazy loading - the view is created when the tab is activated
      */
     registerTabMetadata(tabData: TabMetadata): string {
-        const { id, profileId, url, title } = tabData;
+        const { id, profileId, url, title, faviconDataUrl } = tabData;
 
         console.log(`[TabManager] Registering metadata for tab ${id} (lazy - no view created)`);
 
@@ -187,7 +189,8 @@ class TabManager {
             title: title || 'New Thread',
             url: url || this._getDefaultUrl(),
             loaded: false,
-            lastActiveTime: 0
+            lastActiveTime: 0,
+            faviconDataUrl
         });
 
         // Add to tab order if not already present
@@ -229,6 +232,30 @@ class TabManager {
             if (tab) {
                 tab.title = title;
                 this.mainWindow.webContents.send('tab-updated', { id, title });
+            }
+        });
+
+        // Capture favicon when page provides it
+        view.webContents.on('page-favicon-updated', async (_e, favicons) => {
+            if (favicons.length > 0) {
+                try {
+                    const faviconUrl = favicons[0];
+                    const response = await fetch(faviconUrl);
+                    if (response.ok) {
+                        const buffer = await response.arrayBuffer();
+                        const base64 = Buffer.from(buffer).toString('base64');
+                        const contentType = response.headers.get('content-type') || 'image/x-icon';
+                        const dataUrl = `data:${contentType};base64,${base64}`;
+
+                        const tab = this.tabs.get(id);
+                        if (tab) {
+                            tab.faviconDataUrl = dataUrl;
+                            this.mainWindow.webContents.send('tab-updated', { id, faviconDataUrl: dataUrl });
+                        }
+                    }
+                } catch (err) {
+                    // Silently fail - favicon caching is best-effort
+                }
             }
         });
 
@@ -348,14 +375,13 @@ class TabManager {
     /**
      * Create a tab with a WebContentsView immediately (original behavior)
      * Used for new tabs created by user action
+     * @param faviconDataUrl - Optional cached favicon to preserve during session restore
      */
-    createTab(profileId: string, url: string | null = null, existingId: string | null = null): string {
+    createTab(profileId: string, url: string | null = null, existingId: string | null = null, faviconDataUrl?: string): string {
         const id = existingId || 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
         // Determine URL
         const finalUrl = url || this._getDefaultUrl();
-
-        console.log(`[TabManager] Creating tab ${id} with immediate view for ${finalUrl}`);
 
         const view = new WebContentsView({
             webPreferences: {
@@ -373,7 +399,8 @@ class TabManager {
             title: 'New Thread',
             url: finalUrl,
             loaded: true,
-            lastActiveTime: Date.now()
+            lastActiveTime: Date.now(),
+            faviconDataUrl
         });
 
         // Add to tab order if not already present
@@ -472,7 +499,8 @@ class TabManager {
                     url: tab.url,
                     profileId: tab.profileId,
                     loaded: tab.loaded,
-                    suspended: tab.suspended || false
+                    suspended: tab.suspended || false,
+                    faviconDataUrl: tab.faviconDataUrl
                 });
             }
         }
@@ -522,7 +550,8 @@ class TabManager {
                     title: tab.title,
                     url: tab.url,
                     loaded: tab.loaded,
-                    suspended: tab.suspended || false
+                    suspended: tab.suspended || false,
+                    faviconDataUrl: tab.faviconDataUrl
                 });
             }
         }

@@ -175,6 +175,16 @@ function createWindow(): void {
     tabManager = new TabManager(mainWindow, settingsManager);
     sessionManager = new SessionManager(tabManager, settingsManager);
 
+    // Initialize window state from actual window bounds (ensures x/y are captured)
+    const initialBounds = mainWindow.getBounds();
+    sessionManager.updateWindowState({
+        width: initialBounds.width,
+        height: initialBounds.height,
+        x: initialBounds.x,
+        y: initialBounds.y,
+        isMaximized: mainWindow.isMaximized()
+    });
+
     // Initialize menu builder
     menuBuilder = new MenuBuilder(mainWindow, {
         tabManager,
@@ -264,16 +274,7 @@ function createWindow(): void {
         }
     });
 
-    // Keyboard shortcuts
-    mainWindow.webContents.on('before-input-event', (event, input) => {
-        if (input.type !== 'keyDown') return;
-
-        if (input.control && !input.shift && input.key.toLowerCase() === 'r') {
-            event.preventDefault();
-            tabManager!.reload();
-            return;
-        }
-    });
+    // Note: Ctrl+R is handled by the application menu in MenuBuilder.ts
 
     // Window event handlers
     mainWindow.on('resize', () => {

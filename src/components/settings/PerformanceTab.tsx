@@ -55,7 +55,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                 try {
                     const usage = await window.api.getMemoryUsage()
                     setMemoryUsage({
-                        total: Math.round(usage.totalKB / 1024),
+                        total: usage.totalKB, // Already in MB from backend
                         tabCount: usage.tabsMemory.filter(t => t.loaded).length,
                         suspendedCount: usage.tabsMemory.filter(t => !t.loaded).length
                     })

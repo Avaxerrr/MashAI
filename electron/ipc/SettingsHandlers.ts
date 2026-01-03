@@ -165,38 +165,56 @@ export function register(
             const isWindows = process.platform === 'win32';
 
             let totalKB = 0;
-
             for (const metric of metrics) {
-                const memoryKB = isWindows
+                const memKB = isWindows
                     ? (metric.memory?.privateBytes || 0)
                     : (metric.memory?.workingSetSize || 0);
-
                 if (metric.type !== 'GPU') {
-                    totalKB += memoryKB;
+                    totalKB += memKB;
                 }
             }
 
-            let activeTabCount = 0;
-            let suspendedTabCount = 0;
+            // Build per-tab memory info
+            const tabsMemory: Array<{ tabId: string; title: string; profileId: string; memoryKB: number; loaded: boolean }> = [];
 
             if (tabManager) {
+                const pidToMemory: Record<number, number> = {};
+                for (const m of metrics) {
+                    if (m.memory) {
+                        // Convert to MB for frontend display
+                        pidToMemory[m.pid] = Math.round((m.memory.privateBytes || 0) / 1024);
+                    }
+                }
+
                 for (const [tabId, tab] of tabManager.tabs) {
-                    if (tab.view && tab.view.webContents && !tab.view.webContents.isDestroyed()) {
-                        activeTabCount++;
-                    } else if (!tab.loaded) {
-                        suspendedTabCount++;
+                    if (!tab.loaded || !tab.view || !tab.view.webContents || tab.view.webContents.isDestroyed()) {
+                        tabsMemory.push({
+                            tabId,
+                            title: tab.title || 'Untitled',
+                            profileId: tab.profileId,
+                            memoryKB: 0,
+                            loaded: false
+                        });
+                    } else {
+                        const tabPid = tab.view.webContents.getOSProcessId();
+                        tabsMemory.push({
+                            tabId,
+                            title: tab.title || 'Untitled',
+                            profileId: tab.profileId,
+                            memoryKB: pidToMemory[tabPid] || 0,
+                            loaded: true
+                        });
                     }
                 }
             }
 
             return {
-                total: Math.round(totalKB / 1024),
-                tabCount: activeTabCount,
-                suspendedCount: suspendedTabCount
+                totalKB: Math.round(totalKB / 1024), // Return as MB (named totalKB but value is MB for consistency)
+                tabsMemory
             };
         } catch (e) {
             console.error('Failed to get memory usage:', e);
-            return { total: 0, tabCount: 0, suspendedCount: 0 };
+            return { totalKB: 0, tabsMemory: [] };
         }
     });
 
@@ -230,39 +248,47 @@ export function register(
         }
     });
 
-    // Get memory usage for all tabs
+    // Get memory usage for all tabs - returns array for frontend
     ipcMain.handle('get-all-tabs-memory', async () => {
         try {
-            if (!tabManager) return {};
+            if (!tabManager) return [];
 
             const metrics = app.getAppMetrics();
             const pidToMemory: Record<number, number> = {};
             for (const m of metrics) {
                 if (m.memory) {
+                    // Convert to MB for frontend display
                     pidToMemory[m.pid] = Math.round((m.memory.privateBytes || 0) / 1024);
                 }
             }
 
-            const result: Record<string, { memory: number; loaded: boolean }> = {};
+            const result: Array<{ tabId: string; title: string; profileId: string; memoryKB: number; loaded: boolean }> = [];
 
             for (const [tabId, tab] of tabManager.tabs) {
                 if (!tab.loaded || !tab.view || !tab.view.webContents || tab.view.webContents.isDestroyed()) {
-                    result[tabId] = { memory: 0, loaded: false };
+                    result.push({
+                        tabId,
+                        title: tab.title || 'Untitled',
+                        profileId: tab.profileId,
+                        memoryKB: 0,
+                        loaded: false
+                    });
                 } else {
-                    try {
-                        const tabPid = tab.view.webContents.getOSProcessId();
-                        const memory = pidToMemory[tabPid] || 0;
-                        result[tabId] = { memory, loaded: true };
-                    } catch (e) {
-                        result[tabId] = { memory: 0, loaded: false };
-                    }
+                    const tabPid = tab.view.webContents.getOSProcessId();
+                    result.push({
+                        tabId,
+                        title: tab.title || 'Untitled',
+                        profileId: tab.profileId,
+                        memoryKB: pidToMemory[tabPid] || 0,
+                        loaded: true
+                    });
                 }
             }
 
             return result;
         } catch (e) {
             console.error('Failed to get all tabs memory:', e);
-            return {};
+            return [];
         }
     });
 }

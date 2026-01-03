@@ -354,8 +354,31 @@ class MenuBuilder {
             {
                 label: 'View',
                 submenu: [
-                    { role: 'reload' },
-                    { role: 'forceReload' },
+                    {
+                        label: 'Reload Tab',
+                        accelerator: 'CmdOrCtrl+R',
+                        click: () => {
+                            if (this.tabManager) {
+                                this.tabManager.reload();
+                            }
+                        }
+                    },
+                    {
+                        label: 'Force Reload Tab',
+                        accelerator: 'CmdOrCtrl+Shift+R',
+                        click: () => {
+                            const view = this.tabManager?.getActiveView();
+                            if (view) view.webContents.reloadIgnoringCache();
+                        }
+                    },
+                    {
+                        label: 'Reload App UI (Dev)',
+                        accelerator: 'CmdOrCtrl+Shift+F5',
+                        visible: process.env.NODE_ENV === 'development',
+                        click: () => {
+                            this.mainWindow.webContents.reload();
+                        }
+                    },
                     { role: 'toggleDevTools' },
                     { type: 'separator' },
                     { role: 'resetZoom' },

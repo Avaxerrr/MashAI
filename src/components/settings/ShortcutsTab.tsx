@@ -108,21 +108,6 @@ export default function ShortcutsTab({ generalSettings }: ShortcutsTabProps) {
                 </div>
             </div>
 
-            {/* Editing & Clipboard */}
-            <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
-                    <h3 className="text-white font-medium text-sm">Editing & Clipboard</h3>
-                </div>
-                <div className="p-5 space-y-2">
-                    <ShortcutRow keys="Ctrl + C" description="Copy" />
-                    <ShortcutRow keys="Ctrl + V" description="Paste" />
-                    <ShortcutRow keys="Ctrl + X" description="Cut" />
-                    <ShortcutRow keys="Ctrl + Z" description="Undo" />
-                    <ShortcutRow keys="Ctrl + Y" description="Redo" />
-                    <ShortcutRow keys="Ctrl + A" description="Select All" />
-                </div>
-            </div>
-
             {/* Note */}
             <div className="bg-[#1e2a1e] rounded-lg border border-[#3a523a] p-4">
                 <p className="text-xs text-gray-400">

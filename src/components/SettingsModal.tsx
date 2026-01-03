@@ -108,7 +108,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     }, [profiles.length, activeTab])
 
     useEffect(() => {
-        if (contentAreaRef.current && providers.length > 0 && activeTab === 'providers') {
+        if (contentAreaRef.current && newlyAddedProviderId && activeTab === 'providers') {
             setTimeout(() => {
                 if (contentAreaRef.current) {
                     contentAreaRef.current.scrollTo({
@@ -118,7 +118,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                 }
             }, 100)
         }
-    }, [providers.length, activeTab])
+    }, [newlyAddedProviderId, activeTab])
 
     useEffect(() => {
         if (contentAreaRef.current) {

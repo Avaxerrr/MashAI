@@ -10,6 +10,7 @@ interface TabState {
     loaded: boolean;
     suspended?: boolean;
     loading?: boolean;
+    faviconDataUrl?: string;
 }
 
 function App() {
@@ -72,19 +73,20 @@ function App() {
                 if (prev.some(t => t.id === tab.id)) {
                     return prev
                 }
-                return [...prev, { ...tab, url: '', loaded: tab.loaded ?? false }]
+                return [...prev, { ...tab, url: '', loaded: tab.loaded ?? false, faviconDataUrl: tab.faviconDataUrl }]
             })
             setActiveTabId(tab.id)
         }
 
-        const handleTabUpdated = ({ id, title, url, loaded, suspended }: TabUpdatedEvent) => {
+        const handleTabUpdated = ({ id, title, url, loaded, suspended, faviconDataUrl }: TabUpdatedEvent) => {
             setTabs(prev => prev.map(tab =>
                 tab.id === id ? {
                     ...tab,
                     ...(title !== undefined && { title }),
                     ...(url !== undefined && { url }),
                     ...(loaded !== undefined && { loaded }),
-                    ...(suspended !== undefined && { suspended })
+                    ...(suspended !== undefined && { suspended }),
+                    ...(faviconDataUrl !== undefined && { faviconDataUrl })
                 } : tab
             ))
         }

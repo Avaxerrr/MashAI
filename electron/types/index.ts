@@ -48,6 +48,7 @@ export interface SessionTab {
     profileId: string;
     url: string;
     title: string;
+    faviconDataUrl?: string;
 }
 
 /** Tab data sent to frontend */
@@ -58,6 +59,7 @@ export interface TabInfo {
     url: string;
     loaded: boolean;
     suspended?: boolean;
+    faviconDataUrl?: string;
 }
 
 /** Options for creating a new tab */

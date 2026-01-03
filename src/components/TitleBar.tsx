@@ -10,6 +10,7 @@ interface TabState {
     loaded: boolean;
     suspended?: boolean;
     loading?: boolean;
+    faviconDataUrl?: string;
 }
 
 interface TitleBarProps {
@@ -58,6 +59,7 @@ export default function TitleBar({
     const [isMaximized, setIsMaximized] = useState(false)
     const [draggedTab, setDraggedTab] = useState<string | null>(null)
     const [dragOverTab, setDragOverTab] = useState<string | null>(null)
+    const [dragSide, setDragSide] = useState<'left' | 'right'>('left')
 
     const getProviderForTab = (tab: TabState): AIProvider | undefined => {
         if (!tab.url) return undefined;
@@ -65,22 +67,29 @@ export default function TitleBar({
     }
 
     const getIconForTab = (tab: TabState): string => {
-        const provider = getProviderForTab(tab);
+        // 1. Use tab's own cached favicon (from session/page load)
+        if (tab.faviconDataUrl) {
+            return tab.faviconDataUrl;
+        }
 
+        // 2. Try provider's cached favicon
+        const provider = getProviderForTab(tab);
         if (provider?.faviconDataUrl) {
             return provider.faviconDataUrl;
         }
 
+        // 3. Use Google Favicon Service for the tab's URL
         if (tab.url) {
             try {
                 const urlObj = new URL(tab.url);
                 return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
             } catch {
-                // Invalid URL
+                // Invalid URL - fall through to default
             }
         }
 
-        return 'https://www.google.com/s2/favicons?domain=perplexity.ai&sz=32';
+        // 4. Generic fallback - globe icon
+        return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23888" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
     }
 
     const handleMaximize = () => {
@@ -193,11 +202,16 @@ export default function TitleBar({
                                     e.dataTransfer.dropEffect = 'move';
                                     if (draggedTab && draggedTab !== tab.id) {
                                         setDragOverTab(tab.id);
+                                        // Determine which side based on dragged tab position
+                                        const draggedIndex = tabs.findIndex(t => t.id === draggedTab);
+                                        const targetIndex = tabs.findIndex(t => t.id === tab.id);
+                                        setDragSide(draggedIndex < targetIndex ? 'right' : 'left');
                                     }
                                 }}
                                 onDragLeave={(e: DragEvent<HTMLDivElement>) => {
                                     if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
                                         setDragOverTab(null);
+                                        setDragSide('left');
                                     }
                                 }}
                                 onDrop={(e: DragEvent<HTMLDivElement>) => {
@@ -225,13 +239,15 @@ export default function TitleBar({
                                 className={`h-full px-2 flex items-center gap-2 border-r border-[#1e1e1e] cursor-pointer group select-none
                                         ${!isActive ? 'bg-[#2d2d2d] hover:bg-[#2a2a2a]' : ''}
                                         min-w-[40px] max-w-[160px] flex-1 transition-all duration-200
-                                        ${isDragOver ? 'border-l-4 border-l-violet-400 bg-violet-500/20 scale-[1.02]' : ''}
+                                        ${isDragOver && dragSide === 'left' ? 'border-l-4 border-l-violet-400' : ''}
+                                        ${isDragOver && dragSide === 'right' ? 'border-r-4 border-r-violet-400' : ''}
+                                        ${isDragOver ? 'bg-violet-500/20 scale-[1.02]' : ''}
                                         ${isDragging ? 'scale-95 shadow-lg shadow-violet-500/30 z-50' : ''}
-                                        ${tab.loaded === false && !isDragging ? 'opacity-50' : ''}
+                                        ${tab.loaded === false && !isDragging && !isDragOver ? 'opacity-50' : ''}
                                     `}
                                 title={(() => {
                                     const mem = tabMemory[tab.id];
-                                    const memStr = mem?.memoryKB ? ` (${Math.round(mem.memoryKB / 1024)} MB)` : '';
+                                    const memStr = mem?.memoryKB ? ` (${mem.memoryKB} MB)` : '';
                                     if (tab.loaded === false) {
                                         return `${tab.title} (suspended)`;
                                     }
@@ -240,7 +256,7 @@ export default function TitleBar({
                                 style={{
                                     WebkitAppRegion: 'no-drag',
                                     backgroundColor: isActive ? activeBg : (isDragging ? '#3e3e42' : undefined),
-                                    opacity: isDragging ? 0.9 : 1
+                                    opacity: isDragging ? 0.8 : (isDragOver ? 1 : (tab.loaded === false ? 0.5 : 1))
                                 } as React.CSSProperties}
                             >
                                 <img

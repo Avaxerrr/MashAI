@@ -85,7 +85,8 @@ class SessionManager {
                 id: t.id,
                 profileId: t.profileId,
                 url: t.url,
-                title: t.title
+                title: t.title,
+                faviconDataUrl: t.faviconDataUrl
             })),
             activeTabId: this.tabManager.activeTabId,
             lastActiveProfileId: lastActiveProfileId,
@@ -166,12 +167,13 @@ class SessionManager {
 
                 if (shouldLoad) {
                     console.log(`[SessionManager] Creating tab ${tabData.id} with view (immediate load)`);
-                    const id = this.tabManager.createTab(tabData.profileId, tabData.url, tabData.id);
+                    const id = this.tabManager.createTab(tabData.profileId, tabData.url, tabData.id, tabData.faviconDataUrl);
                     mainWindow.webContents.send('tab-created', {
                         id,
                         profileId: tabData.profileId,
                         title: tabData.title || 'Restored',
-                        loaded: true
+                        loaded: true,
+                        faviconDataUrl: tabData.faviconDataUrl
                     });
                 } else {
                     console.log(`[SessionManager] Registering tab ${tabData.id} as metadata (lazy)`);
@@ -179,13 +181,15 @@ class SessionManager {
                         id: tabData.id,
                         profileId: tabData.profileId,
                         url: tabData.url,
-                        title: tabData.title || 'Restored'
+                        title: tabData.title || 'Restored',
+                        faviconDataUrl: tabData.faviconDataUrl
                     });
                     mainWindow.webContents.send('tab-created', {
                         id: tabData.id,
                         profileId: tabData.profileId,
                         title: tabData.title || 'Restored',
-                        loaded: false
+                        loaded: false,
+                        faviconDataUrl: tabData.faviconDataUrl
                     });
                 }
             });

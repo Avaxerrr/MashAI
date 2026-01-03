@@ -123,12 +123,12 @@ export default function ProvidersTab({
                                 setDraggedProviderId(null)
                                 setDragOverProviderId(null)
                             }}
-                            className={`flex items-center gap-4 p-4 rounded-xl transition-all cursor-move ${newlyAddedProviderId === provider.id
+                            className={`flex items-center gap-2 p-3 rounded-xl transition-all cursor-move ${newlyAddedProviderId === provider.id
                                 ? 'bg-[#252526] neon-glow-green'
                                 : isDefault
                                     ? 'bg-[#252526] ring-2 ring-violet-500/50 shadow-lg shadow-violet-500/10'
                                     : 'bg-[#252526]'
-                                } ${isDragOver ? 'border-l-4 border-l-green-500' : ''}`}
+                                } ${isDragOver ? 'border-l-4 border-l-violet-400' : ''}`}
                             style={{ opacity: isDragging ? 0.5 : 1 }}
                         >
                             {/* Drag Handle */}
@@ -138,7 +138,7 @@ export default function ProvidersTab({
                             {/* Star button for setting default */}
                             <button
                                 onClick={() => setAsDefault(provider.id)}
-                                className={`p-2 rounded-lg transition-all ${isDefault
+                                className={`p-1.5 rounded-lg transition-all ${isDefault
                                     ? 'text-yellow-400 bg-yellow-500/10'
                                     : 'text-gray-600 hover:text-yellow-400 hover:bg-yellow-500/5'
                                     }`}
@@ -147,8 +147,9 @@ export default function ProvidersTab({
                                 <Star size={18} fill={isDefault ? 'currentColor' : 'none'} />
                             </button>
 
+
                             {/* Favicon display */}
-                            <div className="w-[76px] h-[76px] flex-shrink-0 flex items-center justify-center rounded-lg">
+                            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-[#1e1e1e]">
                                 {provider.faviconDataUrl ? (
                                     <img
                                         src={provider.faviconDataUrl}
@@ -182,12 +183,12 @@ export default function ProvidersTab({
                                 )}
                             </div>
 
-                            <div className="flex-1 space-y-2">
+                            <div className="flex-1 space-y-1.5">
                                 <input
                                     type="text"
                                     value={provider.name}
                                     onChange={(e) => updateProvider(provider.id, 'name', e.target.value)}
-                                    className={`w-full bg-[#1e1e1e] text-white text-sm font-medium px-3 py-2 rounded-lg outline-none border-2 transition-all ${!provider.name.trim()
+                                    className={`w-full bg-[#1e1e1e] text-white text-sm font-medium px-2.5 py-1.5 rounded-lg outline-none border-2 transition-all ${!provider.name.trim()
                                         ? 'border-red-500/50 focus:ring-2 focus:ring-red-500'
                                         : 'border-transparent focus:ring-2 focus:ring-violet-500'
                                         }`}
@@ -197,7 +198,7 @@ export default function ProvidersTab({
                                     ? 'border-red-500/50 focus-within:ring-2 focus-within:ring-red-500'
                                     : 'border-transparent focus-within:ring-2 focus-within:ring-violet-500'
                                     }`}>
-                                    <span className="text-xs text-gray-500 pl-3 select-none">https://</span>
+                                    <span className="text-xs text-gray-500 pl-2.5 select-none">https://</span>
                                     <input
                                         type="text"
                                         value={provider.url.replace(/^https?:\/\//, '')}
@@ -205,7 +206,7 @@ export default function ProvidersTab({
                                             const value = e.target.value.replace(/^https?:\/\//, '')
                                             updateProvider(provider.id, 'url', `https://${value}`)
                                         }}
-                                        className="flex-1 bg-transparent text-xs text-violet-400 px-1 py-2 outline-none"
+                                        className="flex-1 bg-transparent text-xs text-violet-400 px-1 py-1.5 outline-none"
                                         placeholder="example.com (required)"
                                     />
                                 </div>
