@@ -29,7 +29,7 @@ export default function ShortcutsTab({ generalSettings }) {
                     {keys}
                 </kbd>
                 {editable && (
-                    <span className="text-xs text-blue-400">(editable in General)</span>
+                    <span className="text-xs text-violet-400">(editable in General)</span>
                 )}
             </div>
         </div>
@@ -40,7 +40,7 @@ export default function ShortcutsTab({ generalSettings }) {
             {/* Header */}
             <div>
                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                    <Keyboard size={20} className="text-blue-400" />
+                    <Keyboard size={20} className="text-violet-400" />
                     Keyboard Shortcuts
                 </h2>
                 <p className="text-sm text-gray-400 mt-1">

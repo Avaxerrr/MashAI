@@ -84,7 +84,7 @@ export default function PrivacyTab({ profiles = [] }) {
             {/* Header */}
             <div>
                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                    <Shield size={20} className="text-blue-400" />
+                    <Shield size={20} className="text-violet-400" />
                     Privacy & Data
                 </h2>
                 <p className="text-sm text-gray-400 mt-1">
@@ -114,7 +114,7 @@ export default function PrivacyTab({ profiles = [] }) {
                             type="checkbox"
                             checked={selectAll}
                             onChange={toggleSelectAll}
-                            className="w-4 h-4 accent-blue-500 rounded"
+                            className="w-4 h-4 accent-violet-500 rounded"
                         />
                         <span className="text-sm text-white font-medium">Select All</span>
                     </label>
@@ -126,7 +126,7 @@ export default function PrivacyTab({ profiles = [] }) {
                                     type="checkbox"
                                     checked={selectedProfiles.includes(profile.id)}
                                     onChange={() => toggleProfile(profile.id)}
-                                    className="w-4 h-4 accent-blue-500 rounded"
+                                    className="w-4 h-4 accent-violet-500 rounded"
                                 />
                                 <span className="text-sm text-gray-300 truncate">{profile.name}</span>
                             </label>
@@ -134,7 +134,7 @@ export default function PrivacyTab({ profiles = [] }) {
                     </div>
 
                     {selectedProfiles.length > 0 && (
-                        <p className="text-xs text-blue-400 mt-3 pl-7">
+                        <p className="text-xs text-violet-400 mt-3 pl-7">
                             {selectedProfiles.length} profile(s) selected
                         </p>
                     )}
@@ -156,7 +156,7 @@ export default function PrivacyTab({ profiles = [] }) {
                                         ? 'bg-[#1e1e1e] border-[#3e3e42] opacity-50 cursor-not-allowed'
                                         : option.warning
                                             ? 'bg-[#1e1e1e] border-yellow-900/50 hover:border-yellow-500/50 hover:bg-yellow-950/20'
-                                            : 'bg-[#1e1e1e] border-[#3e3e42] hover:border-blue-500/50 hover:bg-blue-950/20'
+                                            : 'bg-[#1e1e1e] border-[#3e3e42] hover:border-violet-500/50 hover:bg-violet-950/20'
                                         }`}
                                 >
                                     <div className="flex items-center gap-2 mb-0.5">

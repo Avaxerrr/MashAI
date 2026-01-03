@@ -7,10 +7,10 @@ export default {
     theme: {
         extend: {
             colors: {
-                'editor-bg': '#1e1e1e',
+                'editor-bg': '#18181b',
                 'editor-hover': '#2a2a2a',
-                'tab-active': '#1e1e1e',
-                'tab-inactive': '#2d2d2d',
+                'tab-active': '#18181b',
+                'tab-inactive': '#27272a',
             }
         },
     },

@@ -115,7 +115,7 @@ export default function TitleBar({
                 >
                     <div
                         className="w-6 h-6 rounded flex items-center justify-center text-white"
-                        style={{ backgroundColor: activeProfile?.color || '#3b82f6' }}
+                        style={{ backgroundColor: activeProfile?.color || '#8b5cf6' }}
                     >
                         {renderProfileIcon(activeProfile?.icon || 'briefcase')}
                     </div>
@@ -203,8 +203,9 @@ export default function TitleBar({
                                 className={`h-full px-2 flex items-center gap-2 border-r border-[#1e1e1e] cursor-pointer group select-none
                                         ${!isActive ? 'bg-[#2d2d2d] hover:bg-[#2a2a2a]' : ''}
                                         min-w-[40px] max-w-[160px] flex-1 transition-all duration-200
-                                        ${isDragOver ? 'border-l-2 border-l-blue-500' : ''}
-                                        ${tab.loaded === false ? 'opacity-50' : ''}
+                                        ${isDragOver ? 'border-l-4 border-l-violet-400 bg-violet-500/20 scale-[1.02]' : ''}
+                                        ${isDragging ? 'scale-95 shadow-lg shadow-violet-500/30 z-50' : ''}
+                                        ${tab.loaded === false && !isDragging ? 'opacity-50' : ''}
                                     `}
                                 title={(() => {
                                     const mem = tabMemory[tab.id];
@@ -216,8 +217,8 @@ export default function TitleBar({
                                 })()}
                                 style={{
                                     WebkitAppRegion: 'no-drag',
-                                    backgroundColor: isActive ? activeBg : undefined,
-                                    opacity: isDragging ? 0.5 : (tab.loaded === false ? 0.5 : 1)
+                                    backgroundColor: isActive ? activeBg : (isDragging ? '#3e3e42' : undefined),
+                                    opacity: isDragging ? 0.9 : 1
                                 }}
                             >
                                 <img

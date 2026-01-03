@@ -90,15 +90,15 @@ input[type="color"]::-moz-color-swatch {
 }
 
 /* Neon glow animation for newly added items */
-@keyframes neon-glow-blue {
+@keyframes neon-glow-violet {
 
     0%,
     100% {
-        box-shadow: 0 0 3px #3b82f6, 0 0 7px #3b82f6, 0 0 14px #3b82f6, 0 0 28px #3b82f6;
+        box-shadow: 0 0 3px #8b5cf6, 0 0 7px #8b5cf6, 0 0 14px #8b5cf6, 0 0 28px #8b5cf6;
     }
 
     50% {
-        box-shadow: 0 0 7px #60a5fa, 0 0 14px #60a5fa, 0 0 28px #60a5fa, 0 0 42px #60a5fa;
+        box-shadow: 0 0 7px #a855f7, 0 0 14px #a855f7, 0 0 28px #a855f7, 0 0 42px #a855f7;
     }
 }
 
@@ -114,8 +114,8 @@ input[type="color"]::-moz-color-swatch {
     }
 }
 
-.neon-glow-blue {
-    animation: neon-glow-blue 1s ease-in-out infinite;
+.neon-glow-violet {
+    animation: neon-glow-violet 1s ease-in-out infinite;
 }
 
 .neon-glow-green {
@@ -142,4 +142,54 @@ input[type="color"]::-moz-color-swatch {
 /* Smooth scrolling for settings content */
 .settings-scroll-smooth {
     scroll-behavior: smooth;
+}
+
+/* Logo shine effect on hover */
+.logo-shine {
+    position: relative;
+    overflow: hidden;
+}
+
+.logo-shine::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.2),
+            transparent);
+    transition: none;
+}
+
+.logo-shine:hover::before {
+    animation: shine 0.6s ease-in-out;
+}
+
+.logo-shine:hover {
+    animation: logo-glow-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes shine {
+    0% {
+        left: -60%;
+    }
+
+    100% {
+        left: 120%;
+    }
+}
+
+@keyframes logo-glow-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 8px #8b5cf6, 0 0 16px rgba(139, 92, 246, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 12px #a855f7, 0 0 24px rgba(168, 85, 247, 0.5);
+    }
 }

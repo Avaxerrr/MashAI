@@ -1,4 +1,5 @@
 import { Info, Github, ExternalLink } from 'lucide-react'
+import MashAILogo from '../../assets/MashAI-logo.png'
 
 /**
  * AboutTab - Application information and credits
@@ -15,7 +16,7 @@ export default function AboutTab() {
             {/* Header */}
             <div>
                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                    <Info size={20} className="text-blue-400" />
+                    <Info size={20} className="text-violet-400" />
                     About MashAI
                 </h2>
                 <p className="text-sm text-gray-400 mt-1">
@@ -26,17 +27,28 @@ export default function AboutTab() {
             {/* App Info */}
             <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
-                    <h3 className="text-white font-medium text-sm">MashAI</h3>
+                    <h3 className="text-white font-medium text-sm">Mash AI</h3>
                 </div>
                 <div className="p-5 space-y-4">
+                    {/* Logo */}
+                    <div className="flex justify-center">
+                        <div className="logo-shine w-24 h-24 rounded-xl transition-all duration-300 hover:scale-[1.03] cursor-pointer">
+                            <img
+                                src={MashAILogo}
+                                alt="Mash AI Logo"
+                                className="w-full h-full rounded-xl"
+                            />
+                        </div>
+                    </div>
+
                     <div>
-                        <p className="text-sm text-gray-400 leading-relaxed">
+                        <p className="text-sm text-gray-400 leading-relaxed text-center">
                             A unified interface for all your AI assistants. Manage multiple AI providers and profiles in one place.
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-4 pt-2">
-                        <div>
+                    <div className="flex items-center justify-center gap-4 pt-2">
+                        <div className="text-center">
                             <p className="text-xs text-gray-500">Version</p>
                             <p className="text-sm text-white font-mono">{appVersion}</p>
                         </div>

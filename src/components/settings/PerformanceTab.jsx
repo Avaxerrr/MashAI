@@ -57,7 +57,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                 value={value}
                 checked={currentValue === value}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-4 h-4 accent-blue-500 mt-0.5"
+                className="w-4 h-4 accent-violet-500 mt-0.5"
             />
             <div className="flex-1">
                 <span className="text-sm text-white">
@@ -76,7 +76,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
             {/* Header */}
             <div>
                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                    <Gauge size={20} className="text-blue-400" />
+                    <Gauge size={20} className="text-violet-400" />
                     Performance
                 </h2>
                 <p className="text-sm text-gray-400 mt-1">
@@ -165,7 +165,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                                 type="checkbox"
                                 checked={settings.autoSuspendEnabled}
                                 onChange={(e) => updateSetting('autoSuspendEnabled', e.target.checked)}
-                                className="w-4 h-4 accent-blue-500 rounded"
+                                className="w-4 h-4 accent-violet-500 rounded"
                             />
                             <span className="text-sm text-white">Suspend tabs I haven't used in</span>
                             <input
@@ -190,7 +190,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                             checked={settings.excludeActiveProfile ?? true}
                             onChange={(e) => updateSetting('excludeActiveProfile', e.target.checked)}
                             disabled={!settings.autoSuspendEnabled}
-                            className="w-4 h-4 accent-blue-500 rounded disabled:opacity-50"
+                            className="w-4 h-4 accent-violet-500 rounded disabled:opacity-50"
                         />
                         <span className={`text-sm ${settings.autoSuspendEnabled ? 'text-gray-300' : 'text-gray-500'}`}>
                             Don't suspend tabs in my current profile
@@ -202,7 +202,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
             {/* Memory Usage Section */}
             <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
                 <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
-                    <Gauge size={16} className="text-purple-400" />
+                    <Gauge size={16} className="text-violet-400" />
                     <h3 className="text-white font-medium text-sm">Memory usage</h3>
                 </div>
                 <div className="p-5 space-y-3">

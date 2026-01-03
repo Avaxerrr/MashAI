@@ -19,7 +19,7 @@ export const PROFILE_ICONS = [
 ];
 
 // Default colors
-export const DEFAULT_PROFILE_COLOR = '#3b82f6';
+export const DEFAULT_PROFILE_COLOR = '#8b5cf6';
 export const DEFAULT_PROVIDER_COLOR = '#191A1A';
 
 // Provider default colors (for reset functionality)

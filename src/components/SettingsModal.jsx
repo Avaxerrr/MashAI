@@ -164,7 +164,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
             const defaultSettings = {
                 profiles: [
-                    { id: 'work', name: 'Work', icon: 'briefcase', color: '#3b82f6' },
+                    { id: 'work', name: 'Work', icon: 'briefcase', color: '#8b5cf6' },
                     { id: 'personal', name: 'Personal', icon: 'home', color: '#10b981' }
                 ],
                 aiProviders: [
@@ -172,7 +172,17 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     { id: 'gemini', name: 'Gemini', url: 'https://gemini.google.com', icon: 'google', color: '#000000' },
                     { id: 'chatgpt', name: 'ChatGPT', url: 'https://chatgpt.com', icon: 'openai', color: '#212121' },
                     { id: 'claude', name: 'Claude', url: 'https://claude.ai', icon: 'anthropic', color: '#262624' },
-                    { id: 'grok', name: 'Grok', url: 'https://grok.com', icon: 'x', color: '#000000' }
+                    { id: 'grok', name: 'Grok', url: 'https://grok.com', icon: 'x', color: '#000000' },
+                    { id: 'kling', name: 'Kling AI', url: 'https://app.klingai.com', icon: 'globe', color: '#1a1a2e' },
+                    { id: 'firefly', name: 'Adobe Firefly', url: 'https://www.adobe.com/products/firefly.html', icon: 'globe', color: '#1a0a0a' },
+                    { id: 'flux', name: 'Flux', url: 'https://flux1.ai/', icon: 'globe', color: '#0a0a0a' },
+                    { id: 'leonardo', name: 'Leonardo', url: 'https://leonardo.ai/', icon: 'globe', color: '#1a1a2e' },
+                    { id: 'runway', name: 'Runway', url: 'https://runwayml.com/', icon: 'globe', color: '#0f0f0f' },
+                    { id: 'luma', name: 'Luma', url: 'https://lumalabs.ai/', icon: 'globe', color: '#0a0a0a' },
+                    { id: 'heygen', name: 'HeyGen', url: 'https://www.heygen.com/', icon: 'globe', color: '#1a1a2e' },
+                    { id: 'elevenlabs', name: 'ElevenLabs', url: 'https://elevenlabs.io/', icon: 'globe', color: '#0f0f0f' },
+                    { id: 'udio', name: 'Udio', url: 'https://www.udio.com/', icon: 'globe', color: '#1a1a1a' },
+                    { id: 'suno', name: 'Suno', url: 'https://suno.com/home', icon: 'globe', color: '#0a0a0a' }
                 ],
                 defaultProviderId: 'perplexity'
             }
@@ -281,7 +291,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                 style={{ WebkitAppRegion: 'drag' }}
             >
                 <h2 className="text-white font-semibold text-lg flex items-center gap-3">
-                    <Settings size={20} className="text-blue-400" />
+                    <Settings size={20} className="text-violet-400" />
                     Settings
                 </h2>
                 <button
@@ -299,7 +309,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     <button
                         onClick={() => setActiveTab('general')}
                         className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'general'
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
                             : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
                             }`}
                     >
@@ -309,7 +319,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     <button
                         onClick={() => setActiveTab('privacy')}
                         className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'privacy'
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
                             : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
                             }`}
                     >
@@ -317,20 +327,10 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                         Privacy
                     </button>
                     <button
-                        onClick={() => setActiveTab('performance')}
-                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'performance'
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
-                            }`}
-                    >
-                        <Gauge size={16} />
-                        Performance
-                    </button>
-                    <button
                         onClick={() => setActiveTab('profiles')}
                         className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'profiles'
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                            : 'text-gray-400 hover:text-white hover:bg-[#18181b]'
+                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
+                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
                             }`}
                     >
                         <Users size={16} />
@@ -339,7 +339,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     <button
                         onClick={() => setActiveTab('providers')}
                         className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'providers'
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
                             : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
                             }`}
                     >
@@ -347,9 +347,19 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                         AI Providers
                     </button>
                     <button
+                        onClick={() => setActiveTab('performance')}
+                        className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'performance'
+                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
+                            : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
+                            }`}
+                    >
+                        <Gauge size={16} />
+                        Performance
+                    </button>
+                    <button
                         onClick={() => setActiveTab('shortcuts')}
                         className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'shortcuts'
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
                             : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
                             }`}
                     >
@@ -359,7 +369,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     <button
                         onClick={() => setActiveTab('about')}
                         className={`px-4 py-2.5 rounded-lg text-left text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'about'
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
                             : 'text-gray-400 hover:text-white hover:bg-[#3e3e42]'
                             }`}
                     >
@@ -452,7 +462,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     <button onClick={handleApply} className="px-5 py-2 rounded-lg text-sm bg-gray-700 hover:bg-gray-600 text-white font-medium transition-all">
                         Apply
                     </button>
-                    <button onClick={handleSave} className="px-5 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2 font-medium transition-all shadow-lg shadow-blue-600/20">
+                    <button onClick={handleSave} className="px-5 py-2 rounded-lg text-sm bg-violet-600 hover:bg-violet-500 text-white flex items-center gap-2 font-medium transition-all shadow-lg shadow-violet-600/20">
                         <Save size={16} />
                         Save & Close
                     </button>

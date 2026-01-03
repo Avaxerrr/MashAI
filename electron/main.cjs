@@ -147,6 +147,7 @@ function createWindow() {
         minWidth: DEFAULT_WINDOW.minWidth,
         minHeight: DEFAULT_WINDOW.minHeight,
         backgroundColor: '#1e1e1e',
+        icon: path.join(__dirname, '../src/assets/MashAI-logo.png'),
         frame: false,
         titleBarStyle: 'hidden',
         webPreferences: {

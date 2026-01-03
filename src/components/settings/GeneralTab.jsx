@@ -133,7 +133,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                         onBlur={() => setIsRecording(null)}
                         onKeyDown={(e) => handleShortcutKeyDown(e, type)}
                         className={`w-full bg-[#1e1e1e] border ${shortcutError ? 'border-red-500' : shortcutValid ? 'border-[#3e3e42]' : 'border-yellow-500'
-                            } rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 cursor-pointer`}
+                            } rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 cursor-pointer`}
                         placeholder="Click to record shortcut"
                     />
                     {value && shortcutValid && !shortcutError && (
@@ -145,7 +145,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                 </div>
                 <button
                     onClick={() => resetShortcut(type)}
-                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                    className="px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm rounded-lg transition-colors"
                     title={`Reset to default`}
                 >
                     Reset
@@ -166,7 +166,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
             {/* Header */}
             <div>
                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                    <Settings size={20} className="text-blue-400" />
+                    <Settings size={20} className="text-violet-400" />
                     General
                 </h2>
                 <p className="text-sm text-gray-400 mt-1">
@@ -185,7 +185,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                             type="checkbox"
                             checked={settings.launchAtStartup}
                             onChange={(e) => updateSetting('launchAtStartup', e.target.checked)}
-                            className="w-4 h-4 accent-blue-500 rounded"
+                            className="w-4 h-4 accent-violet-500 rounded"
                         />
                         <div>
                             <span className="text-sm text-white">Launch at system startup</span>
@@ -197,7 +197,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                             type="checkbox"
                             checked={settings.alwaysOnTop}
                             onChange={(e) => updateSetting('alwaysOnTop', e.target.checked)}
-                            className="w-4 h-4 accent-blue-500 rounded"
+                            className="w-4 h-4 accent-violet-500 rounded"
                         />
                         <div>
                             <span className="text-sm text-white">Always on top</span>
@@ -230,7 +230,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                             type="checkbox"
                             checked={settings.showTrayIcon}
                             onChange={(e) => handleShowTrayIconChange(e.target.checked)}
-                            className="w-4 h-4 accent-blue-500 rounded"
+                            className="w-4 h-4 accent-violet-500 rounded"
                         />
                         <div>
                             <span className="text-sm text-white">Show tray icon</span>
@@ -246,7 +246,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                                     type="checkbox"
                                     checked={settings.minimizeToTray}
                                     onChange={(e) => updateSetting('minimizeToTray', e.target.checked)}
-                                    className="w-4 h-4 accent-blue-500 rounded"
+                                    className="w-4 h-4 accent-violet-500 rounded"
                                 />
                                 <div>
                                     <span className="text-sm text-white">Minimize to tray instead of closing</span>
@@ -278,7 +278,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                                 type="checkbox"
                                 checked={settings.suspendOnHide}
                                 onChange={(e) => updateSetting('suspendOnHide', e.target.checked)}
-                                className="w-4 h-4 accent-blue-500 rounded"
+                                className="w-4 h-4 accent-violet-500 rounded"
                             />
                             <div>
                                 <span className="text-sm text-white">Suspend tabs when hidden to tray</span>
@@ -293,7 +293,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                                         type="checkbox"
                                         checked={settings.keepLastActiveTab}
                                         onChange={(e) => updateSetting('keepLastActiveTab', e.target.checked)}
-                                        className="w-4 h-4 accent-blue-500 rounded"
+                                        className="w-4 h-4 accent-violet-500 rounded"
                                     />
                                     <div>
                                         <span className="text-sm text-white">Keep last active tab loaded</span>
@@ -310,7 +310,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                                             max="30"
                                             value={settings.suspendDelaySeconds}
                                             onChange={(e) => updateSetting('suspendDelaySeconds', parseInt(e.target.value))}
-                                            className="flex-1 accent-blue-500"
+                                            className="flex-1 accent-violet-500"
                                         />
                                         <span className="text-sm text-gray-400 w-20">
                                             {settings.suspendDelaySeconds} second{settings.suspendDelaySeconds !== 1 ? 's' : ''}
@@ -337,7 +337,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                             type="checkbox"
                             checked={settings.rememberWindowPosition}
                             onChange={(e) => updateSetting('rememberWindowPosition', e.target.checked)}
-                            className="w-4 h-4 accent-blue-500 rounded"
+                            className="w-4 h-4 accent-violet-500 rounded"
                         />
                         <span className="text-sm text-white">Remember window size and position</span>
                     </label>
@@ -347,7 +347,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }) {
                                 type="checkbox"
                                 checked={settings.hardwareAcceleration}
                                 onChange={(e) => updateSetting('hardwareAcceleration', e.target.checked)}
-                                className="w-4 h-4 accent-blue-500 rounded"
+                                className="w-4 h-4 accent-violet-500 rounded"
                             />
                             <div>
                                 <span className="text-sm text-white">Hardware acceleration</span>

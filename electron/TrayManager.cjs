@@ -367,25 +367,22 @@ class TrayManager {
     }
 
     /**
-     * Create a simple placeholder icon for the tray
-     * Creates a 16x16 icon with the app's accent color
-     */
+ * Create a simple placeholder icon for the tray
+ * Creates a 16x16 icon with the app's accent color
+ */
     _createPlaceholderIcon() {
-        // Create a simple 16x16 colored square as placeholder
-        // Using a data URL for a simple gradient icon
-        const size = 16;
+        // Load the actual MashAI logo
+        const logoPath = path.join(__dirname, '../src/assets/MashAI-logo.png');
 
-        // Create a simple icon using nativeImage
-        // This creates a purple-ish icon matching the app's theme
-        const icon = nativeImage.createFromDataURL(
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA' +
-            'gElEQVQ4T2NkoBAwUqifYdQAhtEwGHQhwPDfn+E/AwPD/38MDIyMjAz/GRgY/v1n+M/I' +
-            'wMDIwMDAwMjI+J+BgeE/AwPDf0ZGxv8MDAwMDAyM/xkYGP4zMjL+Z2Bg+M/AwPCfkZHx' +
-            'PwMDw38GBob/jIyM/xkYGP4zMDD8Z2Rk/A8AJy0YEafOyRIAAAAASUVORK5CYII='
-        );
-
-        // Resize to proper tray icon size
-        return icon.resize({ width: size, height: size });
+        try {
+            const icon = nativeImage.createFromPath(logoPath);
+            // Resize to proper tray icon size (16x16 for Windows tray)
+            return icon.resize({ width: 16, height: 16 });
+        } catch (e) {
+            console.warn('[TrayManager] Could not load logo, using fallback:', e);
+            // Fallback to empty icon if logo fails to load
+            return nativeImage.createEmpty();
+        }
     }
 
     /**

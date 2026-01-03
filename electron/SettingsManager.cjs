@@ -51,6 +51,76 @@ class SettingsManager {
                     url: 'https://grok.com',
                     icon: 'https://grok.com/favicon.ico',
                     color: '#000000'
+                },
+                {
+                    id: 'kling',
+                    name: 'Kling AI',
+                    url: 'https://app.klingai.com',
+                    icon: 'https://app.klingai.com/favicon.ico',
+                    color: '#1a1a2e'
+                },
+                {
+                    id: 'firefly',
+                    name: 'Adobe Firefly',
+                    url: 'https://www.adobe.com/products/firefly.html',
+                    icon: 'https://www.adobe.com/favicon.ico',
+                    color: '#1a0a0a'
+                },
+                {
+                    id: 'flux',
+                    name: 'Flux',
+                    url: 'https://flux1.ai/',
+                    icon: 'https://flux1.ai/favicon.ico',
+                    color: '#0a0a0a'
+                },
+                {
+                    id: 'leonardo',
+                    name: 'Leonardo',
+                    url: 'https://leonardo.ai/',
+                    icon: 'https://leonardo.ai/favicon.ico',
+                    color: '#1a1a2e'
+                },
+                {
+                    id: 'runway',
+                    name: 'Runway',
+                    url: 'https://runwayml.com/',
+                    icon: 'https://runwayml.com/favicon.ico',
+                    color: '#0f0f0f'
+                },
+                {
+                    id: 'luma',
+                    name: 'Luma',
+                    url: 'https://lumalabs.ai/',
+                    icon: 'https://lumalabs.ai/favicon.ico',
+                    color: '#0a0a0a'
+                },
+                {
+                    id: 'heygen',
+                    name: 'HeyGen',
+                    url: 'https://www.heygen.com/',
+                    icon: 'https://www.heygen.com/favicon.ico',
+                    color: '#1a1a2e'
+                },
+                {
+                    id: 'elevenlabs',
+                    name: 'ElevenLabs',
+                    url: 'https://elevenlabs.io/',
+                    icon: 'https://elevenlabs.io/favicon.ico',
+                    color: '#0f0f0f'
+                },
+                {
+                    id: 'udio',
+                    name: 'Udio',
+                    url: 'https://www.udio.com/',
+                    icon: 'https://www.udio.com/favicon.ico',
+                    color: '#1a1a1a'
+                },
+                {
+                    id: 'suno',
+                    name: 'Suno',
+                    url: 'https://suno.com/home',
+                    icon: 'https://suno.com/favicon.ico',
+                    color: '#0a0a0a'
                 }
             ],
             defaultProviderId: 'perplexity',
