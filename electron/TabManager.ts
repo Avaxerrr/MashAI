@@ -121,8 +121,7 @@ class TabManager {
         const settings = this.settingsManager.getSettings();
         const autoSuspendEnabled = settings.performance?.autoSuspendEnabled ?? true;
         const autoSuspendMinutes = settings.performance?.autoSuspendMinutes ?? 30;
-        // Note: excludeActiveProfile is not in our Settings type, using optional chaining
-        const excludeActiveProfile = (settings.performance as any)?.excludeActiveProfile ?? true;
+        const excludeActiveProfile = settings.performance?.excludeActiveProfile ?? false;
 
         if (!autoSuspendEnabled) {
             return;

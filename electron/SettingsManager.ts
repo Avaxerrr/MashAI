@@ -136,7 +136,8 @@ class SettingsManager {
                 tabLoadingStrategy: 'lastActiveOnly',
                 autoSuspendEnabled: true,
                 autoSuspendMinutes: 30,
-                profileSwitchBehavior: 'suspend'
+                profileSwitchBehavior: 'keep',
+                excludeActiveProfile: false
             },
             general: {
                 hardwareAcceleration: true,
@@ -144,8 +145,8 @@ class SettingsManager {
                 launchAtStartup: false,
                 alwaysOnTop: false,
                 alwaysOnTopShortcut: 'CommandOrControl+Shift+A',
-                minimizeToTray: true,
-                showTrayIcon: true,
+                minimizeToTray: false,
+                showTrayIcon: false,
                 hideShortcut: 'CommandOrControl+Shift+M',
                 suspendOnHide: true,
                 keepLastActiveTab: true,

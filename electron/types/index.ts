@@ -77,6 +77,7 @@ export interface PerformanceSettings {
     autoSuspendEnabled: boolean;
     autoSuspendMinutes: number;
     profileSwitchBehavior: 'keep' | 'suspend' | 'close';
+    excludeActiveProfile?: boolean;
 }
 
 export interface GeneralSettings {

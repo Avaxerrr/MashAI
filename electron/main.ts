@@ -267,7 +267,8 @@ function createWindow(): void {
             mainWindow!.webContents.send('tab-created', {
                 id,
                 profileId: defaultProfile,
-                title: 'New Thread'
+                title: 'New Thread',
+                loaded: true
             });
             updateViewBounds();
             sessionManager!.saveSession();

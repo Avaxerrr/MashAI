@@ -162,24 +162,54 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     }
 
     const handleResetAll = async () => {
-        if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
-            const defaultSettings = {
-                profiles: [
-                    { id: 'work', name: 'Work', icon: 'briefcase', color: '#8b5cf6' },
-                    { id: 'personal', name: 'Personal', icon: 'home', color: '#10b981' }
-                ],
-                aiProviders: [
-                    { id: 'perplexity', name: 'Perplexity', url: 'https://www.perplexity.ai', icon: 'perplexity', color: '#191A1A' },
-                    { id: 'gemini', name: 'Gemini', url: 'https://gemini.google.com', icon: 'google', color: '#000000' },
-                    { id: 'chatgpt', name: 'ChatGPT', url: 'https://chatgpt.com', icon: 'openai', color: '#212121' },
-                    { id: 'claude', name: 'Claude', url: 'https://claude.ai', icon: 'anthropic', color: '#262624' },
-                    { id: 'grok', name: 'Grok', url: 'https://grok.com', icon: 'x', color: '#000000' }
-                ],
-                defaultProviderId: 'perplexity'
-            }
-            setProfiles(defaultSettings.profiles)
-            setProviders(defaultSettings.aiProviders)
-            setDefaultProviderId(defaultSettings.defaultProviderId)
+        if (confirm('Are you sure you want to reset all settings to defaults?\n\nNote: Your profiles will NOT be reset.\nThis cannot be undone.')) {
+            // NOTE: Profiles are intentionally excluded from reset.
+            // Resetting profiles would orphan their partition data (cookies, cache, localStorage).
+
+            // Reset AI Providers to all 15 defaults
+            const defaultProviders = [
+                { id: 'perplexity', name: 'Perplexity', url: 'https://www.perplexity.ai', icon: 'perplexity', color: '#191A1A' },
+                { id: 'gemini', name: 'Gemini', url: 'https://gemini.google.com', icon: 'google', color: '#000000' },
+                { id: 'chatgpt', name: 'ChatGPT', url: 'https://chatgpt.com', icon: 'openai', color: '#212121' },
+                { id: 'claude', name: 'Claude', url: 'https://claude.ai', icon: 'anthropic', color: '#262624' },
+                { id: 'grok', name: 'Grok', url: 'https://grok.com', icon: 'x', color: '#000000' },
+                { id: 'kling', name: 'Kling AI', url: 'https://app.klingai.com', icon: 'kling', color: '#1a1a2e' },
+                { id: 'firefly', name: 'Adobe Firefly', url: 'https://www.adobe.com/products/firefly.html', icon: 'firefly', color: '#1a0a0a' },
+                { id: 'flux', name: 'Flux', url: 'https://flux1.ai/', icon: 'flux', color: '#0a0a0a' },
+                { id: 'leonardo', name: 'Leonardo', url: 'https://leonardo.ai/', icon: 'leonardo', color: '#1a1a2e' },
+                { id: 'runway', name: 'Runway', url: 'https://runwayml.com/', icon: 'runway', color: '#0f0f0f' },
+                { id: 'luma', name: 'Luma', url: 'https://lumalabs.ai/', icon: 'luma', color: '#0a0a0a' },
+                { id: 'heygen', name: 'HeyGen', url: 'https://www.heygen.com/', icon: 'heygen', color: '#1a1a2e' },
+                { id: 'elevenlabs', name: 'ElevenLabs', url: 'https://elevenlabs.io/', icon: 'elevenlabs', color: '#0f0f0f' },
+                { id: 'udio', name: 'Udio', url: 'https://www.udio.com/', icon: 'udio', color: '#1a1a1a' },
+                { id: 'suno', name: 'Suno', url: 'https://suno.com/home', icon: 'suno', color: '#0a0a0a' }
+            ]
+            setProviders(defaultProviders)
+            setDefaultProviderId('perplexity')
+
+            // Reset Performance settings
+            setPerformanceSettings({
+                tabLoadingStrategy: 'lastActiveOnly',
+                autoSuspendEnabled: true,
+                autoSuspendMinutes: 30,
+                profileSwitchBehavior: 'keep',
+                excludeActiveProfile: false
+            })
+
+            // Reset General settings
+            setGeneralSettings({
+                hardwareAcceleration: true,
+                rememberWindowPosition: true,
+                launchAtStartup: false,
+                alwaysOnTop: false,
+                alwaysOnTopShortcut: 'CommandOrControl+Shift+A',
+                minimizeToTray: false,
+                showTrayIcon: false,
+                hideShortcut: 'CommandOrControl+Shift+M',
+                suspendOnHide: true,
+                keepLastActiveTab: true,
+                suspendDelaySeconds: 5
+            })
         }
     }
 

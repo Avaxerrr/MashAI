@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Shield, Trash2, Database, HardDrive, Cookie, FolderOpen, LucideIcon } from 'lucide-react'
+import { Shield, Trash2, Database, HardDrive, Cookie, LucideIcon } from 'lucide-react'
 import type { Profile } from '../../types'
 
 interface PrivacyTabProps {
@@ -7,7 +7,7 @@ interface PrivacyTabProps {
 }
 
 interface ClearOption {
-    id: string;
+    id: 'cache' | 'cookies' | 'siteData' | 'all';
     icon: LucideIcon;
     label: string;
     description: string;
@@ -39,7 +39,7 @@ export default function PrivacyTab({ profiles = [] }: PrivacyTabProps) {
         setSelectAll(!selectAll)
     }
 
-    const handleClearData = async (dataType: string) => {
+    const handleClearData = async (dataType: 'cache' | 'cookies' | 'siteData' | 'all') => {
         if (selectedProfiles.length === 0) {
             alert('Please select at least one profile')
             return
@@ -49,7 +49,6 @@ export default function PrivacyTab({ profiles = [] }: PrivacyTabProps) {
             cache: 'Cache',
             cookies: 'Cookies',
             siteData: 'Site Data',
-            sessions: 'Session Data',
             all: 'All Data'
         }
 
@@ -61,13 +60,11 @@ export default function PrivacyTab({ profiles = [] }: PrivacyTabProps) {
 
         setIsClearing(true)
         try {
-            await window.api.clearPrivacyData({
-                profileId: selectedProfiles[0],
-                clearCache: dataType === 'cache' || dataType === 'all',
-                clearCookies: dataType === 'cookies' || dataType === 'all',
-                clearStorage: dataType === 'siteData' || dataType === 'all',
-                clearHistory: dataType === 'sessions' || dataType === 'all'
+            const result = await window.api.clearPrivacyData({
+                profiles: selectedProfiles,
+                dataType
             })
+            console.log('[PrivacyTab] Clear result:', result)
             if (dataType === 'all') {
                 setSelectedProfiles([])
                 setSelectAll(false)
@@ -82,8 +79,7 @@ export default function PrivacyTab({ profiles = [] }: PrivacyTabProps) {
     const clearOptions: ClearOption[] = [
         { id: 'cache', icon: HardDrive, label: 'Cache', description: 'Cached images and scripts' },
         { id: 'cookies', icon: Cookie, label: 'Cookies', description: 'Login sessions' },
-        { id: 'siteData', icon: Database, label: 'Site Data', description: 'Local storage & history', warning: true },
-        { id: 'sessions', icon: FolderOpen, label: 'Sessions', description: 'Saved tabs' }
+        { id: 'siteData', icon: Database, label: 'Site Data', description: 'Local storage & IndexedDB', warning: true }
     ]
 
     const disabled = isClearing || selectedProfiles.length === 0

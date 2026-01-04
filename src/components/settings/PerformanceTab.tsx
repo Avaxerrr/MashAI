@@ -13,10 +13,6 @@ interface MemoryUsage {
     suspendedCount: number;
 }
 
-interface LocalSettings extends PerformanceSettings {
-    excludeActiveProfile?: boolean;
-}
-
 interface RadioOptionProps {
     name: string;
     value: string;
@@ -31,7 +27,7 @@ interface RadioOptionProps {
  * PerformanceTab - Memory and performance optimization settings
  */
 export default function PerformanceTab({ performanceSettings, onPerformanceChange }: PerformanceTabProps) {
-    const [settings, setSettings] = useState<LocalSettings>({
+    const [settings, setSettings] = useState<PerformanceSettings>({
         ...{
             tabLoadingStrategy: 'lastActiveOnly',
             autoSuspendEnabled: true,
@@ -69,7 +65,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
         return () => clearInterval(interval)
     }, [])
 
-    const updateSetting = <K extends keyof LocalSettings>(key: K, value: LocalSettings[K]) => {
+    const updateSetting = <K extends keyof PerformanceSettings>(key: K, value: PerformanceSettings[K]) => {
         const newSettings = { ...settings, [key]: value }
         setSettings(newSettings)
         if (onPerformanceChange) {

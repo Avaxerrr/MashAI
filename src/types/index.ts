@@ -35,6 +35,7 @@ export interface PerformanceSettings {
     autoSuspendEnabled: boolean;
     autoSuspendMinutes: number;
     profileSwitchBehavior: 'keep' | 'suspend' | 'close';
+    excludeActiveProfile?: boolean;
 }
 
 export interface GeneralSettings {
@@ -171,9 +172,6 @@ export interface TabMemoryInfo {
 }
 
 export interface ClearPrivacyDataOptions {
-    profileId?: string;
-    clearCache?: boolean;
-    clearCookies?: boolean;
-    clearStorage?: boolean;
-    clearHistory?: boolean;
+    profiles: string[];
+    dataType: 'cache' | 'cookies' | 'siteData' | 'all';
 }

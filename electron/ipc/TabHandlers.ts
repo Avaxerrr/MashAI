@@ -36,7 +36,8 @@ export function register(
                 id,
                 profileId,
                 title: 'New Thread',
-                url: tab?.url || ''
+                url: tab?.url || '',
+                loaded: true
             });
             updateViewBounds();
             saveSession();
@@ -54,7 +55,8 @@ export function register(
                 id,
                 profileId,
                 title: 'New Thread',
-                url: tab?.url || url || ''
+                url: tab?.url || url || '',
+                loaded: true
             });
             updateViewBounds();
             saveSession();
@@ -101,7 +103,8 @@ export function register(
         mainWindow.webContents.send('tab-created', {
             id: newId,
             profileId: tab.profileId,
-            title: tab.title
+            title: tab.title,
+            loaded: true
         });
         updateViewBounds();
         saveSession();
@@ -125,7 +128,8 @@ export function register(
         mainWindow.webContents.send('tab-created', {
             id,
             profileId: lastClosed.profileId,
-            title: lastClosed.title
+            title: lastClosed.title,
+            loaded: true
         });
         updateViewBounds();
         saveSession();

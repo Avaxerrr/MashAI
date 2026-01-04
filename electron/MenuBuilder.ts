@@ -70,7 +70,8 @@ class MenuBuilder {
                         this.mainWindow.webContents.send('tab-created', {
                             id: newId,
                             profileId: tab.profileId,
-                            title: tab.title
+                            title: tab.title,
+                            loaded: true
                         });
                         this.updateViewBounds();
                         this.saveSession();
@@ -191,7 +192,8 @@ class MenuBuilder {
                                 id,
                                 profileId,
                                 title: 'New Thread',
-                                url: provider.url
+                                url: provider.url,
+                                loaded: true
                             });
                             this.updateViewBounds();
                             this.saveSession();
@@ -251,7 +253,8 @@ class MenuBuilder {
                                     this.mainWindow.webContents.send('tab-created', {
                                         id,
                                         profileId,
-                                        title: 'New Thread'
+                                        title: 'New Thread',
+                                        loaded: true
                                     });
                                     this.updateViewBounds();
                                     this.saveSession();
@@ -279,7 +282,8 @@ class MenuBuilder {
                                 this.mainWindow.webContents.send('tab-created', {
                                     id,
                                     profileId: lastClosed.profileId,
-                                    title: lastClosed.title
+                                    title: lastClosed.title,
+                                    loaded: true
                                 });
                                 this.updateViewBounds();
                                 this.saveSession();

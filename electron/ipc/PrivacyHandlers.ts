@@ -11,7 +11,7 @@ interface PrivacyDependencies {
 
 interface ClearPrivacyOptions {
     profiles: string[];
-    dataType: 'cache' | 'cookies' | 'siteData' | 'sessions' | 'all';
+    dataType: 'cache' | 'cookies' | 'siteData' | 'all';
 }
 
 interface ClearResult {
@@ -57,8 +57,6 @@ class PrivacyHandlers {
                         return await this._clearCookies(profiles);
                     case 'siteData':
                         return await this._clearSiteData(profiles);
-                    case 'sessions':
-                        return await this._clearSessions(profiles);
                     case 'all':
                         return await this._clearAll(profiles);
                     default:
@@ -221,17 +219,16 @@ class PrivacyHandlers {
      * Clear ALL data for specified profiles (nuclear option)
      */
     private async _clearAll(profiles: string[]): Promise<ClearResult> {
-        console.log('[PrivacyHandler] NUCLEAR OPTION - Clearing ALL data for profiles:', profiles);
+        console.log('[PrivacyHandler] Clearing ALL data for profiles:', profiles);
 
         const results = {
             cache: await this._clearCache(profiles),
             cookies: await this._clearCookies(profiles),
-            siteData: await this._clearSiteData(profiles),
-            sessions: await this._clearSessions(profiles)
+            siteData: await this._clearSiteData(profiles)
         };
 
         const allSuccess = Object.values(results).every(r => r.success);
-        console.log(`[PrivacyHandler] Nuclear option complete. All success: ${allSuccess}`);
+        console.log(`[PrivacyHandler] Clear all complete. All success: ${allSuccess}`);
 
         return { success: allSuccess };
     }
