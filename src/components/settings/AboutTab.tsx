@@ -1,11 +1,11 @@
-import { Info, Github, ExternalLink } from 'lucide-react'
+import { Info, Github, Coffee, Bug, RefreshCw } from 'lucide-react'
 import MashAILogo from '../../assets/MashAI-logo.png'
 
 /**
  * AboutTab - Application information and credits
  */
 export default function AboutTab() {
-    const appVersion = '1.0.0'
+    const appVersion = '1.0.0-beta'
 
     const openLink = (url: string) => {
         window.api.openExternal(url)
@@ -24,138 +24,78 @@ export default function AboutTab() {
                 </p>
             </div>
 
-            {/* App Info */}
+            {/* Main About Card */}
             <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
-                    <h3 className="text-white font-medium text-sm">Mash AI</h3>
-                </div>
-                <div className="p-5 space-y-4">
-                    {/* Logo */}
-                    <div className="flex justify-center">
-                        <div className="logo-shine w-24 h-24 rounded-xl transition-all duration-300 hover:scale-[1.03] cursor-pointer">
+                <div className="p-6 space-y-5">
+                    {/* Logo & Version */}
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="logo-shine w-20 h-20 rounded-xl transition-all duration-300 hover:scale-[1.03] cursor-pointer">
                             <img
                                 src={MashAILogo}
-                                alt="Mash AI Logo"
+                                alt="MashAI Logo"
                                 className="w-full h-full rounded-xl"
                             />
                         </div>
+                        <div className="text-center">
+                            <h3 className="text-lg font-semibold text-white">MashAI</h3>
+                            <p className="text-xs text-gray-500 font-mono">v{appVersion}</p>
+                        </div>
                     </div>
 
-                    <div>
-                        <p className="text-sm text-gray-400 leading-relaxed text-center">
-                            A unified interface for all your AI assistants. Manage multiple AI providers and profiles in one place.
+                    {/* Description */}
+                    <p className="text-sm text-gray-400 leading-relaxed text-center">
+                        The all-in-one workspace for your AI workflow. Manage cloud and local models in one private, ad-free environment.
+                    </p>
+
+                    {/* Action Buttons - Row 1 */}
+                    <div className="flex items-center justify-center gap-2">
+                        <button
+                            onClick={() => openLink('https://github.com/Avaxerrr/MashAI')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e1e] hover:bg-[#2a2a2b] border border-[#3e3e42] rounded-lg text-xs text-white transition-colors"
+                        >
+                            <Github size={14} />
+                            <span>GitHub</span>
+                        </button>
+                        <button
+                            onClick={() => openLink('https://github.com/Avaxerrr/MashAI/issues')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e1e] hover:bg-[#2a2a2b] border border-[#3e3e42] rounded-lg text-xs text-white transition-colors"
+                        >
+                            <Bug size={14} />
+                            <span>Report Issue</span>
+                        </button>
+                        <button
+                            onClick={() => openLink('https://ko-fi.com/O4O31RETV3')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 border border-violet-500 rounded-lg text-xs text-white transition-colors"
+                        >
+                            <Coffee size={14} />
+                            <span>Buy Me a Coffee</span>
+                        </button>
+                    </div>
+
+                    {/* Check for Updates */}
+                    <div className="flex items-center justify-center">
+                        <button
+                            onClick={() => openLink('https://github.com/Avaxerrr/MashAI/releases')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e1e] hover:bg-[#2a2a2b] border border-[#3e3e42] rounded-lg text-xs text-gray-400 hover:text-white transition-colors"
+                        >
+                            <RefreshCw size={14} />
+                            <span>Check for Updates</span>
+                        </button>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="border-t border-[#3e3e42]"></div>
+
+                    {/* Developer & Copyright */}
+                    <div className="text-center space-y-1">
+                        <p className="text-sm text-gray-400">
+                            Created by <span className="text-white font-medium">Avaxerrr</span>
+                        </p>
+                        <p className="text-xs text-gray-500">
+                            © 2026 All rights reserved
                         </p>
                     </div>
-
-                    <div className="flex items-center justify-center gap-4 pt-2">
-                        <div className="text-center">
-                            <p className="text-xs text-gray-500">Version</p>
-                            <p className="text-sm text-white font-mono">{appVersion}</p>
-                        </div>
-                    </div>
                 </div>
-            </div>
-
-            {/* Developer Info */}
-            <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
-                    <h3 className="text-white font-medium text-sm">Developer</h3>
-                </div>
-                <div className="p-5 space-y-4">
-                    <div>
-                        <p className="text-sm text-gray-400">Created by <span className="text-white font-medium">Avaxerrr</span></p>
-                        <p className="text-xs text-gray-500 mt-1 italic">"Let's try build everything"</p>
-                    </div>
-
-                    <button
-                        onClick={() => openLink('https://github.com/Avaxerrr')}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#1e1e1e] hover:bg-[#2a2a2b] border border-[#3e3e42] rounded-lg text-sm text-white transition-colors"
-                    >
-                        <Github size={16} />
-                        <span>github.com/Avaxerrr</span>
-                        <ExternalLink size={14} className="text-gray-500 ml-auto" />
-                    </button>
-                </div>
-            </div>
-
-            {/* Built With */}
-            <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
-                    <h3 className="text-white font-medium text-sm">Built With</h3>
-                </div>
-                <div className="p-5">
-                    <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-[#1e1e1e] rounded-lg p-3 text-center">
-                            <p className="text-sm text-white font-medium">Electron</p>
-                            <p className="text-xs text-gray-500 mt-1">Desktop framework</p>
-                        </div>
-                        <div className="bg-[#1e1e1e] rounded-lg p-3 text-center">
-                            <p className="text-sm text-white font-medium">React</p>
-                            <p className="text-xs text-gray-500 mt-1">UI library</p>
-                        </div>
-                        <div className="bg-[#1e1e1e] rounded-lg p-3 text-center">
-                            <p className="text-sm text-white font-medium">Node.js</p>
-                            <p className="text-xs text-gray-500 mt-1">Runtime</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* System Information */}
-            <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
-                    <h3 className="text-white font-medium text-sm">System Information</h3>
-                </div>
-                <div className="p-5 space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-400">Platform</span>
-                        <span className="text-white font-mono">Windows</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-400">Electron</span>
-                        <span className="text-white font-mono">34.x</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-400">Chrome</span>
-                        <span className="text-white font-mono">132.x</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-400">Node.js</span>
-                        <span className="text-white font-mono">20.x</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Links */}
-            <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
-                    <h3 className="text-white font-medium text-sm">Links</h3>
-                </div>
-                <div className="p-5 space-y-2">
-                    <button
-                        onClick={() => openLink('https://github.com/Avaxerrr/MashAI')}
-                        className="w-full flex items-center gap-2 px-4 py-2 bg-[#1e1e1e] hover:bg-[#2a2a2b] border border-[#3e3e42] rounded-lg text-sm text-white transition-colors"
-                    >
-                        <Github size={16} />
-                        <span>View on GitHub</span>
-                        <ExternalLink size={14} className="text-gray-500 ml-auto" />
-                    </button>
-                    <button
-                        onClick={() => openLink('https://github.com/Avaxerrr/MashAI/issues')}
-                        className="w-full flex items-center gap-2 px-4 py-2 bg-[#1e1e1e] hover:bg-[#2a2a2b] border border-[#3e3e42] rounded-lg text-sm text-white transition-colors"
-                    >
-                        <Info size={16} />
-                        <span>Report an Issue</span>
-                        <ExternalLink size={14} className="text-gray-500 ml-auto" />
-                    </button>
-                </div>
-            </div>
-
-            {/* License */}
-            <div className="bg-[#1e1e1e] rounded-lg border border-[#3e3e42] p-4">
-                <p className="text-xs text-gray-500 text-center">
-                    © 2026 Avaxerrr. All rights reserved.
-                </p>
             </div>
         </div>
     )

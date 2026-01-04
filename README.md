@@ -16,16 +16,30 @@
 
 ## What is MashAI?
 
-**MashAI** is a specialized desktop application that consolidates multiple AI chatbot services—ChatGPT, Claude, Gemini, Perplexity, Grok, and more—into a single, organized workspace. Instead of juggling browser tabs across different AI platforms, MashAI provides a focused environment with powerful features like profile-based organization and smart memory management.
+**MashAI** is your all-in-one desktop workspace for artificial intelligence. It consolidates all your AI tools—cloud-based services like ChatGPT and Claude, as well as local LLMs—into a single, privacy-focused environment.
 
 ### The Problem It Solves
 
-- **Tab Chaos** – No more hunting through 20+ browser tabs to find your AI conversations
-- **Memory Bloat** – Built-in tab suspension prevents AI tabs from eating your RAM
-- **Context Switching** – Separate work and personal AI usage with profiles
-- **Quick Access** – One-click access to any AI provider from a unified interface
+- **Fragmented Workflow** – Stop jumping between browser tabs and different apps.
+- **Privacy Concerns** – Block ads and trackers that harvest your data.
+- **Vendor Lock-in** – Mix and match cloud providers with your own local models.
+- **Resource Hogging** – Intelligent tab management keeps your system running smooth.
 
 ---
+
+## Key Features
+
+### Consolidated Workspace
+Access ChatGPT, Claude, Gemini, Perplexity, and more side-by-side in a unified, distraction-free environment. No more lost tabs.
+
+### Privacy First
+Built-in ad blocking and tracker protection ensure you can work without being watched. Your data stays yours.
+
+### Bring Your Own Keys
+Use your own API keys for cloud providers to maintain full control over access, limits, and billing.
+
+### Local AI Support
+Run completely offline with support for self-hosted models for text, image, and video generation. The ultimate privacy.
 
 ## Features
 

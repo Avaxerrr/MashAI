@@ -1,7 +1,7 @@
 {
   "name": "mash-ai",
   "productName": "MashAI",
-  "version": "1.0.0",
+  "version": "1.0.0-beta",
   "description": "A multi-profile AI workspace browser",
   "main": "dist/electron/main.js",
   "type": "module",
