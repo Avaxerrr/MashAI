@@ -126,5 +126,19 @@ contextBridge.exposeInMainWorld('api', {
     clearPrivacyData: (options: unknown) => ipcRenderer.invoke('clear-privacy-data', options),
 
     // External Links
-    openExternal: (url: string) => ipcRenderer.invoke('open-external', url)
+    openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+
+    // Downloads
+    getDownloads: () => ipcRenderer.invoke('get-downloads'),
+    cancelDownload: (id: string) => ipcRenderer.invoke('cancel-download', id),
+    openDownload: (filePath: string) => ipcRenderer.invoke('open-download', filePath),
+    showDownloadInFolder: (filePath: string) => ipcRenderer.send('show-download-in-folder', filePath),
+    clearDownloadHistory: () => ipcRenderer.send('clear-download-history'),
+    removeDownloadFromHistory: (id: string) => ipcRenderer.send('remove-download-from-history', id),
+    openDownloadsWindow: () => ipcRenderer.send('open-downloads-window'),
+    onDownloadUpdate: (callback: (data: unknown) => void) => {
+        const handler = (e: IpcRendererEvent, data: unknown) => callback(data);
+        ipcRenderer.on('download-update', handler);
+        return () => ipcRenderer.removeListener('download-update', handler);
+    }
 });

@@ -94,6 +94,7 @@ export default function ShortcutsTab({ generalSettings }: ShortcutsTabProps) {
                     <ShortcutRow keys="Ctrl + Shift + Tab" description="Previous Tab" />
                     <ShortcutRow keys="Ctrl + Shift + T" description="Reopen Closed Tab" />
                     <ShortcutRow keys="Ctrl + R" description="Reload Active Tab" />
+                    <ShortcutRow keys="Ctrl + J" description="Open Downloads" />
                 </div>
             </div>
 

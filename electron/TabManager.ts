@@ -78,6 +78,7 @@ class TabManager {
     private tabOrder: string[];
     private inactivityCheckInterval: NodeJS.Timeout | null;
     private updateViewBoundsCallback: (() => void) | null;
+    private downloadManager: { addDownload: (item: Electron.DownloadItem) => void } | null;
 
     constructor(mainWindow: BrowserWindow, settingsManager: SettingsManager) {
         this.mainWindow = mainWindow;
@@ -87,6 +88,7 @@ class TabManager {
         this.tabOrder = [];
         this.inactivityCheckInterval = null;
         this.updateViewBoundsCallback = null;
+        this.downloadManager = null;
 
         // Start inactivity check timer (runs every minute)
         this._startInactivityTimer();
@@ -97,6 +99,13 @@ class TabManager {
      */
     setUpdateViewBounds(callback: () => void): void {
         this.updateViewBoundsCallback = callback;
+    }
+
+    /**
+     * Set the download manager for tracking downloads
+     */
+    setDownloadManager(manager: { addDownload: (item: Electron.DownloadItem) => void }): void {
+        this.downloadManager = manager;
     }
 
     /**
@@ -455,8 +464,12 @@ class TabManager {
                 return;
             }
 
-            console.log(`[TabManager] Download allowed: ${item.getFilename()}`);
-            // Let the download proceed normally
+            console.log(`[TabManager] Download started: ${item.getFilename()}`);
+
+            // Track download with DownloadManager immediately
+            if (this.downloadManager) {
+                this.downloadManager.addDownload(item);
+            }
         });
 
         // =============================================================================

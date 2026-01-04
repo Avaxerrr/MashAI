@@ -20,6 +20,16 @@ export interface AIProvider {
     faviconDataUrl?: string;
 }
 
+export interface DownloadInfo {
+    id: string;
+    filename: string;
+    path: string;
+    totalBytes: number;
+    receivedBytes: number;
+    state: 'progressing' | 'completed' | 'cancelled' | 'interrupted';
+    startTime: number;
+}
+
 export interface TabInfo {
     id: string;
     profileId: string;
@@ -149,6 +159,16 @@ export interface ElectronAPI {
 
     // External
     openExternal: (url: string) => void;
+
+    // Downloads
+    getDownloads: () => Promise<{ active: DownloadInfo[]; history: DownloadInfo[] }>;
+    cancelDownload: (id: string) => Promise<boolean>;
+    openDownload: (filePath: string) => Promise<boolean>;
+    showDownloadInFolder: (filePath: string) => void;
+    clearDownloadHistory: () => void;
+    removeDownloadFromHistory: (id: string) => void;
+    openDownloadsWindow: () => void;
+    onDownloadUpdate: (callback: (data: { active: DownloadInfo[]; history: DownloadInfo[] }) => void) => () => void;
 }
 
 // Event types

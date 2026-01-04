@@ -15,7 +15,9 @@ import * as TabHandlers from './ipc/TabHandlers';
 import * as NavigationHandlers from './ipc/NavigationHandlers';
 import * as ProfileHandlers from './ipc/ProfileHandlers';
 import * as SettingsHandlers from './ipc/SettingsHandlers';
+import * as DownloadHandlers from './ipc/DownloadHandlers';
 import PrivacyHandlers from './ipc/PrivacyHandlers';
+import DownloadManager from './DownloadManager';
 
 // Check hardware acceleration setting BEFORE app is ready
 try {
@@ -40,6 +42,8 @@ let settingsManager: SettingsManager | null = null;
 let sessionManager: SessionManager | null = null;
 let menuBuilder: MenuBuilder | null = null;
 let trayManager: TrayManager | null = null;
+let downloadManager: DownloadManager | null = null;
+let downloadsWindow: BrowserWindow | null = null;
 
 interface ClosedTab {
     id: string;
@@ -95,6 +99,61 @@ function createSettingsWindow(): void {
 
     settingsWindow.on('closed', () => {
         settingsWindow = null;
+    });
+}
+
+/**
+ * Create the downloads window
+ */
+function createDownloadsWindow(): void {
+    if (downloadsWindow) {
+        downloadsWindow.focus();
+        return;
+    }
+
+    downloadsWindow = new BrowserWindow({
+        width: 500,
+        height: 600,
+        minWidth: 400,
+        minHeight: 400,
+        maximizable: false,
+        resizable: true,
+        backgroundColor: '#252526',
+        parent: mainWindow!,
+        modal: false,
+        frame: false,
+        titleBarStyle: 'hidden',
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false
+        }
+    });
+
+    downloadsWindow.setMenuBarVisibility(false);
+
+    if (isDev) {
+        downloadsWindow.loadURL('http://localhost:5173/#/downloads');
+    } else {
+        downloadsWindow.loadFile(path.join(__dirname, '../../dist/index.html'), { hash: '/downloads' });
+    }
+
+    // Pass downloads window reference to download manager
+    if (downloadManager) {
+        downloadManager.setDownloadsWindow(downloadsWindow);
+    }
+
+    downloadsWindow.on('close', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.focus();
+        }
+    });
+
+    downloadsWindow.on('closed', () => {
+        if (downloadManager) {
+            downloadManager.setDownloadsWindow(null);
+        }
+        downloadsWindow = null;
     });
 }
 
@@ -175,6 +234,11 @@ function createWindow(): void {
     tabManager = new TabManager(mainWindow, settingsManager);
     sessionManager = new SessionManager(tabManager, settingsManager);
 
+    // Initialize DownloadManager
+    downloadManager = new DownloadManager();
+    downloadManager.setMainWindow(mainWindow);
+    tabManager.setDownloadManager(downloadManager);
+
     // Initialize window state from actual window bounds (ensures x/y are captured)
     const initialBounds = mainWindow.getBounds();
     sessionManager.updateWindowState({
@@ -193,7 +257,8 @@ function createWindow(): void {
         closedTabs,
         saveSession: () => sessionManager!.saveSession(),
         updateViewBounds,
-        createSettingsWindow
+        createSettingsWindow,
+        createDownloadsWindow
     });
     menuBuilder.registerHandlers();
     menuBuilder.createApplicationMenu();
@@ -235,6 +300,12 @@ function createWindow(): void {
         tabManager
     });
     privacyHandlers.register();
+
+    // Register download handlers
+    DownloadHandlers.register(mainWindow, {
+        downloadManager: downloadManager!,
+        createDownloadsWindow
+    });
 
     // Intercept close event
     mainWindow.on('close', (event) => {

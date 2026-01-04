@@ -19,6 +19,7 @@ interface MenuDependencies {
     saveSession: () => void;
     updateViewBounds: () => void;
     createSettingsWindow: () => void;
+    createDownloadsWindow: () => void;
 }
 
 /**
@@ -33,6 +34,7 @@ class MenuBuilder {
     private saveSession: () => void;
     private updateViewBounds: () => void;
     private createSettingsWindow: () => void;
+    private createDownloadsWindow: () => void;
 
     constructor(mainWindow: BrowserWindow, dependencies: MenuDependencies) {
         this.mainWindow = mainWindow;
@@ -43,6 +45,7 @@ class MenuBuilder {
         this.saveSession = dependencies.saveSession;
         this.updateViewBounds = dependencies.updateViewBounds;
         this.createSettingsWindow = dependencies.createSettingsWindow;
+        this.createDownloadsWindow = dependencies.createDownloadsWindow;
     }
 
     /**
@@ -146,6 +149,14 @@ class MenuBuilder {
             } catch (e) {
                 console.error('Failed to load settings icon:', e);
             }
+
+            template.push({
+                label: 'Downloads',
+                accelerator: 'CmdOrCtrl+J',
+                click: () => {
+                    this.createDownloadsWindow();
+                }
+            });
 
             template.push({
                 label: 'Settings',
@@ -343,6 +354,14 @@ class MenuBuilder {
                             this.tabManager.switchTo(prevTab.id);
                             this.updateViewBounds();
                             this.mainWindow.webContents.send('restore-active', prevTab.id);
+                        }
+                    },
+                    { type: 'separator' },
+                    {
+                        label: 'Downloads',
+                        accelerator: 'CmdOrCtrl+J',
+                        click: () => {
+                            this.createDownloadsWindow();
                         }
                     },
                     { type: 'separator' },
