@@ -62,6 +62,7 @@ export default function TitleBar({
     const [draggedTab, setDraggedTab] = useState<string | null>(null)
     const [dragOverTab, setDragOverTab] = useState<string | null>(null)
     const [dragSide, setDragSide] = useState<'left' | 'right'>('left')
+    const [isToastExiting, setIsToastExiting] = useState(false)
 
     const getProviderForTab = (tab: TabState): AIProvider | undefined => {
         if (!tab.url) return undefined;
@@ -117,14 +118,23 @@ export default function TitleBar({
         return <IconComponent size={16} />
     }
 
+    // Handle toast exit animation
+    const handleCloseToast = () => {
+        setIsToastExiting(true)
+        setTimeout(() => {
+            setIsToastExiting(false)
+            onCloseToast()
+        }, 200) // Match exit animation duration
+    }
+
     useEffect(() => {
-        if (showToast && onCloseToast) {
+        if (showToast) {
             const timer = setTimeout(() => {
-                onCloseToast()
-            }, 2500)
+                handleCloseToast()
+            }, 1500)
             return () => clearTimeout(timer)
         }
-    }, [showToast, onCloseToast])
+    }, [showToast])
 
     return (
         <div
@@ -132,24 +142,34 @@ export default function TitleBar({
             style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
         >
             {/* Toast Notification */}
-            {showToast && toastMessage && (
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] animate-fadeIn">
+            {(showToast || isToastExiting) && toastMessage && (
+                <div
+                    className={`absolute left-1/2 top-1/2 z-[9999] ${isToastExiting ? 'animate-titlebar-toast-exit' : 'animate-titlebar-toast-enter'}`}
+                    style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                >
                     <div className={`${toastType === 'warning' ? 'bg-amber-500 border-amber-400' :
-                            toastType === 'error' ? 'bg-red-600 border-red-500' :
-                                toastType === 'info' ? 'bg-blue-600 border-blue-500' :
-                                    'bg-green-600 border-green-500'
+                        toastType === 'error' ? 'bg-red-600 border-red-500' :
+                            toastType === 'info' ? 'bg-blue-600 border-blue-500' :
+                                'bg-green-600 border-green-500'
                         } text-white px-4 py-1.5 rounded-full shadow-lg flex items-center gap-2 border`}>
                         <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
                             {toastType === 'warning' ? (
                                 <AlertTriangle size={10} className="text-amber-500" strokeWidth={3} />
                             ) : (
                                 <Check size={10} className={`${toastType === 'error' ? 'text-red-600' :
-                                        toastType === 'info' ? 'text-blue-600' :
-                                            'text-green-600'
+                                    toastType === 'info' ? 'text-blue-600' :
+                                        'text-green-600'
                                     }`} strokeWidth={3} />
                             )}
                         </div>
                         <span className="font-medium text-xs whitespace-nowrap">{toastMessage}</span>
+                        <button
+                            onClick={handleCloseToast}
+                            className="ml-1 p-1 rounded-full hover:bg-white/20 transition-colors cursor-pointer flex items-center justify-center"
+                            aria-label="Close notification"
+                        >
+                            <X size={12} strokeWidth={2.5} className="pointer-events-none" />
+                        </button>
                     </div>
                 </div>
             )}

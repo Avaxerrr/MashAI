@@ -65,13 +65,15 @@ class MenuBuilder {
                 {
                     label: 'Duplicate',
                     click: () => {
-                        const newId = this.tabManager.createTab(tab.profileId, tab.url);
+                        // Pass source tabId to insert duplicate right after the original
+                        const newId = this.tabManager.createTab(tab.profileId, tab.url, null, undefined, tabId);
                         this.tabManager.switchTo(newId);
                         this.mainWindow.webContents.send('tab-created', {
                             id: newId,
                             profileId: tab.profileId,
                             title: tab.title,
-                            loaded: true
+                            loaded: true,
+                            afterTabId: tabId
                         });
                         this.updateViewBounds();
                         this.saveSession();

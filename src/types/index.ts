@@ -158,6 +158,8 @@ export interface TabCreatedEvent {
     title: string;
     loaded?: boolean;
     faviconDataUrl?: string;
+    afterTabId?: string; // For inserting new tab after its parent tab
+    background?: boolean; // If true, don't switch to this tab (open in background)
 }
 
 export interface TabUpdatedEvent {

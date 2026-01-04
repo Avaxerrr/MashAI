@@ -365,15 +365,18 @@ class TabManager {
                     label: 'Open in New Tab',
                     click: () => {
                         if (tab) {
-                            const newTabId = this.createTab(tab.profileId, params.linkURL);
-                            this.switchTo(newTabId);
+                            // Pass source tab ID to insert new tab right after it
+                            // Don't switch to it - open in background
+                            const newTabId = this.createTab(tab.profileId, params.linkURL, null, undefined, id);
                             this.mainWindow.webContents.send('tab-created', {
                                 id: newTabId,
                                 profileId: tab.profileId,
                                 title: 'Loading...',
-                                loaded: true
+                                loaded: true,
+                                afterTabId: id,
+                                background: true // Don't switch to this tab
                             });
-                            // Update view bounds to show the new tab
+                            // Update view bounds
                             if (this.updateViewBoundsCallback) {
                                 this.updateViewBoundsCallback();
                             }
@@ -468,15 +471,18 @@ class TabManager {
             if (disposition === 'foreground-tab' || disposition === 'background-tab') {
                 if (tab && url && !url.startsWith('about:')) {
                     console.log(`[TabManager] Opening link as new tab (${disposition}): ${url}`);
-                    const newTabId = this.createTab(tab.profileId, url);
-                    this.switchTo(newTabId);
+                    // Pass source tab ID to insert new tab right after it
+                    // Don't switch to it - open in background
+                    const newTabId = this.createTab(tab.profileId, url, null, undefined, id);
                     this.mainWindow.webContents.send('tab-created', {
                         id: newTabId,
                         profileId: tab.profileId,
                         title: 'Loading...',
-                        loaded: true
+                        loaded: true,
+                        afterTabId: id,
+                        background: true // Don't switch to this tab
                     });
-                    // Update view bounds to show the new tab
+                    // Update view bounds
                     if (this.updateViewBoundsCallback) {
                         this.updateViewBoundsCallback();
                     }
@@ -611,8 +617,9 @@ class TabManager {
      * Create a tab with a WebContentsView immediately (original behavior)
      * Used for new tabs created by user action
      * @param faviconDataUrl - Optional cached favicon to preserve during session restore
+     * @param afterTabId - Optional tab ID to insert the new tab after (for "open in new tab" behavior)
      */
-    createTab(profileId: string, url: string | null = null, existingId: string | null = null, faviconDataUrl?: string): string {
+    createTab(profileId: string, url: string | null = null, existingId: string | null = null, faviconDataUrl?: string, afterTabId?: string): string {
         const id = existingId || 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
         // Determine URL
@@ -639,9 +646,20 @@ class TabManager {
             faviconDataUrl
         });
 
-        // Add to tab order if not already present
+        // Add to tab order - insert after afterTabId if provided, otherwise append
         if (!this.tabOrder.includes(id)) {
-            this.tabOrder.push(id);
+            if (afterTabId) {
+                const afterIndex = this.tabOrder.indexOf(afterTabId);
+                if (afterIndex !== -1) {
+                    // Insert right after the source tab
+                    this.tabOrder.splice(afterIndex + 1, 0, id);
+                } else {
+                    // Fallback to append if source tab not found
+                    this.tabOrder.push(id);
+                }
+            } else {
+                this.tabOrder.push(id);
+            }
         }
 
         view.webContents.loadURL(finalUrl);
@@ -795,7 +813,14 @@ class TabManager {
     }
 
     reorderTabs(newOrder: string[]): void {
-        this.tabOrder = newOrder.filter(id => this.tabs.has(id));
+        // Filter to only include valid tab IDs
+        const validNewOrder = newOrder.filter(id => this.tabs.has(id));
+
+        // Find tabs that exist but weren't included in the new order (e.g., from other profiles)
+        const missingTabs = this.tabOrder.filter(id => !validNewOrder.includes(id) && this.tabs.has(id));
+
+        // Combine: new order first, then append any missing tabs to preserve them
+        this.tabOrder = [...validNewOrder, ...missingTabs];
     }
 
     getActiveTabId(): string | null {

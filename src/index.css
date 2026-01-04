@@ -139,6 +139,39 @@ input[type="color"]::-moz-color-swatch {
     animation: slideDown 0.3s ease-out forwards;
 }
 
+/* Titlebar toast animations */
+@keyframes titlebarToastEnter {
+    0% {
+        transform: translate(-50%, -150%);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+}
+
+@keyframes titlebarToastExit {
+    0% {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, 50%);
+        opacity: 0;
+    }
+}
+
+.animate-titlebar-toast-enter {
+    animation: titlebarToastEnter 0.25s ease-out forwards;
+}
+
+.animate-titlebar-toast-exit {
+    animation: titlebarToastExit 0.2s ease-in forwards;
+}
+
 /* Smooth scrolling for settings content */
 .settings-scroll-smooth {
     scroll-behavior: smooth;
@@ -242,8 +275,8 @@ input[type="number"]:hover {
 /* Completely hide spinbox arrows to avoid the ugly white box */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none !important;
-    appearance: none !important;
+    -webkit-appearance: none;
+    appearance: none;
     margin: 0;
     display: none;
 }

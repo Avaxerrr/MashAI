@@ -74,9 +74,26 @@ function App() {
                 if (prev.some(t => t.id === tab.id)) {
                     return prev
                 }
-                return [...prev, { ...tab, url: '', loaded: tab.loaded ?? false, faviconDataUrl: tab.faviconDataUrl, loading: tab.loaded ?? false }]
+
+                const newTab = { ...tab, url: '', loaded: tab.loaded ?? false, faviconDataUrl: tab.faviconDataUrl, loading: tab.loaded ?? false };
+
+                // If afterTabId is provided, insert after that tab
+                if (tab.afterTabId) {
+                    const afterIndex = prev.findIndex(t => t.id === tab.afterTabId);
+                    if (afterIndex !== -1) {
+                        const newTabs = [...prev];
+                        newTabs.splice(afterIndex + 1, 0, newTab);
+                        return newTabs;
+                    }
+                }
+
+                // Default: append to end
+                return [...prev, newTab]
             })
-            setActiveTabId(tab.id)
+            // Only switch to the new tab if it's not a background tab
+            if (!tab.background) {
+                setActiveTabId(tab.id)
+            }
         }
 
         const handleTabUpdated = ({ id, title, url, loaded, suspended, faviconDataUrl, isLoading }: TabUpdatedEvent) => {
@@ -224,6 +241,9 @@ function App() {
             return
         }
 
+        // Find the index of the tab being closed BEFORE closing it
+        const closingTabIndex = activeProfileTabs.findIndex(t => t.id === tabId)
+
         window.api.closeTab(tabId)
         setTabs(prev => {
             const filtered = prev.filter(tab => tab.id !== tabId)
@@ -232,7 +252,16 @@ function App() {
                 const currentProfileFiltered = filtered.filter(t => t.profileId === activeProfileId)
 
                 if (currentProfileFiltered.length > 0) {
-                    const newActiveTab = currentProfileFiltered[currentProfileFiltered.length - 1]
+                    // Chrome-like behavior: switch to the tab that takes the closed tab's position
+                    // If closing the last tab, go to the previous one
+                    let newActiveTab;
+                    if (closingTabIndex >= currentProfileFiltered.length) {
+                        // Closed the last tab, go to previous (now the new last)
+                        newActiveTab = currentProfileFiltered[currentProfileFiltered.length - 1]
+                    } else {
+                        // Go to the tab that's now at the same position (next tab moved up)
+                        newActiveTab = currentProfileFiltered[closingTabIndex]
+                    }
                     setActiveTabId(newActiveTab.id)
                     window.api.switchTab(newActiveTab.id)
                 }
