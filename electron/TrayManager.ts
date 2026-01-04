@@ -343,7 +343,14 @@ class TrayManager {
      * Create a simple placeholder icon for the tray
      */
     private _createPlaceholderIcon() {
-        const logoPath = path.join(__dirname, '../../src/assets/MashAI-logo.png');
+        let logoPath;
+        if (app.isPackaged) {
+            // In production, assets are in resources/assets
+            logoPath = path.join(process.resourcesPath, 'assets/MashAI-logo.png');
+        } else {
+            // In development, relative to this file
+            logoPath = path.join(__dirname, '../../src/assets/MashAI-logo.png');
+        }
 
         try {
             const icon = nativeImage.createFromPath(logoPath);
@@ -472,9 +479,9 @@ class TrayManager {
         this._cancelSuspension();
 
         const settings = this.settingsManager.getSettings();
-        const general = settings.general;
+        const performance = settings.performance;
 
-        if (!general.suspendOnHide) {
+        if (!performance.suspendOnHide) {
             console.log('[TrayManager] Suspension on hide disabled');
             return;
         }
@@ -484,7 +491,7 @@ class TrayManager {
             return;
         }
 
-        const delaySeconds = general.suspendDelaySeconds || 5;
+        const delaySeconds = performance.suspendDelaySeconds || 5;
         const delayMs = delaySeconds * 1000;
 
         console.log(`[TrayManager] Scheduling tab suspension in ${delaySeconds} seconds`);
@@ -512,8 +519,8 @@ class TrayManager {
         if (!this.tabManager) return;
 
         const settings = this.settingsManager.getSettings();
-        const general = settings.general;
-        const keepLastActive = general.keepLastActiveTab !== false;
+        const performance = settings.performance;
+        const keepLastActive = performance.keepLastActiveTab !== false;
         const activeTabId = this.tabManager.activeTabId;
 
         let suspendedCount = 0;

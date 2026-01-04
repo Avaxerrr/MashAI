@@ -28,6 +28,7 @@ export interface TabInfo {
     loaded: boolean;
     suspended?: boolean;
     faviconDataUrl?: string;
+    isLoading?: boolean;
 }
 
 export interface PerformanceSettings {
@@ -36,6 +37,10 @@ export interface PerformanceSettings {
     autoSuspendMinutes: number;
     profileSwitchBehavior: 'keep' | 'suspend' | 'close';
     excludeActiveProfile?: boolean;
+    // Tray optimization settings
+    suspendOnHide: boolean;
+    keepLastActiveTab: boolean;
+    suspendDelaySeconds: number;
 }
 
 export interface GeneralSettings {
@@ -47,9 +52,6 @@ export interface GeneralSettings {
     minimizeToTray: boolean;
     showTrayIcon: boolean;
     hideShortcut: string;
-    suspendOnHide: boolean;
-    keepLastActiveTab: boolean;
-    suspendDelaySeconds: number;
 }
 
 export interface Settings {
@@ -157,6 +159,7 @@ export interface TabUpdatedEvent {
     loaded?: boolean;
     suspended?: boolean;
     faviconDataUrl?: string;
+    isLoading?: boolean;
 }
 
 export interface ProfileTabsLoadedEvent {

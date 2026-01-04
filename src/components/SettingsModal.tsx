@@ -31,7 +31,10 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         tabLoadingStrategy: 'lastActiveOnly',
         autoSuspendEnabled: true,
         autoSuspendMinutes: 30,
-        profileSwitchBehavior: 'suspend'
+        profileSwitchBehavior: 'suspend',
+        suspendOnHide: true,
+        keepLastActiveTab: true,
+        suspendDelaySeconds: 5
     })
 
     const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
@@ -42,10 +45,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         alwaysOnTopShortcut: '',
         minimizeToTray: true,
         showTrayIcon: true,
-        hideShortcut: '',
-        suspendOnHide: true,
-        keepLastActiveTab: true,
-        suspendDelaySeconds: 5
+        hideShortcut: ''
     })
 
     const profilesListRef = useRef<HTMLDivElement>(null)
@@ -194,7 +194,10 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                 autoSuspendEnabled: true,
                 autoSuspendMinutes: 30,
                 profileSwitchBehavior: 'keep',
-                excludeActiveProfile: false
+                excludeActiveProfile: false,
+                suspendOnHide: true,
+                keepLastActiveTab: true,
+                suspendDelaySeconds: 5
             })
 
             // Reset General settings
@@ -206,10 +209,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                 alwaysOnTopShortcut: 'CommandOrControl+Shift+A',
                 minimizeToTray: false,
                 showTrayIcon: false,
-                hideShortcut: 'CommandOrControl+Shift+M',
-                suspendOnHide: true,
-                keepLastActiveTab: true,
-                suspendDelaySeconds: 5
+                hideShortcut: 'CommandOrControl+Shift+M'
             })
         }
     }
@@ -383,6 +383,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                         <PerformanceTab
                             performanceSettings={performanceSettings}
                             onPerformanceChange={setPerformanceSettings}
+                            showTrayIcon={generalSettings.showTrayIcon}
                         />
                     )}
 

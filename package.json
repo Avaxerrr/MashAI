@@ -9,7 +9,7 @@
     "build:ts": "tsc -p tsconfig.electron.json && echo {\"type\":\"commonjs\"} > dist/electron/package.json",
     "watch:ts": "tsc -p tsconfig.electron.json --watch",
     "dev": "npm run build:ts && concurrently --kill-others \"npm run watch:ts\" \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
-    "build": "npm run build:ts && vite build",
+    "build": "vite build && npm run build:ts",
     "build:electron": "npm run build && electron-builder",
     "preview": "vite preview"
   },
@@ -22,6 +22,16 @@
     ],
     "directories": {
       "output": "release"
+    },
+    "extraResources": [
+      {
+        "from": "src/assets",
+        "to": "assets"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "src/assets/MashAI-logo.ico"
     }
   },
   "devDependencies": {

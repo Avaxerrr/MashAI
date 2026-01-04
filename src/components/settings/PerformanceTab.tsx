@@ -5,6 +5,7 @@ import type { PerformanceSettings } from '../../types'
 interface PerformanceTabProps {
     performanceSettings: PerformanceSettings;
     onPerformanceChange: (settings: PerformanceSettings) => void;
+    showTrayIcon?: boolean;
 }
 
 interface MemoryUsage {
@@ -26,13 +27,16 @@ interface RadioOptionProps {
 /**
  * PerformanceTab - Memory and performance optimization settings
  */
-export default function PerformanceTab({ performanceSettings, onPerformanceChange }: PerformanceTabProps) {
+export default function PerformanceTab({ performanceSettings, onPerformanceChange, showTrayIcon = false }: PerformanceTabProps) {
     const [settings, setSettings] = useState<PerformanceSettings>({
         ...{
             tabLoadingStrategy: 'lastActiveOnly',
             autoSuspendEnabled: true,
             autoSuspendMinutes: 30,
             profileSwitchBehavior: 'keep',
+            suspendOnHide: true,
+            keepLastActiveTab: true,
+            suspendDelaySeconds: 5
         },
         ...performanceSettings
     })
@@ -220,6 +224,70 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                             Don't suspend tabs in my current profile
                         </span>
                     </label>
+                </div>
+            </div>
+
+            {/* When Hidden to Tray Section */}
+            <div className={`bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden ${!showTrayIcon ? 'opacity-50' : ''}`}>
+                <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b] flex items-center justify-between">
+                    <h3 className="text-white font-medium text-sm">When hidden to tray</h3>
+                    {!showTrayIcon && (
+                        <span className="text-xs text-amber-500/80">Enable tray icon to use</span>
+                    )}
+                </div>
+                <div className={`p-5 space-y-4 ${!showTrayIcon ? 'pointer-events-none' : ''}`}>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={settings.suspendOnHide ?? true}
+                            onChange={(e) => updateSetting('suspendOnHide', e.target.checked)}
+                            className="w-4 h-4 accent-violet-500 rounded"
+                            disabled={!showTrayIcon}
+                        />
+                        <div>
+                            <span className="text-sm text-white">Suspend tabs when hidden to tray</span>
+                            <p className="text-xs text-gray-500">Free up memory by suspending background tabs</p>
+                        </div>
+                    </label>
+
+                    {(settings.suspendOnHide ?? true) && (
+                        <>
+                            <label className="flex items-center gap-3 cursor-pointer pl-7">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.keepLastActiveTab ?? true}
+                                    onChange={(e) => updateSetting('keepLastActiveTab', e.target.checked)}
+                                    className="w-4 h-4 accent-violet-500 rounded"
+                                    disabled={!showTrayIcon}
+                                />
+                                <div>
+                                    <span className="text-sm text-white">Keep last active tab loaded</span>
+                                    <p className="text-xs text-gray-500">Don't suspend the tab you were viewing</p>
+                                </div>
+                            </label>
+
+                            <div className="pl-7 space-y-2">
+                                <label className="text-sm text-white">Delay before suspension</label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="range"
+                                        min="1"
+                                        max="30"
+                                        value={settings.suspendDelaySeconds ?? 5}
+                                        onChange={(e) => updateSetting('suspendDelaySeconds', parseInt(e.target.value))}
+                                        className="flex-1 accent-violet-500"
+                                        disabled={!showTrayIcon}
+                                    />
+                                    <span className="text-sm text-gray-400 w-20">
+                                        {settings.suspendDelaySeconds ?? 5} second{(settings.suspendDelaySeconds ?? 5) !== 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                    Wait before suspending to prevent accidental suspension
+                                </p>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 

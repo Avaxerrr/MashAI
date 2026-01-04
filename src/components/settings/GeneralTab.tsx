@@ -118,7 +118,11 @@ export default function GeneralTab({ generalSettings, onGeneralChange }: General
 
     const handleShowTrayIconChange = (checked: boolean) => {
         if (checked) {
-            updateSetting('showTrayIcon', true)
+            onGeneralChange({
+                ...settings,
+                showTrayIcon: true,
+                minimizeToTray: true
+            })
         } else {
             onGeneralChange({
                 ...settings,
@@ -216,16 +220,15 @@ export default function GeneralTab({ generalSettings, onGeneralChange }: General
                         </div>
                     </label>
 
-                    {settings.alwaysOnTop && (
-                        <div className="pl-7">
-                            <ShortcutInput
-                                type="aot"
-                                value={aotShortcutInput}
-                                label="Toggle always-on-top shortcut"
-                                description="Press this shortcut anywhere to toggle always-on-top"
-                            />
-                        </div>
-                    )}
+
+                    <div className="pl-7">
+                        <ShortcutInput
+                            type="aot"
+                            value={aotShortcutInput}
+                            label="Toggle always-on-top shortcut"
+                            description="Press this shortcut anywhere to toggle always-on-top"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -273,66 +276,6 @@ export default function GeneralTab({ generalSettings, onGeneralChange }: General
                     )}
                 </div>
             </div>
-
-            {/* Tray Optimization Settings */}
-            {settings.showTrayIcon && (
-                <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
-                    <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
-                        <h3 className="text-white font-medium text-sm">Tray Optimization</h3>
-                    </div>
-                    <div className="p-5 space-y-4">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={settings.suspendOnHide}
-                                onChange={(e) => updateSetting('suspendOnHide', e.target.checked)}
-                                className="w-4 h-4 accent-violet-500 rounded"
-                            />
-                            <div>
-                                <span className="text-sm text-white">Suspend tabs when hidden to tray</span>
-                                <p className="text-xs text-gray-500">Free up memory by suspending background tabs</p>
-                            </div>
-                        </label>
-
-                        {settings.suspendOnHide && (
-                            <>
-                                <label className="flex items-center gap-3 cursor-pointer pl-7">
-                                    <input
-                                        type="checkbox"
-                                        checked={settings.keepLastActiveTab}
-                                        onChange={(e) => updateSetting('keepLastActiveTab', e.target.checked)}
-                                        className="w-4 h-4 accent-violet-500 rounded"
-                                    />
-                                    <div>
-                                        <span className="text-sm text-white">Keep last active tab loaded</span>
-                                        <p className="text-xs text-gray-500">Don't suspend the tab you were viewing</p>
-                                    </div>
-                                </label>
-
-                                <div className="pl-7 space-y-2">
-                                    <label className="text-sm text-white">Delay before suspension</label>
-                                    <div className="flex items-center gap-3">
-                                        <input
-                                            type="range"
-                                            min="1"
-                                            max="30"
-                                            value={settings.suspendDelaySeconds}
-                                            onChange={(e) => updateSetting('suspendDelaySeconds', parseInt(e.target.value))}
-                                            className="flex-1 accent-violet-500"
-                                        />
-                                        <span className="text-sm text-gray-400 w-20">
-                                            {settings.suspendDelaySeconds} second{settings.suspendDelaySeconds !== 1 ? 's' : ''}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-gray-500">
-                                        Wait before suspending to prevent accidental suspension
-                                    </p>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </div>
-            )}
 
             {/* Window Settings */}
             <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">

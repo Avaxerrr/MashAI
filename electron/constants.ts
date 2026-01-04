@@ -130,7 +130,11 @@ export const PERFORMANCE_DEFAULTS: PerformanceSettings = {
     tabLoadingStrategy: 'lastActiveOnly',
     autoSuspendEnabled: true,
     autoSuspendMinutes: 30,
-    profileSwitchBehavior: 'suspend'
+    profileSwitchBehavior: 'suspend',
+    // Tray optimization defaults
+    suspendOnHide: true,
+    keepLastActiveTab: true,
+    suspendDelaySeconds: 5
 };
 
 export const GENERAL_DEFAULTS: Partial<GeneralSettings> = {

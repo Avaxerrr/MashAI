@@ -193,3 +193,25 @@ input[type="color"]::-moz-color-swatch {
         box-shadow: 0 0 12px #a855f7, 0 0 24px rgba(168, 85, 247, 0.5);
     }
 }
+
+/* Tab loading shimmer animation */
+@keyframes tab-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.tab-loading-shimmer {
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(139, 92, 246, 0.3) 25%,
+            rgba(168, 85, 247, 0.5) 50%,
+            rgba(139, 92, 246, 0.3) 75%,
+            transparent 100%);
+    background-size: 200% 100%;
+    animation: tab-shimmer 1.4s linear infinite;
+}

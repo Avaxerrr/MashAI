@@ -244,6 +244,7 @@ export default function TitleBar({
                                         ${isDragOver ? 'bg-violet-500/20 scale-[1.02]' : ''}
                                         ${isDragging ? 'scale-95 shadow-lg shadow-violet-500/30 z-50' : ''}
                                         ${tab.loaded === false && !isDragging && !isDragOver ? 'opacity-50' : ''}
+                                        ${tab.loading ? 'tab-loading-shimmer' : ''}
                                     `}
                                 title={(() => {
                                     const mem = tabMemory[tab.id];

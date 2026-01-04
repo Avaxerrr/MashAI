@@ -137,7 +137,11 @@ class SettingsManager {
                 autoSuspendEnabled: true,
                 autoSuspendMinutes: 30,
                 profileSwitchBehavior: 'keep',
-                excludeActiveProfile: false
+                excludeActiveProfile: false,
+                // Tray optimization settings
+                suspendOnHide: true,
+                keepLastActiveTab: true,
+                suspendDelaySeconds: 5
             },
             general: {
                 hardwareAcceleration: true,
@@ -147,10 +151,7 @@ class SettingsManager {
                 alwaysOnTopShortcut: 'CommandOrControl+Shift+A',
                 minimizeToTray: false,
                 showTrayIcon: false,
-                hideShortcut: 'CommandOrControl+Shift+M',
-                suspendOnHide: true,
-                keepLastActiveTab: true,
-                suspendDelaySeconds: 5
+                hideShortcut: 'CommandOrControl+Shift+M'
             }
         };
     }

@@ -73,12 +73,12 @@ function App() {
                 if (prev.some(t => t.id === tab.id)) {
                     return prev
                 }
-                return [...prev, { ...tab, url: '', loaded: tab.loaded ?? false, faviconDataUrl: tab.faviconDataUrl }]
+                return [...prev, { ...tab, url: '', loaded: tab.loaded ?? false, faviconDataUrl: tab.faviconDataUrl, loading: tab.loaded ?? false }]
             })
             setActiveTabId(tab.id)
         }
 
-        const handleTabUpdated = ({ id, title, url, loaded, suspended, faviconDataUrl }: TabUpdatedEvent) => {
+        const handleTabUpdated = ({ id, title, url, loaded, suspended, faviconDataUrl, isLoading }: TabUpdatedEvent) => {
             setTabs(prev => prev.map(tab =>
                 tab.id === id ? {
                     ...tab,
@@ -86,7 +86,8 @@ function App() {
                     ...(url !== undefined && { url }),
                     ...(loaded !== undefined && { loaded }),
                     ...(suspended !== undefined && { suspended }),
-                    ...(faviconDataUrl !== undefined && { faviconDataUrl })
+                    ...(faviconDataUrl !== undefined && { faviconDataUrl }),
+                    ...(isLoading !== undefined && { loading: isLoading })
                 } : tab
             ))
         }

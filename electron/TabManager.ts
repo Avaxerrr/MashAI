@@ -226,6 +226,15 @@ class TabManager {
         view.webContents.on('did-navigate', injectCSS);
         view.webContents.on('did-finish-load', injectCSS);
 
+        // Track loading state for UI spinner
+        view.webContents.on('did-start-loading', () => {
+            this.mainWindow.webContents.send('tab-updated', { id, isLoading: true });
+        });
+
+        view.webContents.on('did-stop-loading', () => {
+            this.mainWindow.webContents.send('tab-updated', { id, isLoading: false });
+        });
+
         view.webContents.on('page-title-updated', (_e, title) => {
             const tab = this.tabs.get(id);
             if (tab) {
