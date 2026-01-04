@@ -37,6 +37,89 @@ export function register(
         return null;
     });
 
+    // Delete a profile immediately (with full data cleanup)
+    ipcMain.handle('delete-profile', async (event, profileId: string) => {
+        console.log(`[SettingsHandlers] Deleting profile: ${profileId}`);
+
+        const currentSettings = settingsManager.getSettings();
+        const profileToDelete = currentSettings.profiles.find(p => p.id === profileId);
+
+        if (!profileToDelete) {
+            console.error(`[SettingsHandlers] Profile not found: ${profileId}`);
+            return { success: false, error: 'Profile not found' };
+        }
+
+        // Prevent deleting the last profile
+        if (currentSettings.profiles.length <= 1) {
+            console.error(`[SettingsHandlers] Cannot delete the last profile`);
+            return { success: false, error: 'Cannot delete the last profile' };
+        }
+
+        // Check if this is the active profile
+        let activeProfileId: string | null = null;
+        if (tabManager && tabManager.activeTabId) {
+            const activeTab = tabManager.tabs.get(tabManager.activeTabId);
+            if (activeTab) {
+                activeProfileId = activeTab.profileId;
+            }
+        }
+
+        if (activeProfileId === profileId) {
+            console.error(`[SettingsHandlers] Cannot delete the active profile`);
+            return { success: false, error: 'Cannot delete the active profile. Switch to another profile first.' };
+        }
+
+        try {
+            // 1. Close all tabs belonging to this profile
+            const tabsToDelete = tabManager.getTabsForProfile(profileId);
+            console.log(`[SettingsHandlers] Closing ${tabsToDelete.length} tabs for profile ${profileId}`);
+
+            tabsToDelete.forEach(tab => {
+                tabManager.closeTab(tab.id);
+                mainWindow.webContents.send('tab-closed-backend', tab.id);
+            });
+
+            // 2. Clear partition data (cache, cookies, localStorage, etc.)
+            const partitionName = `persist:${profileId}`;
+            console.log(`[SettingsHandlers] Clearing partition data: ${partitionName}`);
+
+            const profileSession = session.fromPartition(partitionName);
+            await profileSession.clearStorageData();
+            await profileSession.clearCache();
+            console.log(`[SettingsHandlers] Cleared all partition data for ${profileId}`);
+
+            // 3. Remove profile from settings
+            const updatedProfiles = currentSettings.profiles.filter(p => p.id !== profileId);
+            currentSettings.profiles = updatedProfiles;
+
+            // If this was the default profile, update to the first remaining profile
+            if (currentSettings.defaultProfileId === profileId && updatedProfiles.length > 0) {
+                currentSettings.defaultProfileId = updatedProfiles[0].id;
+            }
+
+            settingsManager.saveSettings(currentSettings);
+            console.log(`[SettingsHandlers] Profile removed from settings`);
+
+            // 4. Reload profiles in ProfileManager
+            if (profileManager) {
+                profileManager.loadProfiles();
+            }
+
+            // 5. Save session state
+            saveSession();
+
+            // 6. Notify frontend
+            mainWindow.webContents.send('profile-deleted', profileId);
+            mainWindow.webContents.send('settings-updated', settingsManager.getSettings());
+
+            console.log(`[SettingsHandlers] Profile ${profileId} deleted successfully`);
+            return { success: true };
+        } catch (error) {
+            console.error(`[SettingsHandlers] Failed to delete profile ${profileId}:`, error);
+            return { success: false, error: (error as Error).message };
+        }
+    });
+
     // Save settings
     ipcMain.handle('save-settings', async (event, newSettings: Settings) => {
         const oldSettings = settingsManager.getSettings();

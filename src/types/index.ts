@@ -104,7 +104,9 @@ export interface ElectronAPI {
     // Settings
     getSettings: () => Promise<Settings>;
     saveSettings: (settings: Settings) => Promise<boolean>;
+    deleteProfile: (profileId: string) => Promise<{ success: boolean; error?: string }>;
     onSettingsUpdated: (callback: (settings: Settings) => void) => () => void;
+    onProfileDeleted: (callback: (profileId: string) => void) => () => void;
     onOpenSettingsModal: (callback: () => void) => () => void;
 
     // Navigation

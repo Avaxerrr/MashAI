@@ -62,6 +62,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     const [dragOverProviderId, setDragOverProviderId] = useState<string | null>(null)
 
     const [showToast, setShowToast] = useState(false)
+    const [toastMessage, setToastMessage] = useState('Settings applied successfully!')
     const [activeProfileId, setActiveProfileId] = useState<string | null>(null)
 
     useEffect(() => {
@@ -223,7 +224,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         setProfiles(profiles.map(p => p.id === id ? { ...p, [field]: value } : p))
     }
 
-    const deleteProfile = (id: string) => {
+    const deleteProfile = async (id: string) => {
         if (profiles.length <= 1) {
             alert('Cannot delete the last profile. At least one profile is required.')
             return
@@ -247,7 +248,18 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         )
 
         if (confirmed) {
-            setProfiles(profiles.filter(p => p.id !== id))
+            // Call backend to delete profile with full data cleanup
+            const result = await window.api.deleteProfile(id)
+
+            if (result.success) {
+                // Update local state to reflect the deletion
+                setProfiles(profiles.filter(p => p.id !== id))
+                // Show success toast
+                setToastMessage(`Profile "${profileName}" deleted successfully`)
+                setShowToast(true)
+            } else {
+                alert(`Failed to delete profile: ${result.error || 'Unknown error'}`)
+            }
         }
     }
 
@@ -445,7 +457,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
 
             {/* Toast notification */}
             <Toast
-                message="Settings applied successfully!"
+                message={toastMessage}
                 isVisible={showToast}
                 onClose={() => setShowToast(false)}
             />

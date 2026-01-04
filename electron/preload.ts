@@ -32,12 +32,18 @@ contextBridge.exposeInMainWorld('api', {
     // Settings
     getSettings: () => ipcRenderer.invoke('get-settings'),
     saveSettings: (settings: unknown) => ipcRenderer.invoke('save-settings', settings),
+    deleteProfile: (profileId: string) => ipcRenderer.invoke('delete-profile', profileId),
     validateShortcut: (shortcut: string) => ipcRenderer.invoke('validate-shortcut', shortcut),
     getActiveProfileId: () => ipcRenderer.invoke('get-active-profile-id'),
     onSettingsUpdated: (callback: (data: unknown) => void) => {
         const handler = (e: IpcRendererEvent, data: unknown) => callback(data);
         ipcRenderer.on('settings-updated', handler);
         return () => ipcRenderer.removeListener('settings-updated', handler);
+    },
+    onProfileDeleted: (callback: (profileId: string) => void) => {
+        const handler = (e: IpcRendererEvent, profileId: string) => callback(profileId);
+        ipcRenderer.on('profile-deleted', handler);
+        return () => ipcRenderer.removeListener('profile-deleted', handler);
     },
 
     // Memory Usage
