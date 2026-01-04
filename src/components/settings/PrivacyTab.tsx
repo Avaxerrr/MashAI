@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { Shield, Trash2, Database, HardDrive, Cookie, LucideIcon } from 'lucide-react'
-import type { Profile } from '../../types'
+import { Shield, Trash2, Database, HardDrive, Cookie, LucideIcon, Download, ExternalLink, Mic, ShieldCheck } from 'lucide-react'
+import type { Profile, SecuritySettings } from '../../types'
 
 interface PrivacyTabProps {
     profiles?: Profile[];
+    securitySettings?: SecuritySettings;
+    onSecurityChange?: (settings: SecuritySettings) => void;
 }
 
 interface ClearOption {
@@ -15,12 +17,27 @@ interface ClearOption {
 }
 
 /**
- * PrivacyTab - Data management and privacy settings
+ * PrivacyTab - Privacy, security, and data management settings
  */
-export default function PrivacyTab({ profiles = [] }: PrivacyTabProps) {
+export default function PrivacyTab({ profiles = [], securitySettings, onSecurityChange }: PrivacyTabProps) {
     const [selectedProfiles, setSelectedProfiles] = useState<string[]>([])
     const [selectAll, setSelectAll] = useState(false)
     const [isClearing, setIsClearing] = useState(false)
+
+    // Defaults for security settings
+    const security: SecuritySettings = {
+        downloadsEnabled: true,
+        popupsEnabled: true,
+        mediaPolicyAsk: true,
+        adBlockerEnabled: true,
+        ...securitySettings
+    }
+
+    const updateSecuritySetting = <K extends keyof SecuritySettings>(key: K, value: SecuritySettings[K]) => {
+        if (onSecurityChange) {
+            onSecurityChange({ ...security, [key]: value })
+        }
+    }
 
     const toggleProfile = (profileId: string) => {
         setSelectedProfiles(prev =>
@@ -90,10 +107,10 @@ export default function PrivacyTab({ profiles = [] }: PrivacyTabProps) {
             <div>
                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                     <Shield size={20} className="text-violet-400" />
-                    Privacy & Data
+                    Privacy & Security
                 </h2>
                 <p className="text-sm text-gray-400 mt-1">
-                    Manage your data and privacy settings
+                    Manage security settings and your data
                 </p>
             </div>
 
@@ -104,15 +121,91 @@ export default function PrivacyTab({ profiles = [] }: PrivacyTabProps) {
                     Your Privacy Matters
                 </h3>
                 <p className="text-sm text-gray-400">
-                    MashAI runs <span className="text-white font-medium">100% locally</span> on your device. No data is collected or sent to external servers.
+                    MashAI runs <span className="text-white font-medium">100% locally</span> on your device. No data is collected or sent to external servers. Location access is automatically blocked for security.
                 </p>
             </div>
 
-            {/* Unified Clear Data Card */}
+            {/* Security Settings */}
             <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
+                    <h3 className="text-white font-medium text-sm">Permissions</h3>
+                </div>
+                <div className="p-5 space-y-4">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={security.downloadsEnabled}
+                            onChange={(e) => updateSecuritySetting('downloadsEnabled', e.target.checked)}
+                            className="w-4 h-4 accent-violet-500 rounded"
+                        />
+                        <div className="flex items-center gap-2">
+                            <Download size={16} className="text-gray-400" />
+                            <div>
+                                <span className="text-sm text-white">Allow downloads</span>
+                                <p className="text-xs text-gray-500">Enables file downloads and right-click "Save Image/Media" options</p>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={security.popupsEnabled}
+                            onChange={(e) => updateSecuritySetting('popupsEnabled', e.target.checked)}
+                            className="w-4 h-4 accent-violet-500 rounded"
+                        />
+                        <div className="flex items-center gap-2">
+                            <ExternalLink size={16} className="text-gray-400" />
+                            <div>
+                                <span className="text-sm text-white">Allow popup windows</span>
+                                <p className="text-xs text-gray-500">Required for OAuth login flows (e.g., "Sign in with Google")</p>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={security.mediaPolicyAsk}
+                            onChange={(e) => updateSecuritySetting('mediaPolicyAsk', e.target.checked)}
+                            className="w-4 h-4 accent-violet-500 rounded"
+                        />
+                        <div className="flex items-center gap-2">
+                            <Mic size={16} className="text-gray-400" />
+                            <div>
+                                <span className="text-sm text-white">Allow camera/microphone requests</span>
+                                <p className="text-xs text-gray-500">Sites can ask for access (you'll be prompted to confirm)</p>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={security.adBlockerEnabled}
+                            onChange={(e) => updateSecuritySetting('adBlockerEnabled', e.target.checked)}
+                            className="w-4 h-4 accent-violet-500 rounded"
+                        />
+                        <div className="flex items-center gap-2">
+                            <ShieldCheck size={16} className="text-gray-400" />
+                            <div>
+                                <span className="text-sm text-white">Block ads & trackers</span>
+                                <p className="text-xs text-gray-500">Coming soon - Powered by Ghostery</p>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            {/* Clear Data Card */}
+            <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
+                    <h3 className="text-white font-medium text-sm">Clear Browsing Data</h3>
+                </div>
+
                 {/* Section 1: Profile Selection */}
                 <div className="px-5 py-4 border-b border-[#3e3e42]">
-                    <h3 className="text-white font-medium text-sm mb-3">1. Select Profiles</h3>
+                    <h4 className="text-gray-400 text-xs uppercase tracking-wider mb-3">1. Select Profiles</h4>
 
                     <label className="flex items-center gap-3 cursor-pointer mb-3">
                         <input
@@ -147,7 +240,7 @@ export default function PrivacyTab({ profiles = [] }: PrivacyTabProps) {
 
                 {/* Section 2: Clear Options */}
                 <div className="px-5 py-4 border-b border-[#3e3e42]">
-                    <h3 className="text-white font-medium text-sm mb-3">2. Choose What to Clear</h3>
+                    <h4 className="text-gray-400 text-xs uppercase tracking-wider mb-3">2. Choose What to Clear</h4>
 
                     <div className="grid grid-cols-2 gap-2">
                         {clearOptions.map(option => {
@@ -202,3 +295,4 @@ export default function PrivacyTab({ profiles = [] }: PrivacyTabProps) {
         </div>
     )
 }
+

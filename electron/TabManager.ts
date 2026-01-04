@@ -1,4 +1,4 @@
-import { BrowserWindow, WebContentsView } from 'electron';
+import { BrowserWindow, WebContentsView, session, Menu } from 'electron';
 import type { TabInfo } from './types';
 import type SettingsManager from './SettingsManager';
 
@@ -77,6 +77,7 @@ class TabManager {
     activeTabId: string | null;
     private tabOrder: string[];
     private inactivityCheckInterval: NodeJS.Timeout | null;
+    private updateViewBoundsCallback: (() => void) | null;
 
     constructor(mainWindow: BrowserWindow, settingsManager: SettingsManager) {
         this.mainWindow = mainWindow;
@@ -85,9 +86,17 @@ class TabManager {
         this.activeTabId = null;
         this.tabOrder = [];
         this.inactivityCheckInterval = null;
+        this.updateViewBoundsCallback = null;
 
         // Start inactivity check timer (runs every minute)
         this._startInactivityTimer();
+    }
+
+    /**
+     * Set the updateViewBounds callback (called from main.ts after initialization)
+     */
+    setUpdateViewBounds(callback: () => void): void {
+        this.updateViewBoundsCallback = callback;
     }
 
     /**
@@ -282,6 +291,223 @@ class TabManager {
                 this.mainWindow.webContents.send('tab-updated', { id, url });
             }
         });
+
+        // =============================================================================
+        // Security Handlers
+        // =============================================================================
+
+        // Block file:// URLs (always blocked, no setting)
+        view.webContents.on('will-navigate', (e, url) => {
+            if (url.startsWith('file://')) {
+                console.log(`[TabManager] Blocked file:// URL: ${url}`);
+                e.preventDefault();
+            }
+        });
+
+        // Set up permission handler for this session
+        const ses = session.fromPartition(`persist:${this.tabs.get(id)?.profileId}`);
+        ses.setPermissionRequestHandler((webContents, permission, callback) => {
+            const settings = this.settingsManager.getSettings();
+            const security = settings.security;
+
+            // Always block geolocation (no setting exposed)
+            if (permission === 'geolocation') {
+                console.log(`[TabManager] Blocked geolocation request`);
+                this.mainWindow.webContents.send('show-toast', { message: 'Location access blocked', type: 'warning' });
+                callback(false);
+                return;
+            }
+
+            // Camera/microphone based on settings
+            if (permission === 'media') {
+                const allow = security?.mediaPolicyAsk !== false; // Default: ask/allow
+                console.log(`[TabManager] Media permission: ${allow ? 'allowed' : 'blocked'}`);
+                if (!allow) {
+                    this.mainWindow.webContents.send('show-toast', { message: 'Camera/microphone access blocked', type: 'warning' });
+                }
+                callback(allow);
+                return;
+            }
+
+            // Allow other permissions by default
+            callback(true);
+        });
+
+        // =============================================================================
+        // Context Menu
+        // =============================================================================
+        view.webContents.on('context-menu', (_e, params) => {
+            const tab = this.tabs.get(id);
+            const menuItems: Electron.MenuItemConstructorOptions[] = [];
+
+            // Editing actions (only show if there's text selection or editable field)
+            if (params.isEditable || params.selectionText) {
+                if (params.isEditable) {
+                    menuItems.push(
+                        { label: 'Cut', role: 'cut', enabled: params.editFlags.canCut },
+                        { label: 'Copy', role: 'copy', enabled: params.editFlags.canCopy },
+                        { label: 'Paste', role: 'paste', enabled: params.editFlags.canPaste }
+                    );
+                } else if (params.selectionText) {
+                    menuItems.push(
+                        { label: 'Copy', role: 'copy' }
+                    );
+                }
+                menuItems.push(
+                    { label: 'Select All', role: 'selectAll' }
+                );
+                menuItems.push({ type: 'separator' });
+            }
+
+            // Link actions
+            if (params.linkURL) {
+                menuItems.push({
+                    label: 'Open in New Tab',
+                    click: () => {
+                        if (tab) {
+                            const newTabId = this.createTab(tab.profileId, params.linkURL);
+                            this.switchTo(newTabId);
+                            this.mainWindow.webContents.send('tab-created', {
+                                id: newTabId,
+                                profileId: tab.profileId,
+                                title: 'Loading...',
+                                loaded: true
+                            });
+                            // Update view bounds to show the new tab
+                            if (this.updateViewBoundsCallback) {
+                                this.updateViewBoundsCallback();
+                            }
+                        }
+                    }
+                });
+                menuItems.push({ type: 'separator' });
+            }
+
+            // Media/Image actions (only if downloads enabled)
+            const settings = this.settingsManager.getSettings();
+            const downloadsEnabled = settings.security?.downloadsEnabled !== false;
+
+            if (downloadsEnabled && params.mediaType === 'image' && params.srcURL) {
+                menuItems.push(
+                    { label: 'Save Image As...', click: () => view.webContents.downloadURL(params.srcURL) },
+                    { label: 'Copy Image', click: () => view.webContents.copyImageAt(params.x, params.y) },
+                    { label: 'Copy Image URL', click: () => require('electron').clipboard.writeText(params.srcURL) }
+                );
+                menuItems.push({ type: 'separator' });
+            }
+
+            if (downloadsEnabled && (params.mediaType === 'video' || params.mediaType === 'audio') && params.srcURL) {
+                menuItems.push(
+                    { label: 'Save Media As...', click: () => view.webContents.downloadURL(params.srcURL) }
+                );
+                menuItems.push({ type: 'separator' });
+            }
+
+            // Download link (only if downloads enabled and it's a file link)
+            if (downloadsEnabled && params.linkURL && !params.linkURL.startsWith('javascript:')) {
+                const fileMatch = params.linkURL.match(/\.([a-z0-9]+)$/i);
+                if (fileMatch) {
+                    const ext = fileMatch[1].toLowerCase();
+                    let fileType = 'File';
+
+                    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) fileType = 'Archive';
+                    else if (['pdf'].includes(ext)) fileType = 'PDF';
+                    else if (['doc', 'docx'].includes(ext)) fileType = 'Document';
+                    else if (['xls', 'xlsx', 'csv'].includes(ext)) fileType = 'Spreadsheet';
+                    else if (['ppt', 'pptx'].includes(ext)) fileType = 'Presentation';
+                    else if (['txt'].includes(ext)) fileType = 'Text File';
+                    else if (['mp3', 'wav', 'flac', 'aac'].includes(ext)) fileType = 'Audio';
+                    else if (['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext)) fileType = 'Video';
+                    else if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) fileType = 'Image';
+
+                    menuItems.push(
+                        { label: `Download ${fileType}...`, click: () => view.webContents.downloadURL(params.linkURL) }
+                    );
+                    menuItems.push({ type: 'separator' });
+                }
+            }
+
+            // Navigation actions
+            menuItems.push(
+                { label: 'Back', enabled: view.webContents.navigationHistory.canGoBack(), click: () => view.webContents.navigationHistory.goBack() },
+                { label: 'Forward', enabled: view.webContents.navigationHistory.canGoForward(), click: () => view.webContents.navigationHistory.goForward() },
+                { label: 'Reload', click: () => view.webContents.reload() }
+            );
+
+            const menu = Menu.buildFromTemplate(menuItems);
+            menu.popup();
+        });
+
+        // =============================================================================
+        // Download Interception
+        // =============================================================================
+        view.webContents.session.on('will-download', (event, item) => {
+            const settings = this.settingsManager.getSettings();
+            const downloadsEnabled = settings.security?.downloadsEnabled !== false;
+
+            if (!downloadsEnabled) {
+                console.log(`[TabManager] Download blocked: ${item.getFilename()}`);
+                this.mainWindow.webContents.send('show-toast', { message: 'Download blocked', type: 'warning' });
+                event.preventDefault();
+                return;
+            }
+
+            console.log(`[TabManager] Download allowed: ${item.getFilename()}`);
+            // Let the download proceed normally
+        });
+
+        // =============================================================================
+        // Popup/New Window Handling
+        // =============================================================================
+        view.webContents.setWindowOpenHandler(({ url, disposition }) => {
+            const settings = this.settingsManager.getSettings();
+            const popupsEnabled = settings.security?.popupsEnabled !== false;
+            const tab = this.tabs.get(id);
+
+            // For Ctrl+click / middle-click (foreground-tab, background-tab), open as a MashAI tab
+            if (disposition === 'foreground-tab' || disposition === 'background-tab') {
+                if (tab && url && !url.startsWith('about:')) {
+                    console.log(`[TabManager] Opening link as new tab (${disposition}): ${url}`);
+                    const newTabId = this.createTab(tab.profileId, url);
+                    this.switchTo(newTabId);
+                    this.mainWindow.webContents.send('tab-created', {
+                        id: newTabId,
+                        profileId: tab.profileId,
+                        title: 'Loading...',
+                        loaded: true
+                    });
+                    // Update view bounds to show the new tab
+                    if (this.updateViewBoundsCallback) {
+                        this.updateViewBoundsCallback();
+                    }
+                }
+                return { action: 'deny' };
+            }
+
+            // For other popups (like OAuth), check settings
+            if (!popupsEnabled) {
+                console.log(`[TabManager] Popup blocked: ${url}`);
+                this.mainWindow.webContents.send('show-toast', { message: 'Popup blocked', type: 'warning' });
+                return { action: 'deny' };
+            }
+
+            console.log(`[TabManager] Opening popup: ${url}`);
+
+            // Return configuration for the new window with hidden menu bar
+            return {
+                action: 'allow',
+                overrideBrowserWindowOptions: {
+                    autoHideMenuBar: true,
+                    parent: this.mainWindow,
+                    icon: require('path').join(__dirname, '../../src/assets/MashAI-logo.png'),
+                    webPreferences: {
+                        nodeIntegration: false,
+                        contextIsolation: true,
+                        partition: tab ? `persist:${tab.profileId}` : undefined
+                    }
+                }
+            };
+        });
     }
 
     /**
@@ -310,6 +536,7 @@ class TabManager {
                 backgroundThrottling: true
             }
         });
+        view.setBackgroundColor('#1e1e1e');
 
         tab.view = view;
         tab.loaded = true;
@@ -399,6 +626,7 @@ class TabManager {
                 backgroundThrottling: true
             }
         });
+        view.setBackgroundColor('#1e1e1e');
 
         this.tabs.set(id, {
             id,

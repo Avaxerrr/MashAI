@@ -202,6 +202,9 @@ function createWindow(): void {
     trayManager = new TrayManager(mainWindow, settingsManager);
     trayManager.setTabManager(tabManager);
 
+    // Provide updateViewBounds callback to TabManager for internal tab creation
+    tabManager.setUpdateViewBounds(updateViewBounds);
+
     // Register all IPC handlers
     WindowHandlers.register(mainWindow);
 

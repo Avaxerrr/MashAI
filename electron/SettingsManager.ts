@@ -152,6 +152,12 @@ class SettingsManager {
                 minimizeToTray: false,
                 showTrayIcon: false,
                 hideShortcut: 'CommandOrControl+Shift+M'
+            },
+            security: {
+                downloadsEnabled: true,    // Enabled for AI-generated content
+                popupsEnabled: true,       // Enabled for OAuth flows
+                mediaPolicyAsk: true,      // Ask for camera/mic (voice mode)
+                adBlockerEnabled: true     // Placeholder for Ghostery
             }
         };
     }

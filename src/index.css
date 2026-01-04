@@ -215,3 +215,35 @@ input[type="color"]::-moz-color-swatch {
     background-size: 200% 100%;
     animation: tab-shimmer 1.4s linear infinite;
 }
+
+/* Global Spinbox (number input) styling */
+input[type="number"] {
+    background-color: #1e1e1e;
+    border: 1px solid #3e3e42;
+    border-radius: 6px;
+    color: white;
+    padding: 6px 12px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s ease;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+input[type="number"]:focus {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+input[type="number"]:hover {
+    border-color: #52525b;
+}
+
+/* Completely hide spinbox arrows to avoid the ugly white box */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    margin: 0;
+    display: none;
+}

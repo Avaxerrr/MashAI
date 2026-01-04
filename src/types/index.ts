@@ -54,6 +54,13 @@ export interface GeneralSettings {
     hideShortcut: string;
 }
 
+export interface SecuritySettings {
+    downloadsEnabled: boolean;      // Allow file downloads (for AI-generated content)
+    popupsEnabled: boolean;         // Allow popup windows (for OAuth flows)
+    mediaPolicyAsk: boolean;        // Ask for camera/mic permission (for voice mode)
+    adBlockerEnabled: boolean;      // Placeholder for Ghostery integration
+}
+
 export interface Settings {
     profiles: Profile[];
     defaultProfileId: string;
@@ -61,6 +68,7 @@ export interface Settings {
     defaultProviderId: string;
     performance: PerformanceSettings;
     general: GeneralSettings;
+    security?: SecuritySettings;
 }
 
 // Extend the Window interface with the preload-exposed API
@@ -137,7 +145,7 @@ export interface ElectronAPI {
     clearPrivacyData: (options: ClearPrivacyDataOptions) => Promise<{ success: boolean; error?: string }>;
 
     // UI
-    onShowToast: (callback: (message: string) => void) => () => void;
+    onShowToast: (callback: (data: { message: string; type?: 'success' | 'error' | 'warning' | 'info' }) => void) => () => void;
 
     // External
     openExternal: (url: string) => void;

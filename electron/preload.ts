@@ -111,8 +111,8 @@ contextBridge.exposeInMainWorld('api', {
         ipcRenderer.on('open-settings-modal', handler);
         return () => ipcRenderer.removeListener('open-settings-modal', handler);
     },
-    onShowToast: (callback: (message: string) => void) => {
-        const handler = (e: IpcRendererEvent, message: string) => callback(message);
+    onShowToast: (callback: (data: { message: string; type?: 'success' | 'error' | 'warning' | 'info' }) => void) => {
+        const handler = (e: IpcRendererEvent, data: { message: string; type?: 'success' | 'error' | 'warning' | 'info' }) => callback(data);
         ipcRenderer.on('show-toast', handler);
         return () => ipcRenderer.removeListener('show-toast', handler);
     },

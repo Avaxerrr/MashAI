@@ -221,4 +221,9 @@ export function register(
 
         saveSession();
     });
+
+    // Handle request to update view bounds (from TabManager when creating tabs internally)
+    ipcMain.on('request-update-bounds', () => {
+        updateViewBounds();
+    });
 }

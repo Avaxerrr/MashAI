@@ -1,4 +1,4 @@
-import { Minus, Square, X, ChevronDown, ArrowLeft, RotateCw, Plus, Briefcase, User, Home, Zap, Code, Globe, Check, LucideIcon } from 'lucide-react'
+import { Minus, Square, X, ChevronDown, ArrowLeft, RotateCw, Plus, Briefcase, User, Home, Zap, Code, Globe, Check, LucideIcon, AlertTriangle } from 'lucide-react'
 import { useState, useEffect, SyntheticEvent, DragEvent } from 'react'
 import type { Profile, AIProvider, TabMemoryInfo } from '../types'
 
@@ -32,6 +32,7 @@ interface TitleBarProps {
     aiProviders?: AIProvider[];
     toastMessage?: string;
     showToast?: boolean;
+    toastType?: 'success' | 'error' | 'warning' | 'info';
     onCloseToast: () => void;
 }
 
@@ -54,6 +55,7 @@ export default function TitleBar({
     aiProviders = [],
     toastMessage = '',
     showToast = false,
+    toastType = 'success',
     onCloseToast
 }: TitleBarProps) {
     const [isMaximized, setIsMaximized] = useState(false)
@@ -132,9 +134,20 @@ export default function TitleBar({
             {/* Toast Notification */}
             {showToast && toastMessage && (
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] animate-fadeIn">
-                    <div className="bg-green-600 text-white px-4 py-1.5 rounded-full shadow-lg flex items-center gap-2 border border-green-500">
+                    <div className={`${toastType === 'warning' ? 'bg-amber-500 border-amber-400' :
+                            toastType === 'error' ? 'bg-red-600 border-red-500' :
+                                toastType === 'info' ? 'bg-blue-600 border-blue-500' :
+                                    'bg-green-600 border-green-500'
+                        } text-white px-4 py-1.5 rounded-full shadow-lg flex items-center gap-2 border`}>
                         <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                            <Check size={10} className="text-green-600" strokeWidth={3} />
+                            {toastType === 'warning' ? (
+                                <AlertTriangle size={10} className="text-amber-500" strokeWidth={3} />
+                            ) : (
+                                <Check size={10} className={`${toastType === 'error' ? 'text-red-600' :
+                                        toastType === 'info' ? 'text-blue-600' :
+                                            'text-green-600'
+                                    }`} strokeWidth={3} />
+                            )}
                         </div>
                         <span className="font-medium text-xs whitespace-nowrap">{toastMessage}</span>
                     </div>

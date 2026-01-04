@@ -8,7 +8,7 @@ import ProvidersTab from './settings/ProvidersTab'
 import ShortcutsTab from './settings/ShortcutsTab'
 import AboutTab from './settings/AboutTab'
 import Toast from './Toast'
-import type { Profile, AIProvider, Settings as SettingsType, PerformanceSettings, GeneralSettings } from '../types'
+import type { Profile, AIProvider, Settings as SettingsType, PerformanceSettings, GeneralSettings, SecuritySettings } from '../types'
 
 type TabName = 'general' | 'privacy' | 'profiles' | 'providers' | 'performance' | 'shortcuts' | 'about';
 
@@ -48,6 +48,13 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         hideShortcut: ''
     })
 
+    const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
+        downloadsEnabled: true,
+        popupsEnabled: true,
+        mediaPolicyAsk: true,
+        adBlockerEnabled: true
+    })
+
     const profilesListRef = useRef<HTMLDivElement>(null)
     const providersListRef = useRef<HTMLDivElement>(null)
     const contentAreaRef = useRef<HTMLDivElement>(null)
@@ -76,6 +83,9 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
             if (initialSettings.general) {
                 setGeneralSettings(prev => ({ ...prev, ...initialSettings.general }))
             }
+            if (initialSettings.security) {
+                setSecuritySettings(prev => ({ ...prev, ...initialSettings.security }))
+            }
 
             if (window.api?.getActiveProfileId) {
                 window.api.getActiveProfileId().then(id => {
@@ -96,7 +106,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     }, [onClose])
 
     useEffect(() => {
-        if (contentAreaRef.current && profiles.length > 0 && activeTab === 'profiles') {
+        if (contentAreaRef.current && newlyAddedProfileId && activeTab === 'profiles') {
             setTimeout(() => {
                 if (contentAreaRef.current) {
                     contentAreaRef.current.scrollTo({
@@ -106,7 +116,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                 }
             }, 100)
         }
-    }, [profiles.length, activeTab])
+    }, [newlyAddedProfileId, activeTab])
 
     useEffect(() => {
         if (contentAreaRef.current && newlyAddedProviderId && activeTab === 'providers') {
@@ -148,7 +158,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
             defaultProviderId,
             defaultProfileId: profiles[0]?.id || 'work',
             performance: performanceSettings,
-            general: generalSettings
+            general: generalSettings,
+            security: securitySettings
         })
         setShowToast(true)
     }
@@ -340,7 +351,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                         }
                         const labels: Record<TabName, string> = {
                             general: 'General',
-                            privacy: 'Privacy',
+                            privacy: 'Privacy & Security',
                             profiles: 'Profiles',
                             providers: 'AI Providers',
                             performance: 'Performance',
@@ -376,6 +387,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     {activeTab === 'privacy' && (
                         <PrivacyTab
                             profiles={profiles}
+                            securitySettings={securitySettings}
+                            onSecurityChange={setSecuritySettings}
                         />
                     )}
 

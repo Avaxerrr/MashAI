@@ -26,6 +26,7 @@ function App() {
     const [tabMemory, setTabMemory] = useState<Record<string, TabMemoryInfo>>({})
     const [toastMessage, setToastMessage] = useState<string>('')
     const [showToast, setShowToast] = useState<boolean>(false)
+    const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
 
     const closeTabRef = useRef<((tabId: string) => void) | null>(null)
 
@@ -156,8 +157,9 @@ function App() {
             }
         })
 
-        const cleanupShowToast = window.api.onShowToast?.((message: string) => {
-            setToastMessage(message)
+        const cleanupShowToast = window.api.onShowToast?.((data) => {
+            setToastMessage(data.message)
+            setToastType(data.type || 'success')
             setShowToast(true)
         })
 
@@ -334,6 +336,7 @@ function App() {
                 aiProviders={aiProviders}
                 toastMessage={toastMessage}
                 showToast={showToast}
+                toastType={toastType}
                 onCloseToast={() => setShowToast(false)}
             />
 
