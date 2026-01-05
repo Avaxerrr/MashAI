@@ -157,7 +157,9 @@ class SettingsManager {
                 downloadsEnabled: true,    // Enabled for AI-generated content
                 popupsEnabled: true,       // Enabled for OAuth flows
                 mediaPolicyAsk: true,      // Ask for camera/mic (voice mode)
-                adBlockerEnabled: true     // Placeholder for Ghostery
+                adBlockerEnabled: true,    // Placeholder for Ghostery
+                downloadLocation: app.getPath('downloads'), // Default to system Downloads
+                askWhereToSave: false      // Don't ask by default, save directly
             }
         };
     }

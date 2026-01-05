@@ -99,6 +99,12 @@ function createSettingsWindow(): void {
 
     settingsWindow.on('closed', () => {
         settingsWindow = null;
+        // Delayed focus to ensure OS processes the window close first
+        setTimeout(() => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.focus();
+            }
+        }, 50);
     });
 }
 
@@ -154,6 +160,12 @@ function createDownloadsWindow(): void {
             downloadManager.setDownloadsWindow(null);
         }
         downloadsWindow = null;
+        // Delayed focus to ensure OS processes the window close first
+        setTimeout(() => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.focus();
+            }
+        }, 50);
     });
 }
 
@@ -238,6 +250,7 @@ function createWindow(): void {
     downloadManager = new DownloadManager();
     downloadManager.setMainWindow(mainWindow);
     tabManager.setDownloadManager(downloadManager);
+    // Toast notifications are now sent directly from DownloadManager
 
     // Initialize window state from actual window bounds (ensures x/y are captured)
     const initialBounds = mainWindow.getBounds();

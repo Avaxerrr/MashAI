@@ -101,6 +101,8 @@ export interface SecuritySettings {
     popupsEnabled: boolean;         // Allow popup windows (for OAuth flows)
     mediaPolicyAsk: boolean;        // Ask for camera/mic permission (for voice mode)
     adBlockerEnabled: boolean;      // Placeholder for Ghostery integration
+    downloadLocation: string;       // Default download folder path
+    askWhereToSave: boolean;        // Whether to show save dialog for each download
 }
 
 export interface Settings {

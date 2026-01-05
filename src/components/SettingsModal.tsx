@@ -52,7 +52,9 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         downloadsEnabled: true,
         popupsEnabled: true,
         mediaPolicyAsk: true,
-        adBlockerEnabled: true
+        adBlockerEnabled: true,
+        downloadLocation: '',  // Will be populated from initialSettings
+        askWhereToSave: false
     })
 
     const profilesListRef = useRef<HTMLDivElement>(null)

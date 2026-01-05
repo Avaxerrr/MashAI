@@ -9,13 +9,18 @@ export interface DownloadInfo {
     path: string;
     totalBytes: number;
     receivedBytes: number;
-    state: 'progressing' | 'completed' | 'cancelled' | 'interrupted';
+    state: 'progressing' | 'completed' | 'cancelled' | 'interrupted' | 'paused';
     startTime: number;
+    isPaused?: boolean;
+    canResume?: boolean;
+    speed?: number; // bytes per second
 }
 
 interface ActiveDownload {
     info: DownloadInfo;
     item: DownloadItem;
+    lastReceivedBytes: number;
+    lastUpdateTime: number;
 }
 
 /**
@@ -92,6 +97,15 @@ class DownloadManager {
     }
 
     /**
+     * Send a toast notification to the main window
+     */
+    private sendToast(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info'): void {
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            this.mainWindow.webContents.send('show-toast', { message, type });
+        }
+    }
+
+    /**
      * Add a new download to track
      */
     addDownload(item: DownloadItem): void {
@@ -107,18 +121,50 @@ class DownloadManager {
             startTime: Date.now()
         };
 
-        this.activeDownloads.set(id, { info, item });
+        const now = Date.now();
+        this.activeDownloads.set(id, {
+            info,
+            item,
+            lastReceivedBytes: 0,
+            lastUpdateTime: now
+        });
         console.log(`[DownloadManager] Download started: ${info.filename}`);
         this.broadcastUpdate();
+
+        // Send toast notification if downloads window is not visible
+        if (!this.downloadsWindow || this.downloadsWindow.isDestroyed()) {
+            this.sendToast(`Downloading: ${info.filename}`, 'info');
+        }
 
         // Track progress
         item.on('updated', (_event, state) => {
             const download = this.activeDownloads.get(id);
             if (download) {
-                download.info.receivedBytes = item.getReceivedBytes();
+                const currentTime = Date.now();
+                const currentBytes = item.getReceivedBytes();
+
+                // Calculate speed (bytes per second)
+                const timeDelta = (currentTime - download.lastUpdateTime) / 1000; // Convert to seconds
+                if (timeDelta > 0) {
+                    const bytesDelta = currentBytes - download.lastReceivedBytes;
+                    download.info.speed = Math.max(0, bytesDelta / timeDelta);
+                }
+
+                // Update tracking for next calculation
+                download.lastReceivedBytes = currentBytes;
+                download.lastUpdateTime = currentTime;
+
+                download.info.receivedBytes = currentBytes;
                 download.info.totalBytes = item.getTotalBytes();
                 download.info.path = item.getSavePath() || download.info.path;
-                download.info.state = state === 'progressing' ? 'progressing' : 'interrupted';
+                download.info.isPaused = item.isPaused();
+                download.info.canResume = item.canResume();
+                if (state === 'interrupted') {
+                    download.info.state = item.isPaused() ? 'paused' : 'interrupted';
+                    download.info.speed = 0; // No speed when paused/interrupted
+                } else {
+                    download.info.state = 'progressing';
+                }
                 this.broadcastUpdate();
             }
         });
@@ -140,6 +186,13 @@ class DownloadManager {
                 this.activeDownloads.delete(id);
                 console.log(`[DownloadManager] Download ${state}: ${download.info.filename}`);
                 this.broadcastUpdate();
+
+                // Send toast notification if downloads window is not visible
+                if (!this.downloadsWindow || this.downloadsWindow.isDestroyed()) {
+                    if (state === 'completed') {
+                        this.sendToast(`Download complete: ${download.info.filename}`, 'success');
+                    }
+                }
             }
         });
     }
@@ -154,6 +207,38 @@ class DownloadManager {
             download.info.state = 'cancelled';
             this.activeDownloads.delete(id);
             console.log(`[DownloadManager] Download cancelled: ${download.info.filename}`);
+            this.broadcastUpdate();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Pause an active download
+     */
+    pauseDownload(id: string): boolean {
+        const download = this.activeDownloads.get(id);
+        if (download && !download.item.isPaused()) {
+            download.item.pause();
+            download.info.isPaused = true;
+            download.info.state = 'paused';
+            console.log(`[DownloadManager] Download paused: ${download.info.filename}`);
+            this.broadcastUpdate();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Resume a paused download
+     */
+    resumeDownload(id: string): boolean {
+        const download = this.activeDownloads.get(id);
+        if (download && download.item.isPaused() && download.item.canResume()) {
+            download.item.resume();
+            download.info.isPaused = false;
+            download.info.state = 'progressing';
+            console.log(`[DownloadManager] Download resumed: ${download.info.filename}`);
             this.broadcastUpdate();
             return true;
         }

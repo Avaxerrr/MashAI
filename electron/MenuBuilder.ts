@@ -150,8 +150,22 @@ class MenuBuilder {
                 console.error('Failed to load settings icon:', e);
             }
 
+            let downloadsIcon: Electron.NativeImage | undefined = undefined;
+            try {
+                let downloadIconPath;
+                if (app.isPackaged) {
+                    downloadIconPath = path.join(process.resourcesPath, 'assets/download.png');
+                } else {
+                    downloadIconPath = path.join(__dirname, '../../src/assets/download.png');
+                }
+                downloadsIcon = nativeImage.createFromPath(downloadIconPath).resize({ width: 16, height: 16 });
+            } catch (e) {
+                console.error('Failed to load downloads icon:', e);
+            }
+
             template.push({
                 label: 'Downloads',
+                ...(downloadsIcon ? { icon: downloadsIcon } : {}),
                 accelerator: 'CmdOrCtrl+J',
                 click: () => {
                     this.createDownloadsWindow();

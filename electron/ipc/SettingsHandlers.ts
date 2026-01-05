@@ -1,4 +1,4 @@
-import { ipcMain, app, session, BrowserWindow } from 'electron';
+import { ipcMain, app, session, BrowserWindow, dialog } from 'electron';
 import type TabManager from '../TabManager';
 import type SettingsManager from '../SettingsManager';
 import type ProfileManager from '../ProfileManager';
@@ -239,6 +239,20 @@ export function register(
         }
 
         return { valid: true, available: true, reason: null };
+    });
+
+    // Select download folder via dialog
+    ipcMain.handle('select-download-folder', async () => {
+        const result = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openDirectory'],
+            title: 'Select Download Location'
+        });
+
+        if (result.canceled || result.filePaths.length === 0) {
+            return null;
+        }
+
+        return result.filePaths[0];
     });
 
     // Get memory usage statistics

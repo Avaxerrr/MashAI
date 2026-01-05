@@ -23,17 +23,29 @@ export function register(
         return downloadManager.cancelDownload(id);
     });
 
-    // Open a downloaded file
+    // Pause download
+    ipcMain.handle('pause-download', (_event, id: string) => {
+        return downloadManager.pauseDownload(id);
+    });
+
+    // Resume download
+    ipcMain.handle('resume-download', (_event, id: string) => {
+        return downloadManager.resumeDownload(id);
+    });
+
+    // Open downloaded file
     ipcMain.handle('open-download', async (_event, filePath: string) => {
-        return await downloadManager.openFile(filePath);
+        const { shell } = await import('electron');
+        return shell.openPath(filePath);
     });
 
-    // Show file in folder
-    ipcMain.on('show-download-in-folder', (_event, filePath: string) => {
-        downloadManager.showInFolder(filePath);
+    // Show in folder
+    ipcMain.on('show-download-in-folder', async (_event, filePath: string) => {
+        const { shell } = await import('electron');
+        shell.showItemInFolder(filePath);
     });
 
-    // Clear download history
+    // Clear all history
     ipcMain.on('clear-download-history', () => {
         downloadManager.clearHistory();
     });
@@ -50,3 +62,4 @@ export function register(
 
     console.log('[DownloadHandlers] Handlers registered');
 }
+

@@ -131,11 +131,15 @@ contextBridge.exposeInMainWorld('api', {
     // Downloads
     getDownloads: () => ipcRenderer.invoke('get-downloads'),
     cancelDownload: (id: string) => ipcRenderer.invoke('cancel-download', id),
+    pauseDownload: (id: string) => ipcRenderer.invoke('pause-download', id),
+    resumeDownload: (id: string) => ipcRenderer.invoke('resume-download', id),
     openDownload: (filePath: string) => ipcRenderer.invoke('open-download', filePath),
     showDownloadInFolder: (filePath: string) => ipcRenderer.send('show-download-in-folder', filePath),
     clearDownloadHistory: () => ipcRenderer.send('clear-download-history'),
     removeDownloadFromHistory: (id: string) => ipcRenderer.send('remove-download-from-history', id),
     openDownloadsWindow: () => ipcRenderer.send('open-downloads-window'),
+    hideDownloadToast: () => ipcRenderer.send('hide-download-toast'),
+    selectDownloadFolder: () => ipcRenderer.invoke('select-download-folder'),
     onDownloadUpdate: (callback: (data: unknown) => void) => {
         const handler = (e: IpcRendererEvent, data: unknown) => callback(data);
         ipcRenderer.on('download-update', handler);

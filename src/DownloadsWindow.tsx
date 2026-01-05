@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, X, FolderOpen, Play, Trash2, XCircle } from 'lucide-react';
+import { Download, X, FolderOpen, Play, Pause, Trash2, XCircle } from 'lucide-react';
 import './index.css';
 
 interface DownloadInfo {
@@ -8,8 +8,11 @@ interface DownloadInfo {
     path: string;
     totalBytes: number;
     receivedBytes: number;
-    state: 'progressing' | 'completed' | 'cancelled' | 'interrupted';
+    state: 'progressing' | 'completed' | 'cancelled' | 'interrupted' | 'paused';
     startTime: number;
+    isPaused?: boolean;
+    canResume?: boolean;
+    speed?: number;
 }
 
 interface DownloadsData {
@@ -29,6 +32,54 @@ function formatProgress(received: number, total: number): string {
     if (total === 0) return 'Calculating...';
     const percent = Math.round((received / total) * 100);
     return `${formatBytes(received)} / ${formatBytes(total)} (${percent}%)`;
+}
+
+function formatSpeed(bytesPerSecond: number | undefined): string {
+    if (!bytesPerSecond || bytesPerSecond <= 0) return '';
+    return `${formatBytes(bytesPerSecond)}/s`;
+}
+
+function getDateGroup(timestamp: number): string {
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Reset times to midnight for comparison
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+
+    if (dateOnly.getTime() === todayOnly.getTime()) {
+        return 'Today';
+    } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
+        return 'Yesterday';
+    } else {
+        // Format as "January 5, 2026"
+        return date.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+        });
+    }
+}
+
+interface GroupedDownloads {
+    [dateGroup: string]: DownloadInfo[];
+}
+
+function groupDownloadsByDate(downloads: DownloadInfo[]): GroupedDownloads {
+    const groups: GroupedDownloads = {};
+
+    downloads.forEach(download => {
+        const group = getDateGroup(download.startTime);
+        if (!groups[group]) {
+            groups[group] = [];
+        }
+        groups[group].push(download);
+    });
+
+    return groups;
 }
 
 export default function DownloadsWindow() {
@@ -61,6 +112,14 @@ export default function DownloadsWindow() {
 
     const handleCancel = async (id: string) => {
         await window.api.cancelDownload(id);
+    };
+
+    const handlePause = async (id: string) => {
+        await window.api.pauseDownload(id);
+    };
+
+    const handleResume = async (id: string) => {
+        await window.api.resumeDownload(id);
     };
 
     const handleOpen = async (path: string) => {
@@ -117,18 +176,39 @@ export default function DownloadsWindow() {
                                         <span className="text-sm text-white truncate flex-1 mr-2" title={download.filename}>
                                             {download.filename}
                                         </span>
-                                        <button
-                                            onClick={() => handleCancel(download.id)}
-                                            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#3e3e42] rounded transition-colors"
-                                            title="Cancel"
-                                        >
-                                            <XCircle size={16} />
-                                        </button>
+                                        <div className="flex items-center gap-1">
+                                            {/* Pause/Resume button */}
+                                            {download.isPaused ? (
+                                                <button
+                                                    onClick={() => handleResume(download.id)}
+                                                    disabled={!download.canResume}
+                                                    className="p-1.5 text-gray-400 hover:text-green-400 hover:bg-[#3e3e42] rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    title={download.canResume ? 'Resume' : 'Cannot resume'}
+                                                >
+                                                    <Play size={16} />
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handlePause(download.id)}
+                                                    className="p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-[#3e3e42] rounded transition-colors"
+                                                    title="Pause"
+                                                >
+                                                    <Pause size={16} />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleCancel(download.id)}
+                                                className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#3e3e42] rounded transition-colors"
+                                                title="Cancel"
+                                            >
+                                                <XCircle size={16} />
+                                            </button>
+                                        </div>
                                     </div>
                                     {/* Progress bar */}
                                     <div className="h-2 bg-[#3e3e42] rounded-full overflow-hidden mb-1">
                                         <div
-                                            className="h-full bg-gradient-to-r from-violet-500 to-purple-500 transition-all duration-300"
+                                            className={`h-full transition-all duration-300 ${download.isPaused ? 'bg-yellow-500' : 'bg-gradient-to-r from-violet-500 to-purple-500'}`}
                                             style={{
                                                 width: download.totalBytes > 0
                                                     ? `${(download.receivedBytes / download.totalBytes) * 100}%`
@@ -136,9 +216,15 @@ export default function DownloadsWindow() {
                                             }}
                                         />
                                     </div>
-                                    <span className="text-xs text-gray-400">
-                                        {formatProgress(download.receivedBytes, download.totalBytes)}
-                                    </span>
+                                    <div className="flex items-center justify-between text-xs text-gray-400">
+                                        <span>
+                                            {download.isPaused && <span className="text-yellow-400 mr-1">Paused</span>}
+                                            {formatProgress(download.receivedBytes, download.totalBytes)}
+                                        </span>
+                                        {!download.isPaused && download.speed && download.speed > 0 && (
+                                            <span className="text-violet-400">{formatSpeed(download.speed)}</span>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -157,45 +243,56 @@ export default function DownloadsWindow() {
                                 Clear All
                             </button>
                         </div>
-                        <div className="divide-y divide-[#3e3e42]">
-                            {downloads.history.map((download) => (
-                                <div key={download.id} className="p-3 flex items-center gap-3">
-                                    <div className="flex-1 min-w-0">
-                                        <span className="text-sm text-white truncate block" title={download.filename}>
-                                            {download.filename}
-                                        </span>
-                                        <span className="text-xs text-gray-400">
-                                            {download.state === 'completed' && `${formatBytes(download.totalBytes)}`}
-                                            {download.state === 'cancelled' && 'Cancelled'}
-                                            {download.state === 'interrupted' && 'Failed'}
-                                        </span>
+                        <div>
+                            {Object.entries(groupDownloadsByDate(downloads.history)).map(([dateGroup, groupDownloads]) => (
+                                <div key={dateGroup}>
+                                    {/* Date Group Header */}
+                                    <div className="px-4 py-2 bg-[#1e1e1e] border-b border-[#3e3e42]">
+                                        <span className="text-xs font-medium text-gray-500">{dateGroup}</span>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        {download.state === 'completed' && (
-                                            <>
-                                                <button
-                                                    onClick={() => handleOpen(download.path)}
-                                                    className="p-1.5 text-gray-400 hover:text-violet-400 hover:bg-[#3e3e42] rounded transition-colors"
-                                                    title="Open"
-                                                >
-                                                    <Play size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleShowInFolder(download.path)}
-                                                    className="p-1.5 text-gray-400 hover:text-violet-400 hover:bg-[#3e3e42] rounded transition-colors"
-                                                    title="Show in Folder"
-                                                >
-                                                    <FolderOpen size={14} />
-                                                </button>
-                                            </>
-                                        )}
-                                        <button
-                                            onClick={() => handleRemoveFromHistory(download.id)}
-                                            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#3e3e42] rounded transition-colors"
-                                            title="Remove"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
+                                    {/* Downloads in this group */}
+                                    <div className="divide-y divide-[#3e3e42]">
+                                        {groupDownloads.map((download) => (
+                                            <div key={download.id} className="p-3 flex items-center gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <span className="text-sm text-white truncate block" title={download.filename}>
+                                                        {download.filename}
+                                                    </span>
+                                                    <span className="text-xs text-gray-400">
+                                                        {download.state === 'completed' && `${formatBytes(download.totalBytes)}`}
+                                                        {download.state === 'cancelled' && 'Cancelled'}
+                                                        {download.state === 'interrupted' && 'Failed'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    {download.state === 'completed' && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleOpen(download.path)}
+                                                                className="p-1.5 text-gray-400 hover:text-violet-400 hover:bg-[#3e3e42] rounded transition-colors"
+                                                                title="Open"
+                                                            >
+                                                                <Play size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleShowInFolder(download.path)}
+                                                                className="p-1.5 text-gray-400 hover:text-violet-400 hover:bg-[#3e3e42] rounded transition-colors"
+                                                                title="Show in Folder"
+                                                            >
+                                                                <FolderOpen size={14} />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleRemoveFromHistory(download.id)}
+                                                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#3e3e42] rounded transition-colors"
+                                                        title="Remove"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             ))}

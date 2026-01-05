@@ -26,8 +26,11 @@ export interface DownloadInfo {
     path: string;
     totalBytes: number;
     receivedBytes: number;
-    state: 'progressing' | 'completed' | 'cancelled' | 'interrupted';
+    state: 'progressing' | 'completed' | 'cancelled' | 'interrupted' | 'paused';
     startTime: number;
+    isPaused?: boolean;
+    canResume?: boolean;
+    speed?: number; // bytes per second
 }
 
 export interface TabInfo {
@@ -69,6 +72,8 @@ export interface SecuritySettings {
     popupsEnabled: boolean;         // Allow popup windows (for OAuth flows)
     mediaPolicyAsk: boolean;        // Ask for camera/mic permission (for voice mode)
     adBlockerEnabled: boolean;      // Placeholder for Ghostery integration
+    downloadLocation: string;       // Default download folder path
+    askWhereToSave: boolean;        // Whether to show save dialog for each download
 }
 
 export interface Settings {
@@ -163,11 +168,15 @@ export interface ElectronAPI {
     // Downloads
     getDownloads: () => Promise<{ active: DownloadInfo[]; history: DownloadInfo[] }>;
     cancelDownload: (id: string) => Promise<boolean>;
+    pauseDownload: (id: string) => Promise<boolean>;
+    resumeDownload: (id: string) => Promise<boolean>;
     openDownload: (filePath: string) => Promise<boolean>;
     showDownloadInFolder: (filePath: string) => void;
     clearDownloadHistory: () => void;
     removeDownloadFromHistory: (id: string) => void;
     openDownloadsWindow: () => void;
+    hideDownloadToast: () => void;
+    selectDownloadFolder: () => Promise<string | null>;
     onDownloadUpdate: (callback: (data: { active: DownloadInfo[]; history: DownloadInfo[] }) => void) => () => void;
 }
 

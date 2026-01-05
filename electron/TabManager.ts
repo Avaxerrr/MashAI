@@ -1,4 +1,4 @@
-import { BrowserWindow, WebContentsView, session, Menu } from 'electron';
+import { BrowserWindow, WebContentsView, session, Menu, dialog, app } from 'electron';
 import type { TabInfo } from './types';
 import type SettingsManager from './SettingsManager';
 
@@ -79,6 +79,9 @@ class TabManager {
     private inactivityCheckInterval: NodeJS.Timeout | null;
     private updateViewBoundsCallback: (() => void) | null;
     private downloadManager: { addDownload: (item: Electron.DownloadItem) => void } | null;
+    private sessionsWithDownloadListener: Set<string>;
+    private openDownloadsWindowCallback: (() => void) | null;
+    private pendingDownloadPaths: Map<string, string>; // URL -> save path for user-confirmed downloads
 
     constructor(mainWindow: BrowserWindow, settingsManager: SettingsManager) {
         this.mainWindow = mainWindow;
@@ -89,6 +92,9 @@ class TabManager {
         this.inactivityCheckInterval = null;
         this.updateViewBoundsCallback = null;
         this.downloadManager = null;
+        this.sessionsWithDownloadListener = new Set();
+        this.openDownloadsWindowCallback = null;
+        this.pendingDownloadPaths = new Map();
 
         // Start inactivity check timer (runs every minute)
         this._startInactivityTimer();
@@ -106,6 +112,13 @@ class TabManager {
      */
     setDownloadManager(manager: { addDownload: (item: Electron.DownloadItem) => void }): void {
         this.downloadManager = manager;
+    }
+
+    /**
+     * Set the callback to open downloads window
+     */
+    setOpenDownloadsWindow(callback: () => void): void {
+        this.openDownloadsWindowCallback = callback;
     }
 
     /**
@@ -451,26 +464,95 @@ class TabManager {
         });
 
         // =============================================================================
-        // Download Interception
+        // Download Interception (registered once per session to prevent duplicates)
         // =============================================================================
-        view.webContents.session.on('will-download', (event, item) => {
-            const settings = this.settingsManager.getSettings();
-            const downloadsEnabled = settings.security?.downloadsEnabled !== false;
+        const tab = this.tabs.get(id);
+        const partitionName = `persist:${tab?.profileId}`;
 
-            if (!downloadsEnabled) {
-                console.log(`[TabManager] Download blocked: ${item.getFilename()}`);
-                this.mainWindow.webContents.send('show-toast', { message: 'Download blocked', type: 'warning' });
-                event.preventDefault();
-                return;
-            }
+        // Only register the download listener once per session (prevents duplicate entries)
+        if (!this.sessionsWithDownloadListener.has(partitionName)) {
+            this.sessionsWithDownloadListener.add(partitionName);
 
-            console.log(`[TabManager] Download started: ${item.getFilename()}`);
+            const ses = session.fromPartition(partitionName);
+            ses.on('will-download', async (event, item) => {
+                const settings = this.settingsManager.getSettings();
+                const downloadsEnabled = settings.security?.downloadsEnabled !== false;
 
-            // Track download with DownloadManager immediately
-            if (this.downloadManager) {
-                this.downloadManager.addDownload(item);
-            }
-        });
+                if (!downloadsEnabled) {
+                    console.log(`[TabManager] Download blocked: ${item.getFilename()}`);
+                    this.mainWindow.webContents.send('show-toast', { message: 'Download blocked', type: 'warning' });
+                    event.preventDefault();
+                    return;
+                }
+
+                const downloadUrl = item.getURL();
+                const filename = item.getFilename();
+                const defaultLocation = settings.security?.downloadLocation || app.getPath('downloads');
+
+                // Check if this is a retried download with a user-confirmed path
+                const pendingSavePath = this.pendingDownloadPaths.get(downloadUrl);
+                if (pendingSavePath) {
+                    // This is a retry from our save dialog flow - use the confirmed path
+                    this.pendingDownloadPaths.delete(downloadUrl);
+                    item.setSavePath(pendingSavePath);
+                    console.log(`[TabManager] Download resumed with user path: ${filename} -> ${pendingSavePath}`);
+
+                    // Track download with DownloadManager
+                    if (this.downloadManager) {
+                        this.downloadManager.addDownload(item);
+                    }
+
+                    // Auto-open downloads window
+                    if (this.openDownloadsWindowCallback) {
+                        this.openDownloadsWindowCallback();
+                    }
+                    return;
+                }
+
+                const askWhereToSave = settings.security?.askWhereToSave ?? false;
+
+                if (askWhereToSave) {
+                    // Show save dialog - prevent default download until user confirms
+                    event.preventDefault();
+
+                    const result = await dialog.showSaveDialog(this.mainWindow, {
+                        title: 'Save File',
+                        defaultPath: `${defaultLocation}/${filename}`,
+                        filters: [{ name: 'All Files', extensions: ['*'] }]
+                    });
+
+                    if (result.canceled || !result.filePath) {
+                        console.log(`[TabManager] Download cancelled by user: ${filename}`);
+                        return;
+                    }
+
+                    // Store the confirmed path and restart the download
+                    this.pendingDownloadPaths.set(downloadUrl, result.filePath);
+                    console.log(`[TabManager] User selected path: ${filename} -> ${result.filePath}`);
+                    ses.downloadURL(downloadUrl);
+                    // The new download will be caught by this same handler and handled above
+                    return;
+
+                } else {
+                    // Direct download to default location
+                    const savePath = `${defaultLocation}/${filename}`;
+                    item.setSavePath(savePath);
+                    console.log(`[TabManager] Download started: ${filename} -> ${savePath}`);
+
+                    // Track download with DownloadManager
+                    if (this.downloadManager) {
+                        this.downloadManager.addDownload(item);
+                    }
+
+                    // Auto-open downloads window
+                    if (this.openDownloadsWindowCallback) {
+                        this.openDownloadsWindowCallback();
+                    }
+                }
+            });
+
+            console.log(`[TabManager] Download listener registered for session: ${partitionName}`);
+        }
 
         // =============================================================================
         // Popup/New Window Handling
