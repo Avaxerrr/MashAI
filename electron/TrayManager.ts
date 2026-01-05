@@ -214,7 +214,7 @@ class TrayManager {
         if (this.mainWindow.webContents) {
             this.mainWindow.webContents.send('settings-updated', updatedSettings);
             const toastMessage = newValue ? 'Always on top enabled' : 'Always on top disabled';
-            this.mainWindow.webContents.send('show-toast', toastMessage);
+            this.mainWindow.webContents.send('show-toast', { message: toastMessage, type: 'success' });
         }
 
         console.log(`[TrayManager] Toggled always-on-top: ${newValue}`);

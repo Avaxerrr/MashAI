@@ -101,33 +101,9 @@ class TabManager {
 
         // Start inactivity check timer (runs every minute)
         this._startInactivityTimer();
-
-        // Start blocked count emitter (every 3 seconds) for per-tab ad block stats
-        this._startBlockedCountEmitter();
     }
 
-    /**
-     * Start periodic emitter for blocked count updates
-     */
-    private _startBlockedCountEmitter(): void {
-        const EMIT_INTERVAL_MS = 3000; // 3 seconds
 
-        setInterval(() => {
-            if (!this.adBlockManager || !this.mainWindow) return;
-
-            // Emit blocked count for all loaded tabs
-            for (const [tabId, tabData] of this.tabs) {
-                if (tabData.view) {
-                    const webContentsId = tabData.view.webContents.id;
-                    const blockedCount = this.adBlockManager.getBlockedCountForWebContents(webContentsId);
-                    if (blockedCount > 0) {
-                        console.log(`[TabManager] Emitting blockedCount=${blockedCount} for tab ${tabId} (webContentsId=${webContentsId})`);
-                        this.mainWindow.webContents.send('tab-updated', { id: tabId, blockedCount });
-                    }
-                }
-            }
-        }, EMIT_INTERVAL_MS);
-    }
 
     /**
      * Set the updateViewBounds callback (called from main.ts after initialization)

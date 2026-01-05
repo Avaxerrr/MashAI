@@ -2,6 +2,7 @@ import { ipcMain, app, session, BrowserWindow, dialog } from 'electron';
 import type TabManager from '../TabManager';
 import type SettingsManager from '../SettingsManager';
 import type ProfileManager from '../ProfileManager';
+import type AdBlockManager from '../AdBlockManager';
 import TrayManager from '../TrayManager';
 import type { Settings } from '../types';
 
@@ -10,6 +11,7 @@ interface SettingsDependencies {
     profileManager: ProfileManager;
     tabManager: TabManager;
     trayManager: TrayManager;
+    adBlockManager: AdBlockManager | null;
     saveSession: () => void;
     updateViewBounds: () => void;
 }
@@ -19,7 +21,7 @@ interface SettingsDependencies {
  */
 export function register(
     mainWindow: BrowserWindow,
-    { settingsManager, profileManager, tabManager, trayManager, saveSession, updateViewBounds }: SettingsDependencies
+    { settingsManager, profileManager, tabManager, trayManager, adBlockManager, saveSession, updateViewBounds }: SettingsDependencies
 ): void {
     // Get current settings
     ipcMain.handle('get-settings', () => {
@@ -214,6 +216,12 @@ export function register(
         // Apply tray/window settings immediately
         if (trayManager) {
             trayManager.updateSettings(newSettings);
+        }
+
+        // Apply ad blocker settings immediately (enable/disable on the fly)
+        if (adBlockManager) {
+            const wasEnabled = oldSettings.adBlock?.enabled ?? true;
+            await adBlockManager.onSettingsChanged(newSettings, wasEnabled);
         }
 
         // Broadcast to all windows

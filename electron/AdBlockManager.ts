@@ -19,7 +19,6 @@ class AdBlockManager {
     private blocker: ElectronBlocker | null = null;
     private settingsManager: SettingsManager;
     private blockedCount: number = 0;
-    private perTabBlockedCount: Map<number, number> = new Map(); // webContentsId -> blocked count
     private lastUpdated: string | null = null;
     private cacheFilePath: string;
     private enabledSessions: Set<string> = new Set();
@@ -208,22 +207,13 @@ class AdBlockManager {
                     console.log('[AdBlock] Request webContentsId:', request.webContentsId);
                 }
 
-                // Track per-tab count if webContentsId is available
-                if (request.webContentsId !== undefined) {
-                    const currentCount = this.perTabBlockedCount.get(request.webContentsId) || 0;
-                    this.perTabBlockedCount.set(request.webContentsId, currentCount + 1);
-                }
+
 
                 // Check whitelist - if whitelisted, don't count
                 const settings = this.settingsManager.getSettings();
                 if (this.isWhitelisted(request.url, settings.adBlock?.whitelist || [])) {
                     this.blockedCount--; // Undo count
-                    if (request.webContentsId !== undefined) {
-                        const count = this.perTabBlockedCount.get(request.webContentsId) || 0;
-                        if (count > 0) {
-                            this.perTabBlockedCount.set(request.webContentsId, count - 1);
-                        }
-                    }
+
                     return;
                 }
 
@@ -321,19 +311,7 @@ class AdBlockManager {
         };
     }
 
-    /**
-     * Get blocked count for a specific webContents (tab)
-     */
-    getBlockedCountForWebContents(webContentsId: number): number {
-        return this.perTabBlockedCount.get(webContentsId) || 0;
-    }
 
-    /**
-     * Clear blocked count for a specific webContents (when tab is closed)
-     */
-    clearBlockedCountForWebContents(webContentsId: number): void {
-        this.perTabBlockedCount.delete(webContentsId);
-    }
 
     /**
      * Check if ad blocking is enabled
@@ -355,25 +333,30 @@ class AdBlockManager {
 
     /**
      * Handle settings changes
+     * @param newSettings - The new settings being applied
+     * @param wasEnabled - Whether ad blocking was enabled BEFORE the settings were saved
      */
-    async onSettingsChanged(newSettings: { adBlock?: AdBlockSettings }): Promise<void> {
+    async onSettingsChanged(newSettings: { adBlock?: AdBlockSettings }, wasEnabled: boolean): Promise<void> {
         if (!newSettings.adBlock) return;
 
-        const wasEnabled = this.isEnabled();
         const isNowEnabled = newSettings.adBlock.enabled;
+        console.log(`[AdBlock] Settings changed: wasEnabled=${wasEnabled}, isNowEnabled=${isNowEnabled}`);
 
         if (wasEnabled && !isNowEnabled) {
-            // Disable all sessions
+            // Disable all sessions (filter out :events entries)
             for (const partitionName of this.enabledSessions) {
+                if (partitionName.includes(':events')) continue;
                 if (this.blocker) {
                     const ses = session.fromPartition(partitionName);
                     this.blocker.disableBlockingInSession(ses);
+                    console.log(`[AdBlock] Disabled for session: ${partitionName}`);
                 }
             }
             console.log('[AdBlock] Disabled');
         } else if (!wasEnabled && isNowEnabled) {
-            // Re-enable all sessions
+            // Re-enable all sessions (filter out :events entries)
             for (const partitionName of this.enabledSessions) {
+                if (partitionName.includes(':events')) continue;
                 this._enableForPartition(partitionName);
             }
             console.log('[AdBlock] Enabled');

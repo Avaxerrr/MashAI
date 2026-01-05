@@ -218,7 +218,6 @@ export interface TabUpdatedEvent {
     suspended?: boolean;
     faviconDataUrl?: string;
     isLoading?: boolean;
-    blockedCount?: number;
 }
 
 export interface ProfileTabsLoadedEvent {

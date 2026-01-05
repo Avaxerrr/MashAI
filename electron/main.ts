@@ -315,6 +315,7 @@ function createWindow(): void {
         profileManager,
         tabManager,
         trayManager,
+        adBlockManager,
         saveSession: () => sessionManager!.saveSession(),
         updateViewBounds
     });
