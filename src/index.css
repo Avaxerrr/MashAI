@@ -139,6 +139,39 @@ input[type="color"]::-moz-color-swatch {
     animation: slideDown 0.3s ease-out forwards;
 }
 
+/* Titlebar toast animations */
+@keyframes titlebarToastEnter {
+    0% {
+        transform: translate(-50%, -150%);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+}
+
+@keyframes titlebarToastExit {
+    0% {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, 50%);
+        opacity: 0;
+    }
+}
+
+.animate-titlebar-toast-enter {
+    animation: titlebarToastEnter 0.25s ease-out forwards;
+}
+
+.animate-titlebar-toast-exit {
+    animation: titlebarToastExit 0.2s ease-in forwards;
+}
+
 /* Smooth scrolling for settings content */
 .settings-scroll-smooth {
     scroll-behavior: smooth;
@@ -214,4 +247,36 @@ input[type="color"]::-moz-color-swatch {
             transparent 100%);
     background-size: 200% 100%;
     animation: tab-shimmer 1.4s linear infinite;
+}
+
+/* Global Spinbox (number input) styling */
+input[type="number"] {
+    background-color: #1e1e1e;
+    border: 1px solid #3e3e42;
+    border-radius: 6px;
+    color: white;
+    padding: 6px 12px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s ease;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+input[type="number"]:focus {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+input[type="number"]:hover {
+    border-color: #52525b;
+}
+
+/* Completely hide spinbox arrows to avoid the ugly white box */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+    display: none;
 }

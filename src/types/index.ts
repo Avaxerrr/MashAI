@@ -20,6 +20,19 @@ export interface AIProvider {
     faviconDataUrl?: string;
 }
 
+export interface DownloadInfo {
+    id: string;
+    filename: string;
+    path: string;
+    totalBytes: number;
+    receivedBytes: number;
+    state: 'progressing' | 'completed' | 'cancelled' | 'interrupted' | 'paused';
+    startTime: number;
+    isPaused?: boolean;
+    canResume?: boolean;
+    speed?: number; // bytes per second
+}
+
 export interface TabInfo {
     id: string;
     profileId: string;
@@ -54,6 +67,14 @@ export interface GeneralSettings {
     hideShortcut: string;
 }
 
+export interface SecuritySettings {
+    downloadsEnabled: boolean;      // Allow file downloads (for AI-generated content)
+    popupsEnabled: boolean;         // Allow popup windows (for OAuth flows)
+    mediaPolicyAsk: boolean;        // Ask for camera/mic permission (for voice mode)
+    downloadLocation: string;       // Default download folder path
+    askWhereToSave: boolean;        // Whether to show save dialog for each download
+}
+
 export interface Settings {
     profiles: Profile[];
     defaultProfileId: string;
@@ -61,6 +82,23 @@ export interface Settings {
     defaultProviderId: string;
     performance: PerformanceSettings;
     general: GeneralSettings;
+    security?: SecuritySettings;
+    adBlock?: AdBlockSettings;
+}
+
+export interface AdBlockSettings {
+    enabled: boolean;
+    blockAds: boolean;
+    blockTrackers: boolean;
+    blockAnnoyances: boolean;
+    whitelist: string[];
+}
+
+export interface AdBlockStatus {
+    enabled: boolean;
+    version: string;
+    lastUpdated: string | null;
+    blockedCount: number;
 }
 
 // Extend the Window interface with the preload-exposed API
@@ -137,10 +175,28 @@ export interface ElectronAPI {
     clearPrivacyData: (options: ClearPrivacyDataOptions) => Promise<{ success: boolean; error?: string }>;
 
     // UI
-    onShowToast: (callback: (message: string) => void) => () => void;
+    onShowToast: (callback: (data: { message: string; type?: 'success' | 'error' | 'warning' | 'info' }) => void) => () => void;
 
     // External
     openExternal: (url: string) => void;
+
+    // Downloads
+    getDownloads: () => Promise<{ active: DownloadInfo[]; history: DownloadInfo[] }>;
+    cancelDownload: (id: string) => Promise<boolean>;
+    pauseDownload: (id: string) => Promise<boolean>;
+    resumeDownload: (id: string) => Promise<boolean>;
+    openDownload: (filePath: string) => Promise<boolean>;
+    showDownloadInFolder: (filePath: string) => void;
+    clearDownloadHistory: () => void;
+    removeDownloadFromHistory: (id: string) => void;
+    openDownloadsWindow: () => void;
+    hideDownloadToast: () => void;
+    selectDownloadFolder: () => Promise<string | null>;
+    onDownloadUpdate: (callback: (data: { active: DownloadInfo[]; history: DownloadInfo[] }) => void) => () => void;
+
+    // Ad Blocker
+    getAdBlockStatus: () => Promise<AdBlockStatus>;
+    updateAdBlockLists: () => Promise<void>;
 }
 
 // Event types
@@ -150,6 +206,8 @@ export interface TabCreatedEvent {
     title: string;
     loaded?: boolean;
     faviconDataUrl?: string;
+    afterTabId?: string; // For inserting new tab after its parent tab
+    background?: boolean; // If true, don't switch to this tab (open in background)
 }
 
 export interface TabUpdatedEvent {

@@ -98,13 +98,15 @@ export function register(
         const tab = tabManager.tabs.get(tabId);
         if (!tab) return;
 
-        const newId = tabManager.createTab(tab.profileId, tab.url);
+        // Pass source tabId to insert duplicate right after the original
+        const newId = tabManager.createTab(tab.profileId, tab.url, null, undefined, tabId);
         tabManager.switchTo(newId);
         mainWindow.webContents.send('tab-created', {
             id: newId,
             profileId: tab.profileId,
             title: tab.title,
-            loaded: true
+            loaded: true,
+            afterTabId: tabId
         });
         updateViewBounds();
         saveSession();
@@ -220,5 +222,10 @@ export function register(
         }
 
         saveSession();
+    });
+
+    // Handle request to update view bounds (from TabManager when creating tabs internally)
+    ipcMain.on('request-update-bounds', () => {
+        updateViewBounds();
     });
 }

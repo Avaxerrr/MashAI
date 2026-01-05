@@ -11,6 +11,7 @@ interface TabState {
     suspended?: boolean;
     loading?: boolean;
     faviconDataUrl?: string;
+    parentTabId?: string; // The tab that opened this one (for returning on close)
 }
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
     const [tabMemory, setTabMemory] = useState<Record<string, TabMemoryInfo>>({})
     const [toastMessage, setToastMessage] = useState<string>('')
     const [showToast, setShowToast] = useState<boolean>(false)
+    const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
 
     const closeTabRef = useRef<((tabId: string) => void) | null>(null)
 
@@ -73,9 +75,34 @@ function App() {
                 if (prev.some(t => t.id === tab.id)) {
                     return prev
                 }
-                return [...prev, { ...tab, url: '', loaded: tab.loaded ?? false, faviconDataUrl: tab.faviconDataUrl, loading: tab.loaded ?? false }]
+
+                // Store afterTabId as parentTabId so we can return to it when closing
+                const newTab = {
+                    ...tab,
+                    url: '',
+                    loaded: tab.loaded ?? false,
+                    faviconDataUrl: tab.faviconDataUrl,
+                    loading: tab.loaded ?? false,
+                    parentTabId: tab.afterTabId // Track parent for return-on-close
+                };
+
+                // If afterTabId is provided, insert after that tab
+                if (tab.afterTabId) {
+                    const afterIndex = prev.findIndex(t => t.id === tab.afterTabId);
+                    if (afterIndex !== -1) {
+                        const newTabs = [...prev];
+                        newTabs.splice(afterIndex + 1, 0, newTab);
+                        return newTabs;
+                    }
+                }
+
+                // Default: append to end
+                return [...prev, newTab]
             })
-            setActiveTabId(tab.id)
+            // Only switch to the new tab if it's not a background tab
+            if (!tab.background) {
+                setActiveTabId(tab.id)
+            }
         }
 
         const handleTabUpdated = ({ id, title, url, loaded, suspended, faviconDataUrl, isLoading }: TabUpdatedEvent) => {
@@ -156,8 +183,9 @@ function App() {
             }
         })
 
-        const cleanupShowToast = window.api.onShowToast?.((message: string) => {
-            setToastMessage(message)
+        const cleanupShowToast = window.api.onShowToast?.((data) => {
+            setToastMessage(data.message)
+            setToastType(data.type || 'success')
             setShowToast(true)
         })
 
@@ -222,6 +250,11 @@ function App() {
             return
         }
 
+        // Find the tab being closed to get its parent
+        const closingTab = activeProfileTabs.find(t => t.id === tabId)
+        // Find the index of the tab being closed BEFORE closing it
+        const closingTabIndex = activeProfileTabs.findIndex(t => t.id === tabId)
+
         window.api.closeTab(tabId)
         setTabs(prev => {
             const filtered = prev.filter(tab => tab.id !== tabId)
@@ -230,7 +263,27 @@ function App() {
                 const currentProfileFiltered = filtered.filter(t => t.profileId === activeProfileId)
 
                 if (currentProfileFiltered.length > 0) {
-                    const newActiveTab = currentProfileFiltered[currentProfileFiltered.length - 1]
+                    let newActiveTab;
+
+                    // If the closed tab has a parent, return to it (if it still exists)
+                    if (closingTab?.parentTabId) {
+                        const parentTab = currentProfileFiltered.find(t => t.id === closingTab.parentTabId)
+                        if (parentTab) {
+                            newActiveTab = parentTab
+                        }
+                    }
+
+                    // Fallback: if no parent or parent doesn't exist, use default behavior
+                    if (!newActiveTab) {
+                        if (closingTabIndex >= currentProfileFiltered.length) {
+                            // Closed the last tab, go to previous (now the new last)
+                            newActiveTab = currentProfileFiltered[currentProfileFiltered.length - 1]
+                        } else {
+                            // Go to the tab that's now at the same position (next tab moved up)
+                            newActiveTab = currentProfileFiltered[closingTabIndex]
+                        }
+                    }
+
                     setActiveTabId(newActiveTab.id)
                     window.api.switchTab(newActiveTab.id)
                 }
@@ -334,8 +387,11 @@ function App() {
                 aiProviders={aiProviders}
                 toastMessage={toastMessage}
                 showToast={showToast}
+                toastType={toastType}
                 onCloseToast={() => setShowToast(false)}
             />
+
+
 
             <div className="flex-1" />
         </div>

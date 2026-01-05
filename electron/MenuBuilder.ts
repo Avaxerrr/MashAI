@@ -19,6 +19,7 @@ interface MenuDependencies {
     saveSession: () => void;
     updateViewBounds: () => void;
     createSettingsWindow: () => void;
+    createDownloadsWindow: () => void;
 }
 
 /**
@@ -33,6 +34,7 @@ class MenuBuilder {
     private saveSession: () => void;
     private updateViewBounds: () => void;
     private createSettingsWindow: () => void;
+    private createDownloadsWindow: () => void;
 
     constructor(mainWindow: BrowserWindow, dependencies: MenuDependencies) {
         this.mainWindow = mainWindow;
@@ -43,6 +45,7 @@ class MenuBuilder {
         this.saveSession = dependencies.saveSession;
         this.updateViewBounds = dependencies.updateViewBounds;
         this.createSettingsWindow = dependencies.createSettingsWindow;
+        this.createDownloadsWindow = dependencies.createDownloadsWindow;
     }
 
     /**
@@ -65,13 +68,15 @@ class MenuBuilder {
                 {
                     label: 'Duplicate',
                     click: () => {
-                        const newId = this.tabManager.createTab(tab.profileId, tab.url);
+                        // Pass source tabId to insert duplicate right after the original
+                        const newId = this.tabManager.createTab(tab.profileId, tab.url, null, undefined, tabId);
                         this.tabManager.switchTo(newId);
                         this.mainWindow.webContents.send('tab-created', {
                             id: newId,
                             profileId: tab.profileId,
                             title: tab.title,
-                            loaded: true
+                            loaded: true,
+                            afterTabId: tabId
                         });
                         this.updateViewBounds();
                         this.saveSession();
@@ -144,6 +149,28 @@ class MenuBuilder {
             } catch (e) {
                 console.error('Failed to load settings icon:', e);
             }
+
+            let downloadsIcon: Electron.NativeImage | undefined = undefined;
+            try {
+                let downloadIconPath;
+                if (app.isPackaged) {
+                    downloadIconPath = path.join(process.resourcesPath, 'assets/download.png');
+                } else {
+                    downloadIconPath = path.join(__dirname, '../../src/assets/download.png');
+                }
+                downloadsIcon = nativeImage.createFromPath(downloadIconPath).resize({ width: 16, height: 16 });
+            } catch (e) {
+                console.error('Failed to load downloads icon:', e);
+            }
+
+            template.push({
+                label: 'Downloads',
+                ...(downloadsIcon ? { icon: downloadsIcon } : {}),
+                accelerator: 'CmdOrCtrl+J',
+                click: () => {
+                    this.createDownloadsWindow();
+                }
+            });
 
             template.push({
                 label: 'Settings',
@@ -341,6 +368,14 @@ class MenuBuilder {
                             this.tabManager.switchTo(prevTab.id);
                             this.updateViewBounds();
                             this.mainWindow.webContents.send('restore-active', prevTab.id);
+                        }
+                    },
+                    { type: 'separator' },
+                    {
+                        label: 'Downloads',
+                        accelerator: 'CmdOrCtrl+J',
+                        click: () => {
+                            this.createDownloadsWindow();
                         }
                     },
                     { type: 'separator' },

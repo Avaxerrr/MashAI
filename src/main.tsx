@@ -3,12 +3,15 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App'
 import SettingsApp from './SettingsApp'
+import DownloadsWindow from './DownloadsWindow'
 
-// Simple hash routing: render SettingsApp if hash is #/settings
-const isSettings = window.location.hash === '#/settings'
+// Simple hash routing
+const hash = window.location.hash
+const isSettings = hash === '#/settings'
+const isDownloads = hash === '#/downloads'
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
-        {isSettings ? <SettingsApp /> : <App />}
+        {isSettings ? <SettingsApp /> : isDownloads ? <DownloadsWindow /> : <App />}
     </StrictMode>,
 )

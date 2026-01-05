@@ -111,8 +111,8 @@ contextBridge.exposeInMainWorld('api', {
         ipcRenderer.on('open-settings-modal', handler);
         return () => ipcRenderer.removeListener('open-settings-modal', handler);
     },
-    onShowToast: (callback: (message: string) => void) => {
-        const handler = (e: IpcRendererEvent, message: string) => callback(message);
+    onShowToast: (callback: (data: { message: string; type?: 'success' | 'error' | 'warning' | 'info' }) => void) => {
+        const handler = (e: IpcRendererEvent, data: { message: string; type?: 'success' | 'error' | 'warning' | 'info' }) => callback(data);
         ipcRenderer.on('show-toast', handler);
         return () => ipcRenderer.removeListener('show-toast', handler);
     },
@@ -126,5 +126,27 @@ contextBridge.exposeInMainWorld('api', {
     clearPrivacyData: (options: unknown) => ipcRenderer.invoke('clear-privacy-data', options),
 
     // External Links
-    openExternal: (url: string) => ipcRenderer.invoke('open-external', url)
+    openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+
+    // Downloads
+    getDownloads: () => ipcRenderer.invoke('get-downloads'),
+    cancelDownload: (id: string) => ipcRenderer.invoke('cancel-download', id),
+    pauseDownload: (id: string) => ipcRenderer.invoke('pause-download', id),
+    resumeDownload: (id: string) => ipcRenderer.invoke('resume-download', id),
+    openDownload: (filePath: string) => ipcRenderer.invoke('open-download', filePath),
+    showDownloadInFolder: (filePath: string) => ipcRenderer.send('show-download-in-folder', filePath),
+    clearDownloadHistory: () => ipcRenderer.send('clear-download-history'),
+    removeDownloadFromHistory: (id: string) => ipcRenderer.send('remove-download-from-history', id),
+    openDownloadsWindow: () => ipcRenderer.send('open-downloads-window'),
+    hideDownloadToast: () => ipcRenderer.send('hide-download-toast'),
+    selectDownloadFolder: () => ipcRenderer.invoke('select-download-folder'),
+    onDownloadUpdate: (callback: (data: unknown) => void) => {
+        const handler = (e: IpcRendererEvent, data: unknown) => callback(data);
+        ipcRenderer.on('download-update', handler);
+        return () => ipcRenderer.removeListener('download-update', handler);
+    },
+
+    // Ad Blocker
+    getAdBlockStatus: () => ipcRenderer.invoke('get-adblock-status'),
+    updateAdBlockLists: () => ipcRenderer.invoke('update-adblock-lists')
 });

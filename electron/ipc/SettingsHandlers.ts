@@ -1,7 +1,8 @@
-import { ipcMain, app, session, BrowserWindow } from 'electron';
+import { ipcMain, app, session, BrowserWindow, dialog } from 'electron';
 import type TabManager from '../TabManager';
 import type SettingsManager from '../SettingsManager';
 import type ProfileManager from '../ProfileManager';
+import type AdBlockManager from '../AdBlockManager';
 import TrayManager from '../TrayManager';
 import type { Settings } from '../types';
 
@@ -10,6 +11,7 @@ interface SettingsDependencies {
     profileManager: ProfileManager;
     tabManager: TabManager;
     trayManager: TrayManager;
+    adBlockManager: AdBlockManager | null;
     saveSession: () => void;
     updateViewBounds: () => void;
 }
@@ -19,7 +21,7 @@ interface SettingsDependencies {
  */
 export function register(
     mainWindow: BrowserWindow,
-    { settingsManager, profileManager, tabManager, trayManager, saveSession, updateViewBounds }: SettingsDependencies
+    { settingsManager, profileManager, tabManager, trayManager, adBlockManager, saveSession, updateViewBounds }: SettingsDependencies
 ): void {
     // Get current settings
     ipcMain.handle('get-settings', () => {
@@ -216,6 +218,12 @@ export function register(
             trayManager.updateSettings(newSettings);
         }
 
+        // Apply ad blocker settings immediately (enable/disable on the fly)
+        if (adBlockManager) {
+            const wasEnabled = oldSettings.adBlock?.enabled ?? true;
+            await adBlockManager.onSettingsChanged(newSettings, wasEnabled);
+        }
+
         // Broadcast to all windows
         mainWindow.webContents.send('settings-updated', settingsManager.getSettings());
         return success;
@@ -241,6 +249,20 @@ export function register(
         return { valid: true, available: true, reason: null };
     });
 
+    // Select download folder via dialog
+    ipcMain.handle('select-download-folder', async () => {
+        const result = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openDirectory'],
+            title: 'Select Download Location'
+        });
+
+        if (result.canceled || result.filePaths.length === 0) {
+            return null;
+        }
+
+        return result.filePaths[0];
+    });
+
     // Get memory usage statistics
     ipcMain.handle('get-memory-usage', async () => {
         try {
@@ -264,8 +286,11 @@ export function register(
                 const pidToMemory: Record<number, number> = {};
                 for (const m of metrics) {
                     if (m.memory) {
-                        // Convert to MB for frontend display
-                        pidToMemory[m.pid] = Math.round((m.memory.privateBytes || 0) / 1024);
+                        // Convert to MB for frontend display - use platform-appropriate metric
+                        const memBytes = isWindows
+                            ? (m.memory.privateBytes || 0)
+                            : (m.memory.workingSetSize || 0);
+                        pidToMemory[m.pid] = Math.round(memBytes / 1024);
                     }
                 }
 
@@ -318,8 +343,13 @@ export function register(
             const processMetric = metrics.find(m => m.pid === tabPid);
 
             if (processMetric && processMetric.memory) {
+                // Use platform-appropriate memory metric
+                const isWindows = process.platform === 'win32';
+                const memBytes = isWindows
+                    ? (processMetric.memory.privateBytes || 0)
+                    : (processMetric.memory.workingSetSize || 0);
                 return {
-                    memory: Math.round((processMetric.memory.privateBytes || 0) / 1024),
+                    memory: Math.round(memBytes / 1024),
                     loaded: true
                 };
             }
@@ -337,11 +367,15 @@ export function register(
             if (!tabManager) return [];
 
             const metrics = app.getAppMetrics();
+            const isWindows = process.platform === 'win32';
             const pidToMemory: Record<number, number> = {};
             for (const m of metrics) {
                 if (m.memory) {
-                    // Convert to MB for frontend display
-                    pidToMemory[m.pid] = Math.round((m.memory.privateBytes || 0) / 1024);
+                    // Convert to MB for frontend display - use platform-appropriate metric
+                    const memBytes = isWindows
+                        ? (m.memory.privateBytes || 0)
+                        : (m.memory.workingSetSize || 0);
+                    pidToMemory[m.pid] = Math.round(memBytes / 1024);
                 }
             }
 

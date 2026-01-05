@@ -214,7 +214,7 @@ class TrayManager {
         if (this.mainWindow.webContents) {
             this.mainWindow.webContents.send('settings-updated', updatedSettings);
             const toastMessage = newValue ? 'Always on top enabled' : 'Always on top disabled';
-            this.mainWindow.webContents.send('show-toast', toastMessage);
+            this.mainWindow.webContents.send('show-toast', { message: toastMessage, type: 'success' });
         }
 
         console.log(`[TrayManager] Toggled always-on-top: ${newValue}`);
@@ -290,15 +290,24 @@ class TrayManager {
 
     /**
      * Set whether app launches at system startup
+     * Note: Works reliably on Windows and macOS. Linux support varies by distro.
      */
     private _setLaunchAtStartup(enabled: boolean): void {
         try {
+            // setLoginItemSettings works on Windows, macOS, and some Linux distros
+            // On Linux, it creates a .desktop file in ~/.config/autostart/
             app.setLoginItemSettings({
                 openAtLogin: enabled,
+                // On macOS, we can optionally hide the app on login
+                // openAsHidden: false,
             });
-            console.log(`[TrayManager] Launch at startup: ${enabled}`);
+            console.log(`[TrayManager] Launch at startup: ${enabled} (platform: ${process.platform})`);
         } catch (e) {
+            // This may fail on some Linux distros that don't support autostart
             console.error('[TrayManager] Failed to set launch at startup:', e);
+            if (process.platform === 'linux') {
+                console.warn('[TrayManager] Note: Autostart may not be supported on this Linux distribution');
+            }
         }
     }
 

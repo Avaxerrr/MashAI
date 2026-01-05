@@ -96,6 +96,29 @@ export interface GeneralSettings {
     hideShortcut: string;
 }
 
+export interface SecuritySettings {
+    downloadsEnabled: boolean;      // Allow file downloads (for AI-generated content)
+    popupsEnabled: boolean;         // Allow popup windows (for OAuth flows)
+    mediaPolicyAsk: boolean;        // Ask for camera/mic permission (for voice mode)
+    downloadLocation: string;       // Default download folder path
+    askWhereToSave: boolean;        // Whether to show save dialog for each download
+}
+
+export interface AdBlockSettings {
+    enabled: boolean;               // Master toggle (default: true)
+    blockAds: boolean;              // Block advertisements (default: true)
+    blockTrackers: boolean;         // Block tracking scripts (default: true)
+    blockAnnoyances: boolean;       // Block cookie banners, etc. (default: true)
+    whitelist: string[];            // Exempt domains (default: [])
+}
+
+export interface AdBlockStatus {
+    enabled: boolean;
+    version: string;                // Ghostery engine version (e.g., "2.13.2")
+    lastUpdated: string | null;     // ISO timestamp of last filter list update
+    blockedCount: number;           // Session counter of blocked requests
+}
+
 export interface Settings {
     profiles: Profile[];
     defaultProfileId: string;
@@ -103,6 +126,8 @@ export interface Settings {
     defaultProviderId: string;
     performance: PerformanceSettings;
     general: GeneralSettings;
+    security?: SecuritySettings;
+    adBlock?: AdBlockSettings;
 }
 
 // =============================================================================

@@ -152,6 +152,20 @@ class SettingsManager {
                 minimizeToTray: false,
                 showTrayIcon: false,
                 hideShortcut: 'CommandOrControl+Shift+M'
+            },
+            security: {
+                downloadsEnabled: true,    // Enabled for AI-generated content
+                popupsEnabled: true,       // Enabled for OAuth flows
+                mediaPolicyAsk: true,      // Ask for camera/mic (voice mode)
+                downloadLocation: app.getPath('downloads'), // Default to system Downloads
+                askWhereToSave: false      // Don't ask by default, save directly
+            },
+            adBlock: {
+                enabled: true,             // ON by default - works out of box
+                blockAds: true,            // Block advertisements
+                blockTrackers: true,       // Block tracking scripts
+                blockAnnoyances: true,     // Block cookie banners, etc.
+                whitelist: []              // No sites exempt by default
             }
         };
     }

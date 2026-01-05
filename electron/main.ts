@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { TITLEBAR_HEIGHT, DEFAULT_WINDOW, SETTINGS_WINDOW, MAX_CLOSED_TABS } from './constants';
@@ -15,7 +15,10 @@ import * as TabHandlers from './ipc/TabHandlers';
 import * as NavigationHandlers from './ipc/NavigationHandlers';
 import * as ProfileHandlers from './ipc/ProfileHandlers';
 import * as SettingsHandlers from './ipc/SettingsHandlers';
+import * as DownloadHandlers from './ipc/DownloadHandlers';
 import PrivacyHandlers from './ipc/PrivacyHandlers';
+import DownloadManager from './DownloadManager';
+import AdBlockManager from './AdBlockManager';
 
 // Check hardware acceleration setting BEFORE app is ready
 try {
@@ -40,6 +43,9 @@ let settingsManager: SettingsManager | null = null;
 let sessionManager: SessionManager | null = null;
 let menuBuilder: MenuBuilder | null = null;
 let trayManager: TrayManager | null = null;
+let downloadManager: DownloadManager | null = null;
+let downloadsWindow: BrowserWindow | null = null;
+let adBlockManager: AdBlockManager | null = null;
 
 interface ClosedTab {
     id: string;
@@ -95,6 +101,73 @@ function createSettingsWindow(): void {
 
     settingsWindow.on('closed', () => {
         settingsWindow = null;
+        // Delayed focus to ensure OS processes the window close first
+        setTimeout(() => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.focus();
+            }
+        }, 50);
+    });
+}
+
+/**
+ * Create the downloads window
+ */
+function createDownloadsWindow(): void {
+    if (downloadsWindow) {
+        downloadsWindow.focus();
+        return;
+    }
+
+    downloadsWindow = new BrowserWindow({
+        width: 500,
+        height: 600,
+        minWidth: 400,
+        minHeight: 400,
+        maximizable: false,
+        resizable: true,
+        backgroundColor: '#252526',
+        parent: mainWindow!,
+        modal: false,
+        frame: false,
+        titleBarStyle: 'hidden',
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false
+        }
+    });
+
+    downloadsWindow.setMenuBarVisibility(false);
+
+    if (isDev) {
+        downloadsWindow.loadURL('http://localhost:5173/#/downloads');
+    } else {
+        downloadsWindow.loadFile(path.join(__dirname, '../../dist/index.html'), { hash: '/downloads' });
+    }
+
+    // Pass downloads window reference to download manager
+    if (downloadManager) {
+        downloadManager.setDownloadsWindow(downloadsWindow);
+    }
+
+    downloadsWindow.on('close', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.focus();
+        }
+    });
+
+    downloadsWindow.on('closed', () => {
+        if (downloadManager) {
+            downloadManager.setDownloadsWindow(null);
+        }
+        downloadsWindow = null;
+        // Delayed focus to ensure OS processes the window close first
+        setTimeout(() => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.focus();
+            }
+        }, 50);
     });
 }
 
@@ -175,6 +248,21 @@ function createWindow(): void {
     tabManager = new TabManager(mainWindow, settingsManager);
     sessionManager = new SessionManager(tabManager, settingsManager);
 
+    // Initialize DownloadManager
+    downloadManager = new DownloadManager();
+    downloadManager.setMainWindow(mainWindow);
+    tabManager.setDownloadManager(downloadManager);
+    // Toast notifications are now sent directly from DownloadManager
+
+    // Initialize AdBlockManager
+    adBlockManager = new AdBlockManager(settingsManager);
+    adBlockManager.initialize().then(() => {
+        console.log('[main] AdBlockManager initialized');
+    }).catch(err => {
+        console.error('[main] AdBlockManager initialization failed:', err);
+    });
+    tabManager.setAdBlockManager(adBlockManager);
+
     // Initialize window state from actual window bounds (ensures x/y are captured)
     const initialBounds = mainWindow.getBounds();
     sessionManager.updateWindowState({
@@ -193,7 +281,8 @@ function createWindow(): void {
         closedTabs,
         saveSession: () => sessionManager!.saveSession(),
         updateViewBounds,
-        createSettingsWindow
+        createSettingsWindow,
+        createDownloadsWindow
     });
     menuBuilder.registerHandlers();
     menuBuilder.createApplicationMenu();
@@ -201,6 +290,9 @@ function createWindow(): void {
     // Initialize TrayManager
     trayManager = new TrayManager(mainWindow, settingsManager);
     trayManager.setTabManager(tabManager);
+
+    // Provide updateViewBounds callback to TabManager for internal tab creation
+    tabManager.setUpdateViewBounds(updateViewBounds);
 
     // Register all IPC handlers
     WindowHandlers.register(mainWindow);
@@ -223,6 +315,7 @@ function createWindow(): void {
         profileManager,
         tabManager,
         trayManager,
+        adBlockManager,
         saveSession: () => sessionManager!.saveSession(),
         updateViewBounds
     });
@@ -232,6 +325,28 @@ function createWindow(): void {
         tabManager
     });
     privacyHandlers.register();
+
+    // Register download handlers
+    DownloadHandlers.register(mainWindow, {
+        downloadManager: downloadManager!,
+        createDownloadsWindow
+    });
+
+    // Register ad blocker IPC handlers
+    ipcMain.handle('get-adblock-status', () => {
+        return adBlockManager?.getStatus() || {
+            enabled: false,
+            version: '2.13.2',
+            lastUpdated: null,
+            blockedCount: 0
+        };
+    });
+
+    ipcMain.handle('update-adblock-lists', async () => {
+        if (adBlockManager) {
+            await adBlockManager.updateLists();
+        }
+    });
 
     // Intercept close event
     mainWindow.on('close', (event) => {

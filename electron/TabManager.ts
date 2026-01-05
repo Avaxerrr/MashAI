@@ -1,6 +1,7 @@
-import { BrowserWindow, WebContentsView } from 'electron';
+import { BrowserWindow, WebContentsView, session, Menu, dialog, app } from 'electron';
 import type { TabInfo } from './types';
 import type SettingsManager from './SettingsManager';
+import type AdBlockManager from './AdBlockManager';
 
 const INJECTED_CSS = `
     .sticky.top-0.z-50.w-full.bg-super,
@@ -77,6 +78,12 @@ class TabManager {
     activeTabId: string | null;
     private tabOrder: string[];
     private inactivityCheckInterval: NodeJS.Timeout | null;
+    private updateViewBoundsCallback: (() => void) | null;
+    private downloadManager: { addDownload: (item: Electron.DownloadItem) => void } | null;
+    private sessionsWithDownloadListener: Set<string>;
+    private openDownloadsWindowCallback: (() => void) | null;
+    private pendingDownloadPaths: Map<string, string>; // URL -> save path for user-confirmed downloads
+    private adBlockManager: AdBlockManager | null;
 
     constructor(mainWindow: BrowserWindow, settingsManager: SettingsManager) {
         this.mainWindow = mainWindow;
@@ -85,9 +92,45 @@ class TabManager {
         this.activeTabId = null;
         this.tabOrder = [];
         this.inactivityCheckInterval = null;
+        this.updateViewBoundsCallback = null;
+        this.downloadManager = null;
+        this.sessionsWithDownloadListener = new Set();
+        this.openDownloadsWindowCallback = null;
+        this.pendingDownloadPaths = new Map();
+        this.adBlockManager = null;
 
         // Start inactivity check timer (runs every minute)
         this._startInactivityTimer();
+    }
+
+
+
+    /**
+     * Set the updateViewBounds callback (called from main.ts after initialization)
+     */
+    setUpdateViewBounds(callback: () => void): void {
+        this.updateViewBoundsCallback = callback;
+    }
+
+    /**
+     * Set the download manager for tracking downloads
+     */
+    setDownloadManager(manager: { addDownload: (item: Electron.DownloadItem) => void }): void {
+        this.downloadManager = manager;
+    }
+
+    /**
+     * Set the callback to open downloads window
+     */
+    setOpenDownloadsWindow(callback: () => void): void {
+        this.openDownloadsWindowCallback = callback;
+    }
+
+    /**
+     * Set the ad block manager for enabling blocking on sessions
+     */
+    setAdBlockManager(manager: AdBlockManager): void {
+        this.adBlockManager = manager;
     }
 
     /**
@@ -220,11 +263,32 @@ class TabManager {
             });
         };
 
+        // Inject cosmetic filters from ad blocker
+        const injectCosmeticFilters = () => {
+            if (this.adBlockManager && this.adBlockManager.isEnabled()) {
+                try {
+                    const url = view.webContents.getURL();
+                    const cosmeticCSS = this.adBlockManager.getCosmeticFilters(url);
+                    if (cosmeticCSS) {
+                        view.webContents.insertCSS(cosmeticCSS, { cssOrigin: 'user' }).catch(() => {
+                            // Silently fail
+                        });
+                    }
+                } catch {
+                    // Silently fail
+                }
+            }
+        };
+
         // Inject on multiple events to ensure persistence
         view.webContents.on('will-navigate', injectCSS);
         view.webContents.on('did-start-loading', injectCSS);
         view.webContents.on('did-navigate', injectCSS);
         view.webContents.on('did-finish-load', injectCSS);
+
+        // Inject cosmetic filters after page loads
+        view.webContents.on('did-finish-load', injectCosmeticFilters);
+        view.webContents.on('did-navigate-in-page', injectCosmeticFilters);
 
         // Track loading state for UI spinner
         view.webContents.on('did-start-loading', () => {
@@ -282,6 +346,302 @@ class TabManager {
                 this.mainWindow.webContents.send('tab-updated', { id, url });
             }
         });
+
+        // =============================================================================
+        // Security Handlers
+        // =============================================================================
+
+        // Block file:// URLs (always blocked, no setting)
+        view.webContents.on('will-navigate', (e, url) => {
+            if (url.startsWith('file://')) {
+                console.log(`[TabManager] Blocked file:// URL: ${url}`);
+                e.preventDefault();
+            }
+        });
+
+        // Set up permission handler for this session
+        const ses = session.fromPartition(`persist:${this.tabs.get(id)?.profileId}`);
+        ses.setPermissionRequestHandler((webContents, permission, callback) => {
+            const settings = this.settingsManager.getSettings();
+            const security = settings.security;
+
+            // Always block geolocation (no setting exposed)
+            if (permission === 'geolocation') {
+                console.log(`[TabManager] Blocked geolocation request`);
+                this.mainWindow.webContents.send('show-toast', { message: 'Location access blocked', type: 'warning' });
+                callback(false);
+                return;
+            }
+
+            // Camera/microphone based on settings
+            if (permission === 'media') {
+                const allow = security?.mediaPolicyAsk !== false; // Default: ask/allow
+                console.log(`[TabManager] Media permission: ${allow ? 'allowed' : 'blocked'}`);
+                if (!allow) {
+                    this.mainWindow.webContents.send('show-toast', { message: 'Camera/microphone access blocked', type: 'warning' });
+                }
+                callback(allow);
+                return;
+            }
+
+            // Allow other permissions by default
+            callback(true);
+        });
+
+        // =============================================================================
+        // Context Menu
+        // =============================================================================
+        view.webContents.on('context-menu', (_e, params) => {
+            const tab = this.tabs.get(id);
+            const menuItems: Electron.MenuItemConstructorOptions[] = [];
+
+            // Editing actions (only show if there's text selection or editable field)
+            if (params.isEditable || params.selectionText) {
+                if (params.isEditable) {
+                    menuItems.push(
+                        { label: 'Cut', role: 'cut', enabled: params.editFlags.canCut },
+                        { label: 'Copy', role: 'copy', enabled: params.editFlags.canCopy },
+                        { label: 'Paste', role: 'paste', enabled: params.editFlags.canPaste }
+                    );
+                } else if (params.selectionText) {
+                    menuItems.push(
+                        { label: 'Copy', role: 'copy' }
+                    );
+                }
+                menuItems.push(
+                    { label: 'Select All', role: 'selectAll' }
+                );
+                menuItems.push({ type: 'separator' });
+            }
+
+            // Link actions
+            if (params.linkURL) {
+                menuItems.push({
+                    label: 'Open in New Tab',
+                    click: () => {
+                        if (tab) {
+                            // Pass source tab ID to insert new tab right after it
+                            // Don't switch to it - open in background
+                            const newTabId = this.createTab(tab.profileId, params.linkURL, null, undefined, id);
+                            this.mainWindow.webContents.send('tab-created', {
+                                id: newTabId,
+                                profileId: tab.profileId,
+                                title: 'Loading...',
+                                loaded: true,
+                                afterTabId: id,
+                                background: true // Don't switch to this tab
+                            });
+                            // Update view bounds
+                            if (this.updateViewBoundsCallback) {
+                                this.updateViewBoundsCallback();
+                            }
+                        }
+                    }
+                });
+                menuItems.push({ type: 'separator' });
+            }
+
+            // Media/Image actions (only if downloads enabled)
+            const settings = this.settingsManager.getSettings();
+            const downloadsEnabled = settings.security?.downloadsEnabled !== false;
+
+            if (downloadsEnabled && params.mediaType === 'image' && params.srcURL) {
+                menuItems.push(
+                    { label: 'Save Image As...', click: () => view.webContents.downloadURL(params.srcURL) },
+                    { label: 'Copy Image', click: () => view.webContents.copyImageAt(params.x, params.y) },
+                    { label: 'Copy Image URL', click: () => require('electron').clipboard.writeText(params.srcURL) }
+                );
+                menuItems.push({ type: 'separator' });
+            }
+
+            if (downloadsEnabled && (params.mediaType === 'video' || params.mediaType === 'audio') && params.srcURL) {
+                menuItems.push(
+                    { label: 'Save Media As...', click: () => view.webContents.downloadURL(params.srcURL) }
+                );
+                menuItems.push({ type: 'separator' });
+            }
+
+            // Download link (only if downloads enabled and it's a file link)
+            if (downloadsEnabled && params.linkURL && !params.linkURL.startsWith('javascript:')) {
+                const fileMatch = params.linkURL.match(/\.([a-z0-9]+)$/i);
+                if (fileMatch) {
+                    const ext = fileMatch[1].toLowerCase();
+                    let fileType = 'File';
+
+                    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) fileType = 'Archive';
+                    else if (['pdf'].includes(ext)) fileType = 'PDF';
+                    else if (['doc', 'docx'].includes(ext)) fileType = 'Document';
+                    else if (['xls', 'xlsx', 'csv'].includes(ext)) fileType = 'Spreadsheet';
+                    else if (['ppt', 'pptx'].includes(ext)) fileType = 'Presentation';
+                    else if (['txt'].includes(ext)) fileType = 'Text File';
+                    else if (['mp3', 'wav', 'flac', 'aac'].includes(ext)) fileType = 'Audio';
+                    else if (['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext)) fileType = 'Video';
+                    else if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) fileType = 'Image';
+
+                    menuItems.push(
+                        { label: `Download ${fileType}...`, click: () => view.webContents.downloadURL(params.linkURL) }
+                    );
+                    menuItems.push({ type: 'separator' });
+                }
+            }
+
+            // Navigation actions
+            menuItems.push(
+                { label: 'Back', enabled: view.webContents.navigationHistory.canGoBack(), click: () => view.webContents.navigationHistory.goBack() },
+                { label: 'Forward', enabled: view.webContents.navigationHistory.canGoForward(), click: () => view.webContents.navigationHistory.goForward() },
+                { label: 'Reload', click: () => view.webContents.reload() }
+            );
+
+            const menu = Menu.buildFromTemplate(menuItems);
+            menu.popup();
+        });
+
+        // =============================================================================
+        // Download Interception (registered once per session to prevent duplicates)
+        // =============================================================================
+        const tab = this.tabs.get(id);
+        const partitionName = `persist:${tab?.profileId}`;
+
+        // Only register the download listener once per session (prevents duplicate entries)
+        if (!this.sessionsWithDownloadListener.has(partitionName)) {
+            this.sessionsWithDownloadListener.add(partitionName);
+
+            const ses = session.fromPartition(partitionName);
+            ses.on('will-download', async (event, item) => {
+                const settings = this.settingsManager.getSettings();
+                const downloadsEnabled = settings.security?.downloadsEnabled !== false;
+
+                if (!downloadsEnabled) {
+                    console.log(`[TabManager] Download blocked: ${item.getFilename()}`);
+                    this.mainWindow.webContents.send('show-toast', { message: 'Download blocked', type: 'warning' });
+                    event.preventDefault();
+                    return;
+                }
+
+                const downloadUrl = item.getURL();
+                const filename = item.getFilename();
+                const defaultLocation = settings.security?.downloadLocation || app.getPath('downloads');
+
+                // Check if this is a retried download with a user-confirmed path
+                const pendingSavePath = this.pendingDownloadPaths.get(downloadUrl);
+                if (pendingSavePath) {
+                    // This is a retry from our save dialog flow - use the confirmed path
+                    this.pendingDownloadPaths.delete(downloadUrl);
+                    item.setSavePath(pendingSavePath);
+                    console.log(`[TabManager] Download resumed with user path: ${filename} -> ${pendingSavePath}`);
+
+                    // Track download with DownloadManager
+                    if (this.downloadManager) {
+                        this.downloadManager.addDownload(item);
+                    }
+
+                    // Auto-open downloads window
+                    if (this.openDownloadsWindowCallback) {
+                        this.openDownloadsWindowCallback();
+                    }
+                    return;
+                }
+
+                const askWhereToSave = settings.security?.askWhereToSave ?? false;
+
+                if (askWhereToSave) {
+                    // Show save dialog - prevent default download until user confirms
+                    event.preventDefault();
+
+                    const result = await dialog.showSaveDialog(this.mainWindow, {
+                        title: 'Save File',
+                        defaultPath: `${defaultLocation}/${filename}`,
+                        filters: [{ name: 'All Files', extensions: ['*'] }]
+                    });
+
+                    if (result.canceled || !result.filePath) {
+                        console.log(`[TabManager] Download cancelled by user: ${filename}`);
+                        return;
+                    }
+
+                    // Store the confirmed path and restart the download
+                    this.pendingDownloadPaths.set(downloadUrl, result.filePath);
+                    console.log(`[TabManager] User selected path: ${filename} -> ${result.filePath}`);
+                    ses.downloadURL(downloadUrl);
+                    // The new download will be caught by this same handler and handled above
+                    return;
+
+                } else {
+                    // Direct download to default location
+                    const savePath = `${defaultLocation}/${filename}`;
+                    item.setSavePath(savePath);
+                    console.log(`[TabManager] Download started: ${filename} -> ${savePath}`);
+
+                    // Track download with DownloadManager
+                    if (this.downloadManager) {
+                        this.downloadManager.addDownload(item);
+                    }
+
+                    // Auto-open downloads window
+                    if (this.openDownloadsWindowCallback) {
+                        this.openDownloadsWindowCallback();
+                    }
+                }
+            });
+
+            console.log(`[TabManager] Download listener registered for session: ${partitionName}`);
+        }
+
+        // =============================================================================
+        // Popup/New Window Handling
+        // =============================================================================
+        view.webContents.setWindowOpenHandler(({ url, disposition }) => {
+            const settings = this.settingsManager.getSettings();
+            const popupsEnabled = settings.security?.popupsEnabled !== false;
+            const tab = this.tabs.get(id);
+
+            // For Ctrl+click / middle-click (foreground-tab, background-tab), open as a MashAI tab
+            if (disposition === 'foreground-tab' || disposition === 'background-tab') {
+                if (tab && url && !url.startsWith('about:')) {
+                    console.log(`[TabManager] Opening link as new tab (${disposition}): ${url}`);
+                    // Pass source tab ID to insert new tab right after it
+                    // Don't switch to it - open in background
+                    const newTabId = this.createTab(tab.profileId, url, null, undefined, id);
+                    this.mainWindow.webContents.send('tab-created', {
+                        id: newTabId,
+                        profileId: tab.profileId,
+                        title: 'Loading...',
+                        loaded: true,
+                        afterTabId: id,
+                        background: true // Don't switch to this tab
+                    });
+                    // Update view bounds
+                    if (this.updateViewBoundsCallback) {
+                        this.updateViewBoundsCallback();
+                    }
+                }
+                return { action: 'deny' };
+            }
+
+            // For other popups (like OAuth), check settings
+            if (!popupsEnabled) {
+                console.log(`[TabManager] Popup blocked: ${url}`);
+                this.mainWindow.webContents.send('show-toast', { message: 'Popup blocked', type: 'warning' });
+                return { action: 'deny' };
+            }
+
+            console.log(`[TabManager] Opening popup: ${url}`);
+
+            // Return configuration for the new window with hidden menu bar
+            return {
+                action: 'allow',
+                overrideBrowserWindowOptions: {
+                    autoHideMenuBar: true,
+                    parent: this.mainWindow,
+                    icon: require('path').join(__dirname, '../../src/assets/MashAI-logo.png'),
+                    webPreferences: {
+                        nodeIntegration: false,
+                        contextIsolation: true,
+                        partition: tab ? `persist:${tab.profileId}` : undefined
+                    }
+                }
+            };
+        });
     }
 
     /**
@@ -310,6 +670,12 @@ class TabManager {
                 backgroundThrottling: true
             }
         });
+        view.setBackgroundColor('#1e1e1e');
+
+        // Enable ad blocking for this profile's session
+        if (this.adBlockManager) {
+            this.adBlockManager.enableForSession(tab.profileId);
+        }
 
         tab.view = view;
         tab.loaded = true;
@@ -384,8 +750,9 @@ class TabManager {
      * Create a tab with a WebContentsView immediately (original behavior)
      * Used for new tabs created by user action
      * @param faviconDataUrl - Optional cached favicon to preserve during session restore
+     * @param afterTabId - Optional tab ID to insert the new tab after (for "open in new tab" behavior)
      */
-    createTab(profileId: string, url: string | null = null, existingId: string | null = null, faviconDataUrl?: string): string {
+    createTab(profileId: string, url: string | null = null, existingId: string | null = null, faviconDataUrl?: string, afterTabId?: string): string {
         const id = existingId || 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
         // Determine URL
@@ -399,6 +766,12 @@ class TabManager {
                 backgroundThrottling: true
             }
         });
+        view.setBackgroundColor('#1e1e1e');
+
+        // Enable ad blocking for this profile's session
+        if (this.adBlockManager) {
+            this.adBlockManager.enableForSession(profileId);
+        }
 
         this.tabs.set(id, {
             id,
@@ -411,9 +784,20 @@ class TabManager {
             faviconDataUrl
         });
 
-        // Add to tab order if not already present
+        // Add to tab order - insert after afterTabId if provided, otherwise append
         if (!this.tabOrder.includes(id)) {
-            this.tabOrder.push(id);
+            if (afterTabId) {
+                const afterIndex = this.tabOrder.indexOf(afterTabId);
+                if (afterIndex !== -1) {
+                    // Insert right after the source tab
+                    this.tabOrder.splice(afterIndex + 1, 0, id);
+                } else {
+                    // Fallback to append if source tab not found
+                    this.tabOrder.push(id);
+                }
+            } else {
+                this.tabOrder.push(id);
+            }
         }
 
         view.webContents.loadURL(finalUrl);
@@ -567,7 +951,14 @@ class TabManager {
     }
 
     reorderTabs(newOrder: string[]): void {
-        this.tabOrder = newOrder.filter(id => this.tabs.has(id));
+        // Filter to only include valid tab IDs
+        const validNewOrder = newOrder.filter(id => this.tabs.has(id));
+
+        // Find tabs that exist but weren't included in the new order (e.g., from other profiles)
+        const missingTabs = this.tabOrder.filter(id => !validNewOrder.includes(id) && this.tabs.has(id));
+
+        // Combine: new order first, then append any missing tabs to preserve them
+        this.tabOrder = [...validNewOrder, ...missingTabs];
     }
 
     getActiveTabId(): string | null {
