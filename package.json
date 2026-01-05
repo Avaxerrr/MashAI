@@ -2,7 +2,10 @@
   "name": "mash-ai",
   "productName": "MashAI",
   "version": "1.0.0-beta",
-  "author": "Avaxerrr",
+  "author": {
+    "name": "Avaxerrr",
+    "email": "avaxerrr@users.noreply.github.com"
+  },
   "description": "A unified AI workspace browser",
   "main": "dist/electron/main.js",
   "type": "module",
