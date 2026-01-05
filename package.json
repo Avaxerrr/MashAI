@@ -25,7 +25,7 @@
     "productName": "MashAI",
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "!electron/**/*"
     ],
     "directories": {
       "output": "release"
