@@ -286,8 +286,11 @@ export function register(
                 const pidToMemory: Record<number, number> = {};
                 for (const m of metrics) {
                     if (m.memory) {
-                        // Convert to MB for frontend display
-                        pidToMemory[m.pid] = Math.round((m.memory.privateBytes || 0) / 1024);
+                        // Convert to MB for frontend display - use platform-appropriate metric
+                        const memBytes = isWindows
+                            ? (m.memory.privateBytes || 0)
+                            : (m.memory.workingSetSize || 0);
+                        pidToMemory[m.pid] = Math.round(memBytes / 1024);
                     }
                 }
 
@@ -340,8 +343,13 @@ export function register(
             const processMetric = metrics.find(m => m.pid === tabPid);
 
             if (processMetric && processMetric.memory) {
+                // Use platform-appropriate memory metric
+                const isWindows = process.platform === 'win32';
+                const memBytes = isWindows
+                    ? (processMetric.memory.privateBytes || 0)
+                    : (processMetric.memory.workingSetSize || 0);
                 return {
-                    memory: Math.round((processMetric.memory.privateBytes || 0) / 1024),
+                    memory: Math.round(memBytes / 1024),
                     loaded: true
                 };
             }
@@ -359,11 +367,15 @@ export function register(
             if (!tabManager) return [];
 
             const metrics = app.getAppMetrics();
+            const isWindows = process.platform === 'win32';
             const pidToMemory: Record<number, number> = {};
             for (const m of metrics) {
                 if (m.memory) {
-                    // Convert to MB for frontend display
-                    pidToMemory[m.pid] = Math.round((m.memory.privateBytes || 0) / 1024);
+                    // Convert to MB for frontend display - use platform-appropriate metric
+                    const memBytes = isWindows
+                        ? (m.memory.privateBytes || 0)
+                        : (m.memory.workingSetSize || 0);
+                    pidToMemory[m.pid] = Math.round(memBytes / 1024);
                 }
             }
 

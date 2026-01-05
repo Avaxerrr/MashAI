@@ -7,28 +7,41 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build outputs
 dist
 dist-ssr
+release/
+
+# Environment files
 *.local
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-.gitignore
-logo
-LOG_BRIEF.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Internal documentation (not for public repo)
 TODO.md
+LOGO_BRIEF.md
+TYPESCRIPT_MIGRATION.md
 
-# Deprecated files (TypeScript migration)
-_deprecated_jsx/
+# Logo assets (private)
+logo/
 
-# Compiled Electron TypeScript output
-dist/electron/
+# Legacy code (deprecated after TypeScript migration)
+_legacy_cjs/
+
+# Python virtual environment (tools)
+tools/.venv/
