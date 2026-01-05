@@ -20,6 +20,12 @@ import PrivacyHandlers from './ipc/PrivacyHandlers';
 import DownloadManager from './DownloadManager';
 import AdBlockManager from './AdBlockManager';
 
+// Linux sandbox workaround - required for some Linux distributions
+// where unprivileged user namespaces are not available
+if (process.platform === 'linux') {
+    app.commandLine.appendSwitch('no-sandbox');
+}
+
 // Check hardware acceleration setting BEFORE app is ready
 try {
     const settingsPath = path.join(app.getPath('userData'), 'settings.json');

@@ -45,8 +45,20 @@
     },
     "mac": {
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "icon": "src/assets/MashAI-logo.icns",
       "category": "public.app-category.productivity"
@@ -57,7 +69,10 @@
         "deb"
       ],
       "icon": "src/assets/MashAI-logo.png",
-      "category": "Utility"
+      "category": "Utility",
+      "desktop": {
+        "StartupWMClass": "MashAI"
+      }
     },
     "nsis": {
       "oneClick": false,
