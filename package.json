@@ -25,6 +25,7 @@
     "productName": "MashAI",
     "files": [
       "dist/**/*",
+      "dist/electron/package.json",
       "!electron/**/*"
     ],
     "directories": {

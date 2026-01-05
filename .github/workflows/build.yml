@@ -4,26 +4,16 @@ on:
   # Trigger on release creation
   release:
     types: [created]
-  # Optional: trigger on push to master (for testing)
-  # push:
-  #   branches: [master]
   # Manual trigger
   workflow_dispatch:
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            platform: win
-          - os: macos-latest
-            platform: mac
-          - os: ubuntu-latest
-            platform: linux
-
-    runs-on: ${{ matrix.os }}
+  # ============================================
+  # Windows Build
+  # ============================================
+  build-windows:
+    name: Build for Windows
+    runs-on: windows-latest
 
     steps:
       - name: Checkout code
@@ -38,31 +28,110 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build for ${{ matrix.platform }}
-        run: npm run build:${{ matrix.platform }}
+      - name: Build for Windows
+        run: npm run build:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload artifacts
+      - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: MashAI-${{ matrix.platform }}
+          name: MashAI-Windows
           path: |
             release/*.exe
+          if-no-files-found: warn
+
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================
+  # macOS Build (Intel x64 + Apple Silicon arm64)
+  # ============================================
+  build-macos:
+    name: Build for macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for macOS (Intel x64 and Apple Silicon arm64)
+        run: npm run build:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: MashAI-macOS
+          path: |
             release/*.dmg
             release/*.zip
-            release/*.AppImage
-            release/*.deb
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
       - name: Upload to Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            release/*.exe
             release/*.dmg
             release/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================
+  # Linux Build
+  # ============================================
+  build-linux:
+    name: Build for Linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for Linux
+        run: npm run build:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: MashAI-Linux
+          path: |
+            release/*.AppImage
+            release/*.deb
+          if-no-files-found: warn
+
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
             release/*.AppImage
             release/*.deb
         env:
