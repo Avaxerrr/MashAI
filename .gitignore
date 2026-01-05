@@ -45,3 +45,6 @@ _legacy_cjs/
 
 # Python virtual environment (tools)
 tools/.venv/
+
+# Website (separate repository)
+website/
