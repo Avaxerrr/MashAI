@@ -12,6 +12,7 @@ interface TabState {
     loading?: boolean;
     faviconDataUrl?: string;
     parentTabId?: string; // The tab that opened this one (for returning on close)
+    blockedCount?: number; // Number of blocked ads/trackers for this tab
 }
 
 function App() {
@@ -105,7 +106,7 @@ function App() {
             }
         }
 
-        const handleTabUpdated = ({ id, title, url, loaded, suspended, faviconDataUrl, isLoading }: TabUpdatedEvent) => {
+        const handleTabUpdated = ({ id, title, url, loaded, suspended, faviconDataUrl, isLoading, blockedCount }: TabUpdatedEvent) => {
             setTabs(prev => prev.map(tab =>
                 tab.id === id ? {
                     ...tab,
@@ -114,7 +115,8 @@ function App() {
                     ...(loaded !== undefined && { loaded }),
                     ...(suspended !== undefined && { suspended }),
                     ...(faviconDataUrl !== undefined && { faviconDataUrl }),
-                    ...(isLoading !== undefined && { loading: isLoading })
+                    ...(isLoading !== undefined && { loading: isLoading }),
+                    ...(blockedCount !== undefined && { blockedCount })
                 } : tab
             ))
         }

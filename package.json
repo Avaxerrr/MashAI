@@ -2,7 +2,8 @@
   "name": "mash-ai",
   "productName": "MashAI",
   "version": "1.0.0-beta",
-  "description": "A multi-profile AI workspace browser",
+  "author": "Avaxerrr",
+  "description": "A unified AI workspace browser",
   "main": "dist/electron/main.js",
   "type": "module",
   "scripts": {
@@ -43,7 +44,7 @@
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
-    "electron": "^33.2.0",
+    "electron": "^39.2.7",
     "electron-builder": "^25.1.8",
     "eslint": "^9.17.0",
     "eslint-plugin-react": "^7.37.2",
@@ -58,6 +59,7 @@
     "wait-on": "^8.0.1"
   },
   "dependencies": {
+    "@ghostery/adblocker-electron": "^2.13.2",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",

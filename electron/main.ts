@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { TITLEBAR_HEIGHT, DEFAULT_WINDOW, SETTINGS_WINDOW, MAX_CLOSED_TABS } from './constants';
@@ -18,6 +18,7 @@ import * as SettingsHandlers from './ipc/SettingsHandlers';
 import * as DownloadHandlers from './ipc/DownloadHandlers';
 import PrivacyHandlers from './ipc/PrivacyHandlers';
 import DownloadManager from './DownloadManager';
+import AdBlockManager from './AdBlockManager';
 
 // Check hardware acceleration setting BEFORE app is ready
 try {
@@ -44,6 +45,7 @@ let menuBuilder: MenuBuilder | null = null;
 let trayManager: TrayManager | null = null;
 let downloadManager: DownloadManager | null = null;
 let downloadsWindow: BrowserWindow | null = null;
+let adBlockManager: AdBlockManager | null = null;
 
 interface ClosedTab {
     id: string;
@@ -252,6 +254,15 @@ function createWindow(): void {
     tabManager.setDownloadManager(downloadManager);
     // Toast notifications are now sent directly from DownloadManager
 
+    // Initialize AdBlockManager
+    adBlockManager = new AdBlockManager(settingsManager);
+    adBlockManager.initialize().then(() => {
+        console.log('[main] AdBlockManager initialized');
+    }).catch(err => {
+        console.error('[main] AdBlockManager initialization failed:', err);
+    });
+    tabManager.setAdBlockManager(adBlockManager);
+
     // Initialize window state from actual window bounds (ensures x/y are captured)
     const initialBounds = mainWindow.getBounds();
     sessionManager.updateWindowState({
@@ -318,6 +329,22 @@ function createWindow(): void {
     DownloadHandlers.register(mainWindow, {
         downloadManager: downloadManager!,
         createDownloadsWindow
+    });
+
+    // Register ad blocker IPC handlers
+    ipcMain.handle('get-adblock-status', () => {
+        return adBlockManager?.getStatus() || {
+            enabled: false,
+            version: '2.13.2',
+            lastUpdated: null,
+            blockedCount: 0
+        };
+    });
+
+    ipcMain.handle('update-adblock-lists', async () => {
+        if (adBlockManager) {
+            await adBlockManager.updateLists();
+        }
     });
 
     // Intercept close event

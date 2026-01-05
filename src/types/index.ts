@@ -71,7 +71,6 @@ export interface SecuritySettings {
     downloadsEnabled: boolean;      // Allow file downloads (for AI-generated content)
     popupsEnabled: boolean;         // Allow popup windows (for OAuth flows)
     mediaPolicyAsk: boolean;        // Ask for camera/mic permission (for voice mode)
-    adBlockerEnabled: boolean;      // Placeholder for Ghostery integration
     downloadLocation: string;       // Default download folder path
     askWhereToSave: boolean;        // Whether to show save dialog for each download
 }
@@ -84,6 +83,22 @@ export interface Settings {
     performance: PerformanceSettings;
     general: GeneralSettings;
     security?: SecuritySettings;
+    adBlock?: AdBlockSettings;
+}
+
+export interface AdBlockSettings {
+    enabled: boolean;
+    blockAds: boolean;
+    blockTrackers: boolean;
+    blockAnnoyances: boolean;
+    whitelist: string[];
+}
+
+export interface AdBlockStatus {
+    enabled: boolean;
+    version: string;
+    lastUpdated: string | null;
+    blockedCount: number;
 }
 
 // Extend the Window interface with the preload-exposed API
@@ -178,6 +193,10 @@ export interface ElectronAPI {
     hideDownloadToast: () => void;
     selectDownloadFolder: () => Promise<string | null>;
     onDownloadUpdate: (callback: (data: { active: DownloadInfo[]; history: DownloadInfo[] }) => void) => () => void;
+
+    // Ad Blocker
+    getAdBlockStatus: () => Promise<AdBlockStatus>;
+    updateAdBlockLists: () => Promise<void>;
 }
 
 // Event types
@@ -199,6 +218,7 @@ export interface TabUpdatedEvent {
     suspended?: boolean;
     faviconDataUrl?: string;
     isLoading?: boolean;
+    blockedCount?: number;
 }
 
 export interface ProfileTabsLoadedEvent {

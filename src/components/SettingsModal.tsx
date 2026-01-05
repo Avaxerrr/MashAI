@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Save, Settings, RotateCcw, Shield, Keyboard, Info, Users, Bot, Gauge } from 'lucide-react'
+import { X, Save, Settings, RotateCcw, Shield, Keyboard, Info, Users, Bot, Gauge, Ban } from 'lucide-react'
 import GeneralTab from './settings/GeneralTab'
 import PrivacyTab from './settings/PrivacyTab'
 import PerformanceTab from './settings/PerformanceTab'
@@ -7,10 +7,19 @@ import ProfilesTab from './settings/ProfilesTab'
 import ProvidersTab from './settings/ProvidersTab'
 import ShortcutsTab from './settings/ShortcutsTab'
 import AboutTab from './settings/AboutTab'
+import AdBlockerTab from './settings/AdBlockerTab'
 import Toast from './Toast'
 import type { Profile, AIProvider, Settings as SettingsType, PerformanceSettings, GeneralSettings, SecuritySettings } from '../types'
 
-type TabName = 'general' | 'privacy' | 'profiles' | 'providers' | 'performance' | 'shortcuts' | 'about';
+interface AdBlockSettings {
+    enabled: boolean;
+    blockAds: boolean;
+    blockTrackers: boolean;
+    blockAnnoyances: boolean;
+    whitelist: string[];
+}
+
+type TabName = 'general' | 'privacy' | 'adblocker' | 'profiles' | 'providers' | 'performance' | 'shortcuts' | 'about';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -52,9 +61,16 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         downloadsEnabled: true,
         popupsEnabled: true,
         mediaPolicyAsk: true,
-        adBlockerEnabled: true,
         downloadLocation: '',  // Will be populated from initialSettings
         askWhereToSave: false
+    })
+
+    const [adBlockSettings, setAdBlockSettings] = useState<AdBlockSettings>({
+        enabled: true,
+        blockAds: true,
+        blockTrackers: true,
+        blockAnnoyances: true,
+        whitelist: []
     })
 
     const profilesListRef = useRef<HTMLDivElement>(null)
@@ -87,6 +103,9 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
             }
             if (initialSettings.security) {
                 setSecuritySettings(prev => ({ ...prev, ...initialSettings.security }))
+            }
+            if ((initialSettings as { adBlock?: AdBlockSettings }).adBlock) {
+                setAdBlockSettings(prev => ({ ...prev, ...(initialSettings as { adBlock: AdBlockSettings }).adBlock }))
             }
 
             if (window.api?.getActiveProfileId) {
@@ -161,8 +180,9 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
             defaultProfileId: profiles[0]?.id || 'work',
             performance: performanceSettings,
             general: generalSettings,
-            security: securitySettings
-        })
+            security: securitySettings,
+            adBlock: adBlockSettings
+        } as SettingsType)
         setShowToast(true)
     }
 
@@ -341,10 +361,11 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
             <div className="flex flex-1 overflow-hidden">
                 {/* Sidebar */}
                 <div className="w-56 border-r border-[#3e3e42] bg-[#252526] p-3 flex flex-col gap-2">
-                    {(['general', 'privacy', 'profiles', 'providers', 'performance', 'shortcuts', 'about'] as const).map(tab => {
+                    {(['general', 'privacy', 'adblocker', 'profiles', 'providers', 'performance', 'shortcuts', 'about'] as const).map(tab => {
                         const icons: Record<TabName, typeof Settings> = {
                             general: Settings,
                             privacy: Shield,
+                            adblocker: Ban,
                             profiles: Users,
                             providers: Bot,
                             performance: Gauge,
@@ -354,6 +375,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                         const labels: Record<TabName, string> = {
                             general: 'General',
                             privacy: 'Privacy & Security',
+                            adblocker: 'Ad Blocker',
                             profiles: 'Profiles',
                             providers: 'AI Providers',
                             performance: 'Performance',
@@ -391,6 +413,13 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                             profiles={profiles}
                             securitySettings={securitySettings}
                             onSecurityChange={setSecuritySettings}
+                        />
+                    )}
+
+                    {activeTab === 'adblocker' && (
+                        <AdBlockerTab
+                            adBlockSettings={adBlockSettings}
+                            onAdBlockChange={setAdBlockSettings}
                         />
                     )}
 

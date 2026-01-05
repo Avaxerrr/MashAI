@@ -11,6 +11,7 @@ interface TabState {
     suspended?: boolean;
     loading?: boolean;
     faviconDataUrl?: string;
+    blockedCount?: number;
 }
 
 interface TitleBarProps {
@@ -282,10 +283,11 @@ export default function TitleBar({
                                 title={(() => {
                                     const mem = tabMemory[tab.id];
                                     const memStr = mem?.memoryKB ? ` (${mem.memoryKB} MB)` : '';
+                                    const blockedStr = tab.blockedCount && tab.blockedCount > 0 ? `\n🛡️ ${tab.blockedCount} ads/trackers blocked` : '';
                                     if (tab.loaded === false) {
                                         return `${tab.title} (suspended)`;
                                     }
-                                    return `${tab.title}${memStr}`;
+                                    return `${tab.title}${memStr}${blockedStr}`;
                                 })()}
                                 style={{
                                     WebkitAppRegion: 'no-drag',

@@ -1,6 +1,7 @@
 import { BrowserWindow, WebContentsView, session, Menu, dialog, app } from 'electron';
 import type { TabInfo } from './types';
 import type SettingsManager from './SettingsManager';
+import type AdBlockManager from './AdBlockManager';
 
 const INJECTED_CSS = `
     .sticky.top-0.z-50.w-full.bg-super,
@@ -82,6 +83,7 @@ class TabManager {
     private sessionsWithDownloadListener: Set<string>;
     private openDownloadsWindowCallback: (() => void) | null;
     private pendingDownloadPaths: Map<string, string>; // URL -> save path for user-confirmed downloads
+    private adBlockManager: AdBlockManager | null;
 
     constructor(mainWindow: BrowserWindow, settingsManager: SettingsManager) {
         this.mainWindow = mainWindow;
@@ -95,9 +97,36 @@ class TabManager {
         this.sessionsWithDownloadListener = new Set();
         this.openDownloadsWindowCallback = null;
         this.pendingDownloadPaths = new Map();
+        this.adBlockManager = null;
 
         // Start inactivity check timer (runs every minute)
         this._startInactivityTimer();
+
+        // Start blocked count emitter (every 3 seconds) for per-tab ad block stats
+        this._startBlockedCountEmitter();
+    }
+
+    /**
+     * Start periodic emitter for blocked count updates
+     */
+    private _startBlockedCountEmitter(): void {
+        const EMIT_INTERVAL_MS = 3000; // 3 seconds
+
+        setInterval(() => {
+            if (!this.adBlockManager || !this.mainWindow) return;
+
+            // Emit blocked count for all loaded tabs
+            for (const [tabId, tabData] of this.tabs) {
+                if (tabData.view) {
+                    const webContentsId = tabData.view.webContents.id;
+                    const blockedCount = this.adBlockManager.getBlockedCountForWebContents(webContentsId);
+                    if (blockedCount > 0) {
+                        console.log(`[TabManager] Emitting blockedCount=${blockedCount} for tab ${tabId} (webContentsId=${webContentsId})`);
+                        this.mainWindow.webContents.send('tab-updated', { id: tabId, blockedCount });
+                    }
+                }
+            }
+        }, EMIT_INTERVAL_MS);
     }
 
     /**
@@ -119,6 +148,13 @@ class TabManager {
      */
     setOpenDownloadsWindow(callback: () => void): void {
         this.openDownloadsWindowCallback = callback;
+    }
+
+    /**
+     * Set the ad block manager for enabling blocking on sessions
+     */
+    setAdBlockManager(manager: AdBlockManager): void {
+        this.adBlockManager = manager;
     }
 
     /**
@@ -251,11 +287,32 @@ class TabManager {
             });
         };
 
+        // Inject cosmetic filters from ad blocker
+        const injectCosmeticFilters = () => {
+            if (this.adBlockManager && this.adBlockManager.isEnabled()) {
+                try {
+                    const url = view.webContents.getURL();
+                    const cosmeticCSS = this.adBlockManager.getCosmeticFilters(url);
+                    if (cosmeticCSS) {
+                        view.webContents.insertCSS(cosmeticCSS, { cssOrigin: 'user' }).catch(() => {
+                            // Silently fail
+                        });
+                    }
+                } catch {
+                    // Silently fail
+                }
+            }
+        };
+
         // Inject on multiple events to ensure persistence
         view.webContents.on('will-navigate', injectCSS);
         view.webContents.on('did-start-loading', injectCSS);
         view.webContents.on('did-navigate', injectCSS);
         view.webContents.on('did-finish-load', injectCSS);
+
+        // Inject cosmetic filters after page loads
+        view.webContents.on('did-finish-load', injectCosmeticFilters);
+        view.webContents.on('did-navigate-in-page', injectCosmeticFilters);
 
         // Track loading state for UI spinner
         view.webContents.on('did-start-loading', () => {
@@ -639,6 +696,11 @@ class TabManager {
         });
         view.setBackgroundColor('#1e1e1e');
 
+        // Enable ad blocking for this profile's session
+        if (this.adBlockManager) {
+            this.adBlockManager.enableForSession(tab.profileId);
+        }
+
         tab.view = view;
         tab.loaded = true;
         tab.lastActiveTime = Date.now();
@@ -729,6 +791,11 @@ class TabManager {
             }
         });
         view.setBackgroundColor('#1e1e1e');
+
+        // Enable ad blocking for this profile's session
+        if (this.adBlockManager) {
+            this.adBlockManager.enableForSession(profileId);
+        }
 
         this.tabs.set(id, {
             id,

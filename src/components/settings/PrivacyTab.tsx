@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Shield, Trash2, Database, HardDrive, Cookie, LucideIcon, Download, ExternalLink, Mic, ShieldCheck, FolderOpen } from 'lucide-react'
+import { Shield, Trash2, Database, HardDrive, Cookie, LucideIcon, Download, ExternalLink, Mic, FolderOpen } from 'lucide-react'
 import type { Profile, SecuritySettings } from '../../types'
 
 interface PrivacyTabProps {
@@ -29,7 +29,6 @@ export default function PrivacyTab({ profiles = [], securitySettings, onSecurity
         downloadsEnabled: true,
         popupsEnabled: true,
         mediaPolicyAsk: true,
-        adBlockerEnabled: true,
         downloadLocation: '',
         askWhereToSave: false,
         ...securitySettings
@@ -181,21 +180,6 @@ export default function PrivacyTab({ profiles = [], securitySettings, onSecurity
                         </div>
                     </label>
 
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={security.adBlockerEnabled}
-                            onChange={(e) => updateSecuritySetting('adBlockerEnabled', e.target.checked)}
-                            className="w-4 h-4 accent-violet-500 rounded"
-                        />
-                        <div className="flex items-center gap-2">
-                            <ShieldCheck size={16} className="text-gray-400" />
-                            <div>
-                                <span className="text-sm text-white">Block ads & trackers</span>
-                                <p className="text-xs text-gray-500">Coming soon - Powered by Ghostery</p>
-                            </div>
-                        </div>
-                    </label>
                 </div>
             </div>
 

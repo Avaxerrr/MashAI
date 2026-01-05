@@ -144,5 +144,9 @@ contextBridge.exposeInMainWorld('api', {
         const handler = (e: IpcRendererEvent, data: unknown) => callback(data);
         ipcRenderer.on('download-update', handler);
         return () => ipcRenderer.removeListener('download-update', handler);
-    }
+    },
+
+    // Ad Blocker
+    getAdBlockStatus: () => ipcRenderer.invoke('get-adblock-status'),
+    updateAdBlockLists: () => ipcRenderer.invoke('update-adblock-lists')
 });
