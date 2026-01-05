@@ -6,8 +6,9 @@
 
 **A multi-profile desktop browser for accessing all your AI assistants in one place**
 
-[![Electron](https://img.shields.io/badge/Electron-33.2-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![Electron](https://img.shields.io/badge/Electron-39.2-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 
 </div>
@@ -16,30 +17,16 @@
 
 ## What is MashAI?
 
-**MashAI** is your all-in-one desktop workspace for artificial intelligence. It consolidates all your AI tools—cloud-based services like ChatGPT and Claude, as well as local LLMs—into a single, privacy-focused environment.
+**MashAI** is your all-in-one desktop workspace for artificial intelligence. It consolidates all your AI tools—cloud-based services like ChatGPT, Claude, and Gemini—into a single, privacy-focused environment with built-in ad blocking.
 
 ### The Problem It Solves
 
 - **Fragmented Workflow** – Stop jumping between browser tabs and different apps.
 - **Privacy Concerns** – Block ads and trackers that harvest your data.
-- **Vendor Lock-in** – Mix and match cloud providers with your own local models.
 - **Resource Hogging** – Intelligent tab management keeps your system running smooth.
+- **Context Switching** – Separate profiles for Work, Personal, and Research.
 
 ---
-
-## Key Features
-
-### Consolidated Workspace
-Access ChatGPT, Claude, Gemini, Perplexity, and more side-by-side in a unified, distraction-free environment. No more lost tabs.
-
-### Privacy First
-Built-in ad blocking and tracker protection ensure you can work without being watched. Your data stays yours.
-
-### Bring Your Own Keys
-Use your own API keys for cloud providers to maintain full control over access, limits, and billing.
-
-### Local AI Support
-Run completely offline with support for self-hosted models for text, image, and video generation. The ultimate privacy.
 
 ## Features
 
@@ -52,10 +39,16 @@ Access all major AI assistants from one window:
 - **Grok** – xAI's real-time AI
 - **Custom Providers** – Add any web-based AI service
 
+### Built-in Ad Blocking
+Privacy-first browsing powered by Ghostery's adblocker:
+- Blocks ads and trackers automatically
+- Per-tab blocked request counts
+- Toggle on/off from settings
+
 ### Profile System
 Organize your AI workflows by context:
 - Create unlimited profiles (Work, Personal, Research, etc.)
-- Each profile maintains its own tab sessions
+- Each profile maintains its own tab sessions and cookies
 - Custom icons and colors for quick identification
 - Remembers your last active tab per profile
 
@@ -65,6 +58,7 @@ Browser-like experience with power-user features:
 - Duplicate, reload, and reopen closed tabs
 - Close tabs to the right / close other tabs
 - Real-time memory usage per tab
+- Parent tab navigation (close child returns to parent)
 
 ### Performance & Memory Optimization
 Stay productive without slowing down your system:
@@ -81,12 +75,28 @@ Native desktop experience:
 - **Launch at Startup** – Start with your system
 - **Always-on-Top** – Keep MashAI visible over other windows
 
+### Download Manager
+Built-in download handling:
+- View and manage downloads
+- Toast notifications for completed downloads
+- Configurable download location
+
 ### Modern UI/UX
 Clean, focused interface:
-- Dark theme with VS Code-inspired aesthetics
+- Dark theme with violet accent colors
 - Custom frameless window with native controls
 - Native context menus
 - Comprehensive settings panel
+
+---
+
+## Roadmap
+
+Features planned for future releases:
+
+- 🔜 **Bring Your Own Keys** – Use your own API keys for direct API access
+- 🔜 **Local AI Support** – Integration with Ollama, LM Studio, and other local LLM runners
+- 🔜 **Unified Chat Interface** – Single interface for all AI providers via API
 
 ---
 
@@ -100,8 +110,8 @@ Clean, focused interface:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/mashai.git
-cd mashai
+git clone https://github.com/Avaxerrr/MashAI.git
+cd MashAI
 
 # Install dependencies
 npm install
@@ -113,8 +123,13 @@ npm run dev
 ### Building for Production
 
 ```bash
-# Build the app
+# Build for current platform
 npm run build:electron
+
+# Build for specific platform
+npm run build:win     # Windows (NSIS installer + portable)
+npm run build:mac     # macOS (DMG + ZIP)
+npm run build:linux   # Linux (AppImage + deb)
 ```
 
 The built application will be available in the `release` directory.
@@ -136,6 +151,7 @@ MashAI stores its configuration in your user data directory:
 | **Profiles** | Create/edit/delete profiles, custom icons and colors |
 | **AI Providers** | Add/remove/reorder AI services, set default provider |
 | **Performance** | Tab loading strategy, auto-suspend timeout, profile switch behavior |
+| **Privacy** | Ad blocking toggle, download settings |
 
 ---
 
@@ -143,15 +159,17 @@ MashAI stores its configuration in your user data directory:
 
 | Technology | Purpose |
 |------------|---------|
-| **Electron** | Cross-platform desktop framework |
+| **Electron 39** | Cross-platform desktop framework |
 | **React 18** | UI component library |
+| **TypeScript** | Type-safe JavaScript |
 | **Vite** | Fast development and build tool |
 | **Tailwind CSS** | Utility-first styling |
-| **WebContentsView** | Isolated browser views for each AI tab |
+| **Ghostery Adblocker** | Privacy protection |
 
 ### Architecture Highlights
 
 - **Modular Main Process** – Separated managers for tabs, profiles, settings, sessions, tray, and menus
+- **TypeScript Throughout** – Full type safety in both main and renderer processes
 - **IPC Communication** – Clean separation between main and renderer processes
 - **Session Persistence** – Automatic save/restore of tabs and window state
 - **Favicon Caching** – Pre-fetched and cached as base64 for instant display
@@ -161,26 +179,28 @@ MashAI stores its configuration in your user data directory:
 ## Project Structure
 
 ```
-mashai/
-├── electron/           # Electron main process
-│   ├── main.cjs        # Application entry point
-│   ├── preload.cjs     # Preload script for IPC
-│   ├── TabManager.cjs  # Tab lifecycle management
-│   ├── ProfileManager.cjs
-│   ├── SettingsManager.cjs
-│   ├── SessionManager.cjs
-│   ├── MenuBuilder.cjs
-│   ├── TrayManager.cjs
-│   └── ipc/            # IPC handlers by domain
-├── src/                # React renderer process
-│   ├── App.jsx         # Main application component
-│   ├── components/     # UI components
-│   │   ├── TitleBar.jsx
-│   │   ├── SettingsModal.jsx
-│   │   └── settings/   # Settings tab components
-│   └── index.css       # Global styles
-├── public/             # Static assets
-└── dist/               # Production build output
+MashAI/
+├── electron/              # Electron main process (TypeScript)
+│   ├── main.ts            # Application entry point
+│   ├── preload.ts         # Preload script for IPC
+│   ├── TabManager.ts      # Tab lifecycle management
+│   ├── ProfileManager.ts
+│   ├── SettingsManager.ts
+│   ├── SessionManager.ts
+│   ├── MenuBuilder.ts
+│   ├── TrayManager.ts
+│   ├── AdBlockManager.ts
+│   ├── DownloadManager.ts
+│   └── ipc/               # IPC handlers by domain
+├── src/                   # React renderer process (TypeScript)
+│   ├── App.tsx            # Main application component
+│   ├── components/        # UI components
+│   │   ├── TitleBar.tsx
+│   │   └── settings/      # Settings tab components
+│   └── index.css          # Global styles (Tailwind)
+├── tools/                 # Build utilities
+│   └── png_to_icns.py     # macOS icon generator
+└── dist/                  # Production build output
 ```
 
 ---
@@ -195,26 +215,16 @@ mashai/
 | `Ctrl+Shift+Tab` | Previous tab |
 | `Ctrl+R` | Reload active tab |
 | `Ctrl+Shift+T` | Reopen closed tab |
-| `Ctrl+Shift+M` | Toggle window visibility (global) |
-| `Ctrl+,` | Open settings |
-
----
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+| `Ctrl+J` | Open downloads |
+| `Ctrl+Shift+A` | Toggle always-on-top |
 
 ---
 
 ## License
 
-License TBD - This project is currently unlicensed. A license will be added in a future release.
+All Rights Reserved © 2026 Avaxerrr
+
+This software is proprietary. Unauthorized copying, distribution, or modification is prohibited.
 
 ---
 
@@ -223,13 +233,12 @@ License TBD - This project is currently unlicensed. A license will be added in a
 - Built with [Electron](https://www.electronjs.org/)
 - UI powered by [React](https://reactjs.org/) and [Tailwind CSS](https://tailwindcss.com/)
 - Icons by [Lucide](https://lucide.dev/)
+- Ad blocking by [Ghostery](https://github.com/nickvidal/AdblockerElectron)
 
 ---
 
 <div align="center">
 
 **Made with care for AI enthusiasts**
-
-[Report Bug](https://github.com/yourusername/mashai/issues) · [Request Feature](https://github.com/yourusername/mashai/issues)
 
 </div>
