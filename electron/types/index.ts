@@ -128,6 +128,29 @@ export interface Settings {
     general: GeneralSettings;
     security?: SecuritySettings;
     adBlock?: AdBlockSettings;
+    shortcuts?: ShortcutSettings;
+}
+
+// =============================================================================
+// Shortcut Types
+// =============================================================================
+
+export type ShortcutPreset = 'standard' | 'safari' | 'brave' | 'custom';
+
+export interface ShortcutConfig {
+    newTab: string;
+    closeTab: string;
+    reloadTab: string;
+    forceReloadTab: string;
+    nextTab: string;
+    prevTab: string;
+    reopenClosedTab: string;
+    downloads: string;
+}
+
+export interface ShortcutSettings {
+    preset: ShortcutPreset;
+    custom: ShortcutConfig;
 }
 
 // =============================================================================

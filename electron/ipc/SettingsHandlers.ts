@@ -3,6 +3,7 @@ import type TabManager from '../TabManager';
 import type SettingsManager from '../SettingsManager';
 import type ProfileManager from '../ProfileManager';
 import type AdBlockManager from '../AdBlockManager';
+import type MenuBuilder from '../MenuBuilder';
 import TrayManager from '../TrayManager';
 import type { Settings } from '../types';
 
@@ -12,6 +13,7 @@ interface SettingsDependencies {
     tabManager: TabManager;
     trayManager: TrayManager;
     adBlockManager: AdBlockManager | null;
+    menuBuilder: MenuBuilder | null;
     saveSession: () => void;
     updateViewBounds: () => void;
 }
@@ -21,7 +23,7 @@ interface SettingsDependencies {
  */
 export function register(
     mainWindow: BrowserWindow,
-    { settingsManager, profileManager, tabManager, trayManager, adBlockManager, saveSession, updateViewBounds }: SettingsDependencies
+    { settingsManager, profileManager, tabManager, trayManager, adBlockManager, menuBuilder, saveSession, updateViewBounds }: SettingsDependencies
 ): void {
     // Get current settings
     ipcMain.handle('get-settings', () => {
@@ -222,6 +224,12 @@ export function register(
         if (adBlockManager) {
             const wasEnabled = oldSettings.adBlock?.enabled ?? true;
             await adBlockManager.onSettingsChanged(newSettings, wasEnabled);
+        }
+
+        // Rebuild menus if shortcuts changed
+        if (menuBuilder && JSON.stringify(oldSettings.shortcuts) !== JSON.stringify(newSettings.shortcuts)) {
+            console.log('[SettingsHandlers] Shortcuts changed, rebuilding menus');
+            menuBuilder.rebuildMenus();
         }
 
         // Broadcast to all windows

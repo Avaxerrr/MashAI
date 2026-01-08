@@ -1,4 +1,4 @@
-import { Menu, nativeImage, ipcMain, BrowserWindow, app, MenuItemConstructorOptions } from 'electron';
+import { Menu, nativeImage, ipcMain, BrowserWindow, app, MenuItemConstructorOptions, clipboard } from 'electron';
 import * as path from 'path';
 import type TabManager from './TabManager';
 import type ProfileManager from './ProfileManager';
@@ -57,10 +57,40 @@ class MenuBuilder {
             const tab = this.tabManager.tabs.get(tabId);
             if (!tab) return;
 
+            const shortcuts = this.settingsManager.getActiveShortcuts();
+
+            // Get AI providers for submenu
+            const settings = this.settingsManager.getSettings();
+            const providers = settings.aiProviders || [];
+
+            // Build submenu with AI provider options
+            const newTabSubmenu: MenuItemConstructorOptions[] = providers.map(provider => ({
+                label: provider.name,
+                click: () => {
+                    // Create new tab with this provider's URL, inserted after the right-clicked tab
+                    const newId = this.tabManager.createTab(tab.profileId, provider.url, null, undefined, tabId);
+                    this.tabManager.switchTo(newId);
+                    this.mainWindow.webContents.send('tab-created', {
+                        id: newId,
+                        profileId: tab.profileId,
+                        title: provider.name,
+                        loaded: true,
+                        afterTabId: tabId
+                    });
+                    this.updateViewBounds();
+                    this.saveSession();
+                }
+            }));
+
             const template: MenuItemConstructorOptions[] = [
                 {
+                    label: 'New Tab to Right',
+                    submenu: newTabSubmenu
+                },
+                { type: 'separator' },
+                {
                     label: 'Reload',
-                    accelerator: 'CmdOrCtrl+R',
+                    accelerator: shortcuts.reloadTab,
                     click: () => {
                         if (tab.view) tab.view.webContents.reload();
                     }
@@ -84,8 +114,23 @@ class MenuBuilder {
                 },
                 { type: 'separator' },
                 {
+                    label: 'Copy URL',
+                    click: () => {
+                        const currentUrl = tab.view?.webContents.getURL() || tab.url;
+                        if (currentUrl) {
+                            clipboard.writeText(currentUrl);
+                            // Send toast notification to renderer
+                            this.mainWindow.webContents.send('show-toast', {
+                                message: 'URL copied to clipboard',
+                                type: 'success'
+                            });
+                        }
+                    }
+                },
+                { type: 'separator' },
+                {
                     label: 'Close Tab',
-                    accelerator: 'CmdOrCtrl+W',
+                    accelerator: shortcuts.closeTab,
                     click: () => {
                         this.mainWindow.webContents.send('request-close-tab', tabId);
                     }
@@ -248,6 +293,7 @@ class MenuBuilder {
      */
     createApplicationMenu(): void {
         const isMac = process.platform === 'darwin';
+        const shortcuts = this.settingsManager.getActiveShortcuts();
 
         const template: MenuItemConstructorOptions[] = [
             ...(isMac ? [{
@@ -269,7 +315,7 @@ class MenuBuilder {
                 submenu: [
                     {
                         label: 'New Tab',
-                        accelerator: 'CmdOrCtrl+T',
+                        accelerator: shortcuts.newTab,
                         click: () => {
                             if (this.mainWindow && this.tabManager) {
                                 let profileId = 'work';
@@ -296,7 +342,7 @@ class MenuBuilder {
                     },
                     {
                         label: 'Close Tab',
-                        accelerator: 'CmdOrCtrl+W',
+                        accelerator: shortcuts.closeTab,
                         click: () => {
                             if (this.mainWindow && this.tabManager && this.tabManager.activeTabId) {
                                 this.mainWindow.webContents.send('request-close-tab', this.tabManager.activeTabId);
@@ -305,7 +351,7 @@ class MenuBuilder {
                     },
                     {
                         label: 'Reopen Closed Tab',
-                        accelerator: 'CmdOrCtrl+Shift+T',
+                        accelerator: shortcuts.reopenClosedTab,
                         click: () => {
                             if (this.closedTabs.length > 0 && this.tabManager) {
                                 const lastClosed = this.closedTabs.pop()!;
@@ -324,7 +370,7 @@ class MenuBuilder {
                     },
                     {
                         label: 'Next Tab',
-                        accelerator: 'Ctrl+Tab',
+                        accelerator: shortcuts.nextTab,
                         click: () => {
                             if (!this.tabManager || !this.tabManager.activeTabId) return;
 
@@ -348,7 +394,7 @@ class MenuBuilder {
                     },
                     {
                         label: 'Previous Tab',
-                        accelerator: 'Ctrl+Shift+Tab',
+                        accelerator: shortcuts.prevTab,
                         click: () => {
                             if (!this.tabManager || !this.tabManager.activeTabId) return;
 
@@ -373,7 +419,7 @@ class MenuBuilder {
                     { type: 'separator' },
                     {
                         label: 'Downloads',
-                        accelerator: 'CmdOrCtrl+J',
+                        accelerator: shortcuts.downloads,
                         click: () => {
                             this.createDownloadsWindow();
                         }
@@ -400,7 +446,7 @@ class MenuBuilder {
                 submenu: [
                     {
                         label: 'Reload Tab',
-                        accelerator: 'CmdOrCtrl+R',
+                        accelerator: shortcuts.reloadTab,
                         click: () => {
                             if (this.tabManager) {
                                 this.tabManager.reload();
@@ -409,7 +455,7 @@ class MenuBuilder {
                     },
                     {
                         label: 'Force Reload Tab',
-                        accelerator: 'CmdOrCtrl+Shift+R',
+                        accelerator: shortcuts.forceReloadTab,
                         click: () => {
                             const view = this.tabManager?.getActiveView();
                             if (view) view.webContents.reloadIgnoringCache();
@@ -457,6 +503,15 @@ class MenuBuilder {
 
         const menu = Menu.buildFromTemplate(template);
         Menu.setApplicationMenu(menu);
+    }
+
+    /**
+     * Rebuild the application menu with current shortcut settings
+     * Called when shortcut settings are changed
+     */
+    rebuildMenus(): void {
+        console.log('[MenuBuilder] Rebuilding menus with updated shortcuts');
+        this.createApplicationMenu();
     }
 }
 

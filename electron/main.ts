@@ -322,6 +322,7 @@ function createWindow(): void {
         tabManager,
         trayManager,
         adBlockManager,
+        menuBuilder,
         saveSession: () => sessionManager!.saveSession(),
         updateViewBounds
     });

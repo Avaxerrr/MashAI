@@ -1,7 +1,8 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { app } from 'electron';
-import type { Settings, Profile, AIProvider, PerformanceSettings, GeneralSettings } from './types';
+import type { Settings, Profile, AIProvider, ShortcutSettings } from './types';
+import { getDefaultShortcutSettings } from './ShortcutPresets';
 
 /**
  * Manages application settings persistence and retrieval
@@ -166,7 +167,8 @@ class SettingsManager {
                 blockTrackers: true,       // Block tracking scripts
                 blockAnnoyances: true,     // Block cookie banners, etc.
                 whitelist: []              // No sites exempt by default
-            }
+            },
+            shortcuts: getDefaultShortcutSettings()
         };
     }
 
@@ -291,6 +293,22 @@ class SettingsManager {
 
     getDefaultProviderId(): string {
         return this.settings.defaultProviderId || 'perplexity';
+    }
+
+    /**
+     * Get the currently active shortcut configuration
+     * Returns custom shortcuts if preset is 'custom', otherwise returns preset shortcuts
+     */
+    getActiveShortcuts(): import('./types').ShortcutConfig {
+        const shortcuts = this.settings.shortcuts || getDefaultShortcutSettings();
+
+        if (shortcuts.preset === 'custom') {
+            return shortcuts.custom;
+        }
+
+        // Import dynamically to avoid circular deps at module level
+        const { getShortcutsForPreset } = require('./ShortcutPresets');
+        return getShortcutsForPreset(shortcuts.preset);
     }
 }
 

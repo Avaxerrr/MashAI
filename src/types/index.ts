@@ -84,6 +84,7 @@ export interface Settings {
     general: GeneralSettings;
     security?: SecuritySettings;
     adBlock?: AdBlockSettings;
+    shortcuts?: ShortcutSettings;
 }
 
 export interface AdBlockSettings {
@@ -100,6 +101,59 @@ export interface AdBlockStatus {
     lastUpdated: string | null;
     blockedCount: number;
 }
+
+// Shortcut types
+export type ShortcutPreset = 'standard' | 'safari' | 'brave' | 'custom';
+
+export interface ShortcutConfig {
+    newTab: string;
+    closeTab: string;
+    reloadTab: string;
+    forceReloadTab: string;
+    nextTab: string;
+    prevTab: string;
+    reopenClosedTab: string;
+    downloads: string;
+}
+
+export interface ShortcutSettings {
+    preset: ShortcutPreset;
+    custom: ShortcutConfig;
+}
+
+// Shortcut preset constants for frontend
+export const STANDARD_SHORTCUTS: ShortcutConfig = {
+    newTab: 'CmdOrCtrl+T',
+    closeTab: 'CmdOrCtrl+W',
+    reloadTab: 'CmdOrCtrl+R',
+    forceReloadTab: 'CmdOrCtrl+Shift+R',
+    nextTab: 'Ctrl+Tab',
+    prevTab: 'Ctrl+Shift+Tab',
+    reopenClosedTab: 'CmdOrCtrl+Shift+T',
+    downloads: 'CmdOrCtrl+J'
+};
+
+export const SAFARI_SHORTCUTS: ShortcutConfig = {
+    newTab: 'CmdOrCtrl+T',
+    closeTab: 'CmdOrCtrl+W',
+    reloadTab: 'CmdOrCtrl+R',
+    forceReloadTab: 'CmdOrCtrl+Shift+R',
+    nextTab: 'Ctrl+Tab',
+    prevTab: 'Ctrl+Shift+Tab',
+    reopenClosedTab: 'CmdOrCtrl+Shift+T',
+    downloads: 'CmdOrCtrl+Alt+L'
+};
+
+export const BRAVE_SHORTCUTS: ShortcutConfig = {
+    newTab: 'CmdOrCtrl+T',
+    closeTab: 'CmdOrCtrl+W',
+    reloadTab: 'F5',
+    forceReloadTab: 'Shift+F5',
+    nextTab: 'Ctrl+Tab',
+    prevTab: 'Ctrl+Shift+Tab',
+    reopenClosedTab: 'CmdOrCtrl+Shift+T',
+    downloads: 'CmdOrCtrl+J'
+};
 
 // Extend the Window interface with the preload-exposed API
 declare global {

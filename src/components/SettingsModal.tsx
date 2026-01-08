@@ -9,7 +9,8 @@ import ShortcutsTab from './settings/ShortcutsTab'
 import AboutTab from './settings/AboutTab'
 import AdBlockerTab from './settings/AdBlockerTab'
 import Toast from './Toast'
-import type { Profile, AIProvider, Settings as SettingsType, PerformanceSettings, GeneralSettings, SecuritySettings } from '../types'
+import type { Profile, AIProvider, Settings as SettingsType, PerformanceSettings, GeneralSettings, SecuritySettings, ShortcutSettings } from '../types'
+import { STANDARD_SHORTCUTS } from '../types'
 
 interface AdBlockSettings {
     enabled: boolean;
@@ -73,6 +74,11 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
         whitelist: []
     })
 
+    const [shortcutSettings, setShortcutSettings] = useState<ShortcutSettings>({
+        preset: 'standard',
+        custom: { ...STANDARD_SHORTCUTS }
+    })
+
     const profilesListRef = useRef<HTMLDivElement>(null)
     const providersListRef = useRef<HTMLDivElement>(null)
     const contentAreaRef = useRef<HTMLDivElement>(null)
@@ -106,6 +112,9 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
             }
             if ((initialSettings as { adBlock?: AdBlockSettings }).adBlock) {
                 setAdBlockSettings(prev => ({ ...prev, ...(initialSettings as { adBlock: AdBlockSettings }).adBlock }))
+            }
+            if (initialSettings.shortcuts) {
+                setShortcutSettings(prev => ({ ...prev, ...initialSettings.shortcuts }))
             }
 
             if (window.api?.getActiveProfileId) {
@@ -181,7 +190,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
             performance: performanceSettings,
             general: generalSettings,
             security: securitySettings,
-            adBlock: adBlockSettings
+            adBlock: adBlockSettings,
+            shortcuts: shortcutSettings
         } as SettingsType)
         setShowToast(true)
     }
@@ -468,6 +478,22 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
                     {activeTab === 'shortcuts' && (
                         <ShortcutsTab
                             generalSettings={generalSettings}
+                            shortcutSettings={shortcutSettings}
+                            onShortcutChange={setShortcutSettings}
+                            onImmediateApply={() => {
+                                // Save immediately without showing toast
+                                onSave({
+                                    profiles,
+                                    aiProviders: providers,
+                                    defaultProviderId,
+                                    defaultProfileId: profiles[0]?.id || 'work',
+                                    performance: performanceSettings,
+                                    general: generalSettings,
+                                    security: securitySettings,
+                                    adBlock: adBlockSettings,
+                                    shortcuts: shortcutSettings
+                                } as SettingsType);
+                            }}
                         />
                     )}
 
