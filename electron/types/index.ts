@@ -146,6 +146,7 @@ export interface ShortcutConfig {
     prevTab: string;
     reopenClosedTab: string;
     downloads: string;
+    quickSearch: string;
 }
 
 export interface ShortcutSettings {

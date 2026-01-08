@@ -19,6 +19,7 @@ import * as DownloadHandlers from './ipc/DownloadHandlers';
 import PrivacyHandlers from './ipc/PrivacyHandlers';
 import DownloadManager from './DownloadManager';
 import AdBlockManager from './AdBlockManager';
+import QuickSearchManager from './QuickSearchManager';
 
 // Linux sandbox workaround - required for some Linux distributions
 // where unprivileged user namespaces are not available
@@ -52,6 +53,7 @@ let trayManager: TrayManager | null = null;
 let downloadManager: DownloadManager | null = null;
 let downloadsWindow: BrowserWindow | null = null;
 let adBlockManager: AdBlockManager | null = null;
+let quickSearchManager: QuickSearchManager | null = null;
 
 interface ClosedTab {
     id: string;
@@ -269,6 +271,35 @@ function createWindow(): void {
     });
     tabManager.setAdBlockManager(adBlockManager);
 
+    // Initialize QuickSearchManager
+    quickSearchManager = new QuickSearchManager(mainWindow);
+    quickSearchManager.setOnSearch((url: string) => {
+        // Get active profile from active tab
+        let profileId = 'personal';
+        if (tabManager!.activeTabId) {
+            const activeTab = tabManager!.tabs.get(tabManager!.activeTabId);
+            if (activeTab) {
+                profileId = activeTab.profileId;
+            }
+        }
+
+        const id = tabManager!.createTab(profileId, url);
+        const tab = tabManager!.tabs.get(id);
+        const success = tabManager!.switchTo(id);
+
+        if (success) {
+            mainWindow!.webContents.send('tab-created', {
+                id,
+                profileId,
+                title: 'Loading...',
+                url: tab?.url || url || '',
+                loaded: true
+            });
+            updateViewBounds();
+            sessionManager!.saveSession();
+        }
+    });
+
     // Initialize window state from actual window bounds (ensures x/y are captured)
     const initialBounds = mainWindow.getBounds();
     sessionManager.updateWindowState({
@@ -288,7 +319,8 @@ function createWindow(): void {
         saveSession: () => sessionManager!.saveSession(),
         updateViewBounds,
         createSettingsWindow,
-        createDownloadsWindow
+        createDownloadsWindow,
+        toggleQuickSearch: () => quickSearchManager?.toggle()
     });
     menuBuilder.registerHandlers();
     menuBuilder.createApplicationMenu();
@@ -352,6 +384,13 @@ function createWindow(): void {
     ipcMain.handle('update-adblock-lists', async () => {
         if (adBlockManager) {
             await adBlockManager.updateLists();
+        }
+    });
+
+    // Quick Search toggle
+    ipcMain.on('toggle-quick-search', () => {
+        if (quickSearchManager) {
+            quickSearchManager.toggle();
         }
     });
 

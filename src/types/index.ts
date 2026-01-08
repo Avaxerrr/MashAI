@@ -114,6 +114,7 @@ export interface ShortcutConfig {
     prevTab: string;
     reopenClosedTab: string;
     downloads: string;
+    quickSearch: string;
 }
 
 export interface ShortcutSettings {
@@ -130,7 +131,8 @@ export const STANDARD_SHORTCUTS: ShortcutConfig = {
     nextTab: 'Ctrl+Tab',
     prevTab: 'Ctrl+Shift+Tab',
     reopenClosedTab: 'CmdOrCtrl+Shift+T',
-    downloads: 'CmdOrCtrl+J'
+    downloads: 'CmdOrCtrl+J',
+    quickSearch: 'CmdOrCtrl+K'
 };
 
 export const SAFARI_SHORTCUTS: ShortcutConfig = {
@@ -141,7 +143,8 @@ export const SAFARI_SHORTCUTS: ShortcutConfig = {
     nextTab: 'Ctrl+Tab',
     prevTab: 'Ctrl+Shift+Tab',
     reopenClosedTab: 'CmdOrCtrl+Shift+T',
-    downloads: 'CmdOrCtrl+Alt+L'
+    downloads: 'CmdOrCtrl+Alt+L',
+    quickSearch: 'CmdOrCtrl+K'
 };
 
 export const BRAVE_SHORTCUTS: ShortcutConfig = {
@@ -152,7 +155,8 @@ export const BRAVE_SHORTCUTS: ShortcutConfig = {
     nextTab: 'Ctrl+Tab',
     prevTab: 'Ctrl+Shift+Tab',
     reopenClosedTab: 'CmdOrCtrl+Shift+T',
-    downloads: 'CmdOrCtrl+J'
+    downloads: 'CmdOrCtrl+J',
+    quickSearch: 'CmdOrCtrl+K'
 };
 
 // Extend the Window interface with the preload-exposed API

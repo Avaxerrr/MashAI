@@ -24,7 +24,8 @@ export const STANDARD_SHORTCUTS: ShortcutConfig = {
     nextTab: 'Ctrl+Tab',
     prevTab: 'Ctrl+Shift+Tab',
     reopenClosedTab: 'CmdOrCtrl+Shift+T',
-    downloads: 'CmdOrCtrl+J'
+    downloads: 'CmdOrCtrl+J',
+    quickSearch: 'CmdOrCtrl+K'
 };
 
 /**
@@ -39,7 +40,8 @@ export const SAFARI_SHORTCUTS: ShortcutConfig = {
     nextTab: 'Ctrl+Tab',
     prevTab: 'Ctrl+Shift+Tab',
     reopenClosedTab: 'CmdOrCtrl+Shift+T',
-    downloads: 'CmdOrCtrl+Alt+L'  // Safari uses Cmd+Option+L
+    downloads: 'CmdOrCtrl+Alt+L',  // Safari uses Cmd+Option+L
+    quickSearch: 'CmdOrCtrl+K'
 };
 
 /**
@@ -54,7 +56,8 @@ export const BRAVE_SHORTCUTS: ShortcutConfig = {
     nextTab: 'Ctrl+Tab',
     prevTab: 'Ctrl+Shift+Tab',
     reopenClosedTab: 'CmdOrCtrl+Shift+T',
-    downloads: 'CmdOrCtrl+J'
+    downloads: 'CmdOrCtrl+J',
+    quickSearch: 'CmdOrCtrl+K'
 };
 
 /**

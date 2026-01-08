@@ -63,6 +63,34 @@ export function register(
         }
     });
 
+    // Create new tab in active profile (for Quick Search)
+    ipcMain.on('create-tab-active-profile', (event, url: string) => {
+        // Get active profile from active tab
+        let profileId = 'personal';
+        if (tabManager.activeTabId) {
+            const activeTab = tabManager.tabs.get(tabManager.activeTabId);
+            if (activeTab) {
+                profileId = activeTab.profileId;
+            }
+        }
+
+        const id = tabManager.createTab(profileId, url);
+        const tab = tabManager.tabs.get(id);
+        const success = tabManager.switchTo(id);
+
+        if (success) {
+            mainWindow.webContents.send('tab-created', {
+                id,
+                profileId,
+                title: 'Loading...',
+                url: tab?.url || url || '',
+                loaded: true
+            });
+            updateViewBounds();
+            saveSession();
+        }
+    });
+
     // Switch to tab
     ipcMain.on('switch-tab', (event, tabId: string) => {
         const success = tabManager.switchTo(tabId);

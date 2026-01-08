@@ -12,6 +12,18 @@ contextBridge.exposeInMainWorld('api', {
     hideWebView: () => ipcRenderer.send('hide-webview'),
     showWebView: () => ipcRenderer.send('show-webview'),
 
+    // Quick Search (for floating window)
+    send: (channel: string, ...args: unknown[]) => {
+        const validChannels = ['quick-search-submit', 'quick-search-close'];
+        if (validChannels.includes(channel)) {
+            ipcRenderer.send(channel, ...args);
+        }
+    },
+    onQuickSearchFocus: (callback: () => void) => {
+        ipcRenderer.on('quick-search-focus', callback);
+        return () => ipcRenderer.removeListener('quick-search-focus', callback);
+    },
+
     // Tab Actions
     createTab: (profileId: string) => ipcRenderer.send('create-tab', profileId),
     createTabWithUrl: (profileId: string, url: string) => ipcRenderer.send('create-tab-with-url', { profileId, url }),

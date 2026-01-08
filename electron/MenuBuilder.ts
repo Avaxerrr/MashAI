@@ -20,6 +20,7 @@ interface MenuDependencies {
     updateViewBounds: () => void;
     createSettingsWindow: () => void;
     createDownloadsWindow: () => void;
+    toggleQuickSearch?: () => void;
 }
 
 /**
@@ -35,6 +36,7 @@ class MenuBuilder {
     private updateViewBounds: () => void;
     private createSettingsWindow: () => void;
     private createDownloadsWindow: () => void;
+    private toggleQuickSearch: (() => void) | null;
 
     constructor(mainWindow: BrowserWindow, dependencies: MenuDependencies) {
         this.mainWindow = mainWindow;
@@ -46,6 +48,7 @@ class MenuBuilder {
         this.updateViewBounds = dependencies.updateViewBounds;
         this.createSettingsWindow = dependencies.createSettingsWindow;
         this.createDownloadsWindow = dependencies.createDownloadsWindow;
+        this.toggleQuickSearch = dependencies.toggleQuickSearch || null;
     }
 
     /**
@@ -475,7 +478,17 @@ class MenuBuilder {
                     { role: 'zoomIn' },
                     { role: 'zoomOut' },
                     { type: 'separator' },
-                    { role: 'togglefullscreen' }
+                    { role: 'togglefullscreen' },
+                    { type: 'separator' },
+                    {
+                        label: 'Quick Search',
+                        accelerator: shortcuts.quickSearch,
+                        click: () => {
+                            if (this.toggleQuickSearch) {
+                                this.toggleQuickSearch();
+                            }
+                        }
+                    }
                 ]
             },
             {

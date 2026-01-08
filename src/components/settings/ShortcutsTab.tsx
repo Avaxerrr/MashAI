@@ -18,7 +18,8 @@ const SHORTCUT_LABELS: Record<keyof ShortcutConfig, string> = {
     nextTab: 'Next Tab',
     prevTab: 'Previous Tab',
     reopenClosedTab: 'Reopen Closed Tab',
-    downloads: 'Open Downloads'
+    downloads: 'Open Downloads',
+    quickSearch: 'Quick Search'
 };
 
 const PRESET_LABELS: Record<ShortcutPreset, string> = {
