@@ -39,6 +39,12 @@ Access all major AI assistants from one window:
 - **Grok** – xAI's real-time AI
 - **Custom Providers** – Add any web-based AI service
 
+### Quick Search Overlay
+Fast navigation and command palette:
+- **Ctrl+K** to open anywhere
+- Search web, switch tabs, or execute commands
+- Seamless floating interface
+
 ### Built-in Ad Blocking
 Privacy-first browsing powered by Ghostery's adblocker:
 - Blocks ads and trackers automatically
@@ -51,6 +57,7 @@ Organize your AI workflows by context:
 - Each profile maintains its own tab sessions and cookies
 - Custom icons and colors for quick identification
 - Remembers your last active tab per profile
+- **Complete Cleanup** – Thoroughly removes all profile data on deletion
 
 ### Advanced Tab Management
 Browser-like experience with power-user features:
@@ -66,12 +73,13 @@ Stay productive without slowing down your system:
 - **Auto-Suspend** – Inactive tabs are suspended after configurable timeout
 - **Profile Switch Behavior** – Choose to keep, suspend, or close tabs when switching profiles
 - **Hardware Acceleration** – Toggle on/off based on your system
+- **Smart Cleanup** – Instantly removes orphaned data on startup
 
 ### System Integration
 Native desktop experience:
 - **System Tray** – Minimize to tray, quick access menu
 - **Global Shortcuts** – Toggle visibility from anywhere
-- **Session Persistence** – Tabs and window position restored on restart
+- **Session Persistence** – Tabs and window position/size reliably restored
 - **Launch at Startup** – Start with your system
 - **Always-on-Top** – Keep MashAI visible over other windows
 
@@ -85,6 +93,7 @@ Built-in download handling:
 Clean, focused interface:
 - Dark theme with violet accent colors
 - Custom frameless window with native controls
+- **Flexible Layout** – Responsive title bar with dynamic drag regions
 - Native context menus
 - Comprehensive settings panel
 
@@ -216,6 +225,7 @@ MashAI/
 | `Ctrl+R` | Reload active tab |
 | `Ctrl+Shift+T` | Reopen closed tab |
 | `Ctrl+J` | Open downloads |
+| `Ctrl+K` | Quick Search |
 | `Ctrl+Shift+A` | Toggle always-on-top |
 
 ---
