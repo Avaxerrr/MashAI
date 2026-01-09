@@ -66,6 +66,47 @@ const closedTabs: ClosedTab[] = [];
 const isDev = process.env.NODE_ENV === 'development';
 
 /**
+ * Clean up orphan partition folders from deleted profiles
+ * This runs on startup to catch any folders that couldn't be deleted during profile deletion
+ */
+function cleanupOrphanPartitions(validProfileIds: Set<string>): void {
+    try {
+        const partitionsDir = path.join(app.getPath('userData'), 'Partitions');
+
+        if (!fs.existsSync(partitionsDir)) {
+            console.log('[main] No Partitions directory found, skipping cleanup');
+            return;
+        }
+
+        const folders = fs.readdirSync(partitionsDir);
+        console.log(`[main] Checking ${folders.length} partition folders for orphans...`);
+
+        for (const folder of folders) {
+            // Skip special folders (like :events suffixes from AdBlockManager)
+            if (folder.includes(':')) continue;
+
+            // Check if this folder matches a valid profile ID (case-insensitive)
+            const folderLower = folder.toLowerCase();
+            const isValid = Array.from(validProfileIds).some(id => id.toLowerCase() === folderLower);
+
+            if (!isValid) {
+                const folderPath = path.join(partitionsDir, folder);
+                try {
+                    fs.rmSync(folderPath, { recursive: true, force: true });
+                    console.log(`[main] Deleted orphan partition folder: ${folder}`);
+                } catch (err) {
+                    console.warn(`[main] Could not delete orphan folder ${folder}:`, (err as Error).message);
+                }
+            }
+        }
+
+        console.log('[main] Partition cleanup complete');
+    } catch (err) {
+        console.error('[main] Error during partition cleanup:', err);
+    }
+}
+
+/**
  * Create the settings window
  */
 function createSettingsWindow(): void {
@@ -202,23 +243,37 @@ function createWindow(): void {
     settingsManager = new SettingsManager();
     profileManager = new ProfileManager(settingsManager);
 
+    // Clean up orphan partition folders from previously deleted profiles
+    const profiles = profileManager.getAllProfiles();
+    const validProfileIds = new Set(profiles.map(p => p.id));
+    cleanupOrphanPartitions(validProfileIds);
+
     // Pre-fetch favicons
     settingsManager.ensureProvidersFavicons().catch(err => {
         console.error('Failed to fetch provider favicons:', err);
     });
 
-    // Load window state from previous session
+    // Load window state from previous session (only if setting is enabled)
     const sessionPath = path.join(app.getPath('userData'), 'session.json');
     let windowState: { width?: number; height?: number; x?: number; y?: number; isMaximized?: boolean } = {};
-    try {
-        if (fs.existsSync(sessionPath)) {
-            const data = JSON.parse(fs.readFileSync(sessionPath, 'utf-8'));
-            if (data.windowBounds) {
-                windowState = { ...data.windowBounds, isMaximized: data.isMaximized || false };
+
+    // Check if rememberWindowPosition is enabled (default is true)
+    const settings = settingsManager.getSettings();
+    const rememberWindowPosition = settings.general?.rememberWindowPosition !== false;
+
+    if (rememberWindowPosition) {
+        try {
+            if (fs.existsSync(sessionPath)) {
+                const data = JSON.parse(fs.readFileSync(sessionPath, 'utf-8'));
+                if (data.windowBounds) {
+                    windowState = { ...data.windowBounds, isMaximized: data.isMaximized || false };
+                }
             }
+        } catch (e) {
+            console.error('Failed to load window state:', e);
         }
-    } catch (e) {
-        console.error('Failed to load window state:', e);
+    } else {
+        console.log('[main] rememberWindowPosition is disabled, using default window size');
     }
 
     // Create mainWindow

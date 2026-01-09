@@ -1,4 +1,6 @@
 import { ipcMain, app, session, BrowserWindow, dialog } from 'electron';
+import * as fs from 'fs';
+import * as path from 'path';
 import type TabManager from '../TabManager';
 import type SettingsManager from '../SettingsManager';
 import type ProfileManager from '../ProfileManager';
@@ -92,6 +94,23 @@ export function register(
             await profileSession.clearCache();
             console.log(`[SettingsHandlers] Cleared all partition data for ${profileId}`);
 
+            // 3. Delete the partition folder from disk to reclaim storage
+            // Electron stores partitions in folders with lowercase names
+            const partitionFolderName = profileId.toLowerCase();
+            const partitionPath = path.join(app.getPath('userData'), 'Partitions', partitionFolderName);
+            console.log(`[SettingsHandlers] Deleting partition folder: ${partitionPath}`);
+
+            try {
+                if (fs.existsSync(partitionPath)) {
+                    await fs.promises.rm(partitionPath, { recursive: true, force: true });
+                    console.log(`[SettingsHandlers] Successfully deleted partition folder for ${profileId}`);
+                } else {
+                    console.log(`[SettingsHandlers] Partition folder does not exist (already deleted): ${partitionPath}`);
+                }
+            } catch (fsError) {
+                console.warn(`[SettingsHandlers] Could not delete partition folder (will be cleaned up later): ${fsError}`);
+            }
+
             // 3. Remove profile from settings
             const updatedProfiles = currentSettings.profiles.filter(p => p.id !== profileId);
             currentSettings.profiles = updatedProfiles;
@@ -162,6 +181,15 @@ export function register(
                         await profileSession.clearStorageData();
                         await profileSession.clearCache();
                         console.log(`[SettingsHandlers] Successfully cleaned up all data for deleted profile: ${profileId}`);
+
+                        // Delete the partition folder from disk to reclaim storage
+                        // Electron stores partitions in folders with lowercase names
+                        const partitionFolderName = profileId.toLowerCase();
+                        const partitionPath = path.join(app.getPath('userData'), 'Partitions', partitionFolderName);
+                        if (fs.existsSync(partitionPath)) {
+                            await fs.promises.rm(partitionPath, { recursive: true, force: true });
+                            console.log(`[SettingsHandlers] Deleted partition folder for ${profileId}`);
+                        }
                     } catch (error) {
                         console.error(`[SettingsHandlers] Failed to clear partition data for ${profileId}:`, error);
                     }

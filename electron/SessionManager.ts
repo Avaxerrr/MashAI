@@ -80,6 +80,10 @@ class SessionManager {
             }
         }
 
+        // Check if rememberWindowPosition is enabled
+        const settings = this.settingsManager.getSettings();
+        const rememberWindowPosition = settings.general?.rememberWindowPosition !== false;
+
         const sessionData: Session = {
             tabs: Array.from(this.tabManager.tabs.values()).map(t => ({
                 id: t.id,
@@ -91,8 +95,9 @@ class SessionManager {
             activeTabId: this.tabManager.activeTabId,
             lastActiveProfileId: lastActiveProfileId,
             activeTabByProfile: this.activeTabByProfile,
-            windowBounds: this.currentWindowState,
-            isMaximized: this.currentWindowState.isMaximized
+            // Only save window bounds if setting is enabled
+            windowBounds: rememberWindowPosition ? this.currentWindowState : { width: 1200, height: 800 },
+            isMaximized: rememberWindowPosition ? this.currentWindowState.isMaximized : false
         };
 
         try {

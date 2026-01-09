@@ -258,7 +258,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialSettings
     }
 
     const addProfile = () => {
-        const newId = 'profile-' + Date.now()
+        // Use simple timestamp-based ID for uniqueness and stability
+        const newId = `profile-${Date.now()}`
         setProfiles([...profiles, { id: newId, name: 'New Profile', icon: 'user', color: '#6366f1' }])
         setNewlyAddedProfileId(newId)
     }

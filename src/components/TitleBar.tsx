@@ -207,9 +207,9 @@ export default function TitleBar({
                 </button>
             </div>
 
-            {/* Center: Tabs */}
-            <div className="flex-1 flex items-center h-full overflow-hidden">
-                <div className="flex-1 flex items-center h-full overflow-x-auto scrollbar-hide">
+            {/* Center: Tabs - shrinks as needed, scrolls when tabs overflow */}
+            <div className="flex items-center h-full overflow-hidden flex-shrink min-w-0">
+                <div className="flex items-center h-full overflow-x-auto scrollbar-hide">
                     {tabs.map(tab => {
                         const isActive = tab.id === activeTabId;
                         const provider = getProviderForTab(tab);
@@ -337,8 +337,8 @@ export default function TitleBar({
                 </button>
             </div>
 
-            {/* Guaranteed Drag Region */}
-            <div className="h-full w-6 flex-shrink-0" title="Drag to move window" />
+            {/* Flexible Drag Region - expands to fill space between tabs and window controls */}
+            <div className="h-full min-w-6 flex-1" title="Drag to move window" />
 
             {/* Right: Window Controls */}
             <div className="flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
