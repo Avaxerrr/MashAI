@@ -1,6 +1,6 @@
 import { Minus, Square, X, ChevronDown, ArrowLeft, RotateCw, Plus, Briefcase, User, Home, Zap, Code, Globe, Check, LucideIcon, AlertTriangle } from 'lucide-react'
 import { useState, useEffect, SyntheticEvent, DragEvent } from 'react'
-import type { Profile, AIProvider, TabMemoryInfo } from '../types'
+import type { Profile, AIProvider, TabMemoryInfo, SidePanelState } from '../types'
 
 interface TabState {
     id: string;
@@ -34,6 +34,7 @@ interface TitleBarProps {
     showToast?: boolean;
     toastType?: 'success' | 'error' | 'warning' | 'info';
     onCloseToast: () => void;
+    sidePanelState?: SidePanelState | null;
 }
 
 export default function TitleBar({
@@ -56,7 +57,8 @@ export default function TitleBar({
     toastMessage = '',
     showToast = false,
     toastType = 'success',
-    onCloseToast
+    onCloseToast,
+    sidePanelState
 }: TitleBarProps) {
     const [isMaximized, setIsMaximized] = useState(false)
     const [draggedTab, setDraggedTab] = useState<string | null>(null)
@@ -216,6 +218,7 @@ export default function TitleBar({
                         const activeBg = isActive ? (provider?.color || '#191A1A') : '';
                         const isDragging = draggedTab === tab.id;
                         const isDragOver = dragOverTab === tab.id;
+                        const isPinnedTab = sidePanelState?.pinnedTabId === tab.id;
 
                         return (
                             <div
@@ -264,7 +267,14 @@ export default function TitleBar({
                                     setDraggedTab(null);
                                     setDragOverTab(null);
                                 }}
-                                onClick={() => onSwitchTab(tab.id)}
+                                onClick={() => {
+                                    // If clicking pinned tab, trigger pulse instead of switching
+                                    if (isPinnedTab) {
+                                        window.api.pulseSidePanel?.();
+                                        return;
+                                    }
+                                    onSwitchTab(tab.id);
+                                }}
                                 onContextMenu={(e) => {
                                     e.preventDefault()
                                     window.api.showContextMenu(tab.id)
@@ -278,10 +288,15 @@ export default function TitleBar({
                                         ${isDragging ? 'scale-95 shadow-lg shadow-violet-500/30 z-50' : ''}
                                         ${tab.loaded === false && !isDragging && !isDragOver ? 'opacity-50' : ''}
                                         ${tab.loading ? 'tab-loading-shimmer' : ''}
+                                        ${isPinnedTab ? 'border-b-2 border-b-violet-500' : ''}
                                     `}
                                 title={(() => {
                                     const mem = tabMemory[tab.id];
                                     const memStr = mem?.memoryKB ? ` (${mem.memoryKB} MB)` : '';
+                                    if (isPinnedTab) {
+                                        const side = sidePanelState?.panelSide === 'left' ? 'Left' : 'Right';
+                                        return `${tab.title} (Pinned to ${side})`;
+                                    }
                                     if (tab.loaded === false) {
                                         return `${tab.title} (suspended)`;
                                     }

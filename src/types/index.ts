@@ -102,6 +102,15 @@ export interface AdBlockStatus {
     blockedCount: number;
 }
 
+// Side Panel types
+export type PanelSide = 'left' | 'right';
+
+export interface SidePanelState {
+    pinnedTabId: string;
+    panelSide: PanelSide;
+    panelWidth: number;
+}
+
 // Shortcut types
 export type ShortcutPreset = 'standard' | 'safari' | 'brave' | 'custom';
 
@@ -255,6 +264,16 @@ export interface ElectronAPI {
     // Ad Blocker
     getAdBlockStatus: () => Promise<AdBlockStatus>;
     updateAdBlockLists: () => Promise<void>;
+
+    // Side Panel
+    pinToSidePanel: (tabId: string, side?: PanelSide) => void;
+    unpinSidePanel: () => void;
+    swapPanelSide: () => void;
+    setPanelWidth: (width: number) => void;
+    getSidePanelState: () => Promise<SidePanelState | null>;
+    onSidePanelStateChanged: (callback: (state: SidePanelState | null) => void) => () => void;
+    onPulseSidePanel: (callback: () => void) => () => void;
+    pulseSidePanel: () => void;
 }
 
 // Event types

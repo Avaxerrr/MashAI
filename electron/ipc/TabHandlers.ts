@@ -256,4 +256,44 @@ export function register(
     ipcMain.on('request-update-bounds', () => {
         updateViewBounds();
     });
+
+    // =========================================================================
+    // Side Panel Handlers
+    // =========================================================================
+
+    // Pin a tab to the side panel
+    ipcMain.on('pin-to-side-panel', (event, { tabId, side }: { tabId: string; side?: 'left' | 'right' }) => {
+        const success = tabManager.pinToSidePanel(tabId, side || 'right');
+        if (success) {
+            saveSession();
+        }
+    });
+
+    // Unpin the side panel
+    ipcMain.on('unpin-side-panel', () => {
+        tabManager.unpinSidePanel();
+        saveSession();
+    });
+
+    // Swap side panel to other side
+    ipcMain.on('swap-panel-side', () => {
+        tabManager.swapPanelSide();
+        saveSession();
+    });
+
+    // Set panel width
+    ipcMain.on('set-panel-width', (event, width: number) => {
+        tabManager.setPanelWidth(width);
+        saveSession();
+    });
+
+    // Get side panel state
+    ipcMain.handle('get-side-panel-state', () => {
+        return tabManager.getSidePanelState();
+    });
+
+    // Pulse side panel (visual feedback when clicking pinned tab)
+    ipcMain.on('pulse-side-panel', () => {
+        mainWindow.webContents.send('pulse-side-panel');
+    });
 }

@@ -221,18 +221,64 @@ function createDownloadsWindow(): void {
 }
 
 /**
- * Update view bounds for the active tab
+ * Update view bounds for the active tab and side panel
  */
 function updateViewBounds(): void {
     if (!mainWindow || !tabManager) return;
+
     const bounds = mainWindow.getBounds();
-    const contentBounds = {
-        x: 0,
-        y: TITLEBAR_HEIGHT,
-        width: bounds.width,
-        height: bounds.height - TITLEBAR_HEIGHT
-    };
-    tabManager.resizeActiveView(contentBounds);
+    const panelState = tabManager.getSidePanelState();
+    const DIVIDER_WIDTH = 4;
+
+    if (panelState) {
+        // Side panel is active - split the view
+        const panelWidthPx = Math.floor(bounds.width * panelState.panelWidth / 100);
+        const mainWidthPx = bounds.width - panelWidthPx - DIVIDER_WIDTH;
+
+        let mainBounds, panelBounds;
+
+        if (panelState.panelSide === 'right') {
+            // Main on left, panel on right
+            mainBounds = {
+                x: 0,
+                y: TITLEBAR_HEIGHT,
+                width: mainWidthPx,
+                height: bounds.height - TITLEBAR_HEIGHT
+            };
+            panelBounds = {
+                x: mainWidthPx + DIVIDER_WIDTH,
+                y: TITLEBAR_HEIGHT,
+                width: panelWidthPx,
+                height: bounds.height - TITLEBAR_HEIGHT
+            };
+        } else {
+            // Panel on left, main on right
+            panelBounds = {
+                x: 0,
+                y: TITLEBAR_HEIGHT,
+                width: panelWidthPx,
+                height: bounds.height - TITLEBAR_HEIGHT
+            };
+            mainBounds = {
+                x: panelWidthPx + DIVIDER_WIDTH,
+                y: TITLEBAR_HEIGHT,
+                width: mainWidthPx,
+                height: bounds.height - TITLEBAR_HEIGHT
+            };
+        }
+
+        tabManager.resizeActiveView(mainBounds);
+        tabManager.resizePinnedView(panelBounds);
+    } else {
+        // Single view - full width
+        const contentBounds = {
+            x: 0,
+            y: TITLEBAR_HEIGHT,
+            width: bounds.width,
+            height: bounds.height - TITLEBAR_HEIGHT
+        };
+        tabManager.resizeActiveView(contentBounds);
+    }
 }
 
 /**

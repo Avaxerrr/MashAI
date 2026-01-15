@@ -1,5 +1,5 @@
 import { BrowserWindow, WebContentsView, session, Menu, dialog, app } from 'electron';
-import type { TabInfo } from './types';
+import type { TabInfo, SidePanelState, PanelSide } from './types';
 import type SettingsManager from './SettingsManager';
 import type AdBlockManager from './AdBlockManager';
 
@@ -84,6 +84,7 @@ class TabManager {
     private openDownloadsWindowCallback: (() => void) | null;
     private pendingDownloadPaths: Map<string, string>; // URL -> save path for user-confirmed downloads
     private adBlockManager: AdBlockManager | null;
+    private sidePanelState: SidePanelState | null;
 
     constructor(mainWindow: BrowserWindow, settingsManager: SettingsManager) {
         this.mainWindow = mainWindow;
@@ -98,6 +99,7 @@ class TabManager {
         this.openDownloadsWindowCallback = null;
         this.pendingDownloadPaths = new Map();
         this.adBlockManager = null;
+        this.sidePanelState = null;
 
         // Start inactivity check timer (runs every minute)
         this._startInactivityTimer();
@@ -827,10 +829,14 @@ class TabManager {
         if (this.activeTabId && this.activeTabId !== tabId) {
             const currentTab = this.tabs.get(this.activeTabId);
             if (currentTab && currentTab.view) {
-                try {
-                    this.mainWindow.contentView.removeChildView(currentTab.view);
-                } catch (e) {
-                    console.warn('Could not remove view:', e);
+                // DON'T remove the view if it's the pinned tab - it needs to stay visible
+                const isPinnedTab = this.sidePanelState?.pinnedTabId === this.activeTabId;
+                if (!isPinnedTab) {
+                    try {
+                        this.mainWindow.contentView.removeChildView(currentTab.view);
+                    } catch (e) {
+                        console.warn('Could not remove view:', e);
+                    }
                 }
             }
         }
@@ -852,6 +858,12 @@ class TabManager {
     closeTab(tabId: string): void {
         const tab = this.tabs.get(tabId);
         if (!tab) return;
+
+        // If closing the pinned tab, exit side panel mode first
+        if (this.sidePanelState?.pinnedTabId === tabId) {
+            console.log(`[TabManager] Closing pinned tab ${tabId}, exiting side panel mode`);
+            this.unpinSidePanel();
+        }
 
         if (this.activeTabId === tabId && tab.view) {
             try {
@@ -1000,6 +1012,195 @@ class TabManager {
             else unloaded++;
         }
         return { loaded, unloaded, total: this.tabs.size };
+    }
+
+    // =========================================================================
+    // Side Panel Methods
+    // =========================================================================
+
+    /**
+     * Pin a tab to the side panel
+     * @param tabId - The tab to pin
+     * @param side - Which side to pin to ('left' or 'right')
+     * @returns true if successful
+     */
+    pinToSidePanel(tabId: string, side: PanelSide = 'right'): boolean {
+        const tab = this.tabs.get(tabId);
+        if (!tab) {
+            console.warn(`[TabManager] Cannot pin tab ${tabId} - not found`);
+            return false;
+        }
+
+        // If there's already a pinned tab, remove its view first
+        const previousWidth = this.sidePanelState?.panelWidth || 40;
+        if (this.sidePanelState && this.sidePanelState.pinnedTabId !== tabId) {
+            const oldPinnedTab = this.tabs.get(this.sidePanelState.pinnedTabId);
+            if (oldPinnedTab?.view) {
+                try {
+                    this.mainWindow.contentView.removeChildView(oldPinnedTab.view);
+                    console.log(`[TabManager] Removed old pinned tab ${this.sidePanelState.pinnedTabId}`);
+                } catch (e) {
+                    console.warn('Could not remove old pinned view:', e);
+                }
+            }
+        }
+
+        // Load the tab if it's not loaded
+        if (!tab.loaded) {
+            console.log(`[TabManager] Tab ${tabId} not loaded, loading now for side panel...`);
+            this.loadTab(tabId);
+        }
+
+        // Set the side panel state FIRST (so switchTo knows about it)
+        // Preserve previous width when replacing
+        this.sidePanelState = {
+            pinnedTabId: tabId,
+            panelSide: side,
+            panelWidth: previousWidth
+        };
+
+        console.log(`[TabManager] Pinned tab ${tabId} to ${side} side panel`);
+
+        // If the pinned tab was the active tab, switch to another tab FIRST
+        // This way switchTo() won't remove the pinned tab's view (since sidePanelState is set)
+        if (this.activeTabId === tabId) {
+            const profileTabs = this.getTabsForProfile(tab.profileId);
+            const currentIndex = profileTabs.findIndex(t => t.id === tabId);
+
+            // Find next tab (or previous if this was the last)
+            let newActiveTab = null;
+            if (profileTabs.length > 1) {
+                if (currentIndex < profileTabs.length - 1) {
+                    // Switch to next tab
+                    newActiveTab = profileTabs[currentIndex + 1];
+                } else if (currentIndex > 0) {
+                    // Switch to previous tab
+                    newActiveTab = profileTabs[currentIndex - 1];
+                }
+            }
+
+            if (newActiveTab) {
+                console.log(`[TabManager] Switching main view to ${newActiveTab.id} after pinning`);
+                this.switchTo(newActiveTab.id);
+            }
+        }
+
+        // NOW add the pinned view to the window (after switchTo is done)
+        const pinnedTab = this.tabs.get(tabId);
+        if (pinnedTab?.view) {
+            this.mainWindow.contentView.addChildView(pinnedTab.view);
+        }
+
+        // Notify frontend
+        this.mainWindow.webContents.send('side-panel-state-changed', this.sidePanelState);
+
+        // Trigger view bounds update
+        if (this.updateViewBoundsCallback) {
+            this.updateViewBoundsCallback();
+        }
+
+        return true;
+    }
+
+    /**
+     * Unpin the side panel
+     */
+    unpinSidePanel(): void {
+        if (!this.sidePanelState) return;
+
+        const pinnedTabId = this.sidePanelState.pinnedTabId;
+        const pinnedTab = this.tabs.get(pinnedTabId);
+
+        // Remove the pinned view from window (if it exists and isn't the active tab)
+        if (pinnedTab?.view && pinnedTabId !== this.activeTabId) {
+            try {
+                this.mainWindow.contentView.removeChildView(pinnedTab.view);
+            } catch (e) {
+                console.warn('Could not remove pinned view:', e);
+            }
+        }
+
+        console.log(`[TabManager] Unpinned side panel (was tab ${pinnedTabId})`);
+
+        this.sidePanelState = null;
+
+        // Notify frontend
+        this.mainWindow.webContents.send('side-panel-state-changed', null);
+
+        // Trigger view bounds update
+        if (this.updateViewBoundsCallback) {
+            this.updateViewBoundsCallback();
+        }
+    }
+
+    /**
+     * Swap the side panel to the other side
+     */
+    swapPanelSide(): void {
+        if (!this.sidePanelState) return;
+
+        this.sidePanelState.panelSide = this.sidePanelState.panelSide === 'left' ? 'right' : 'left';
+        console.log(`[TabManager] Swapped side panel to ${this.sidePanelState.panelSide}`);
+
+        // Notify frontend
+        this.mainWindow.webContents.send('side-panel-state-changed', this.sidePanelState);
+
+        // Trigger view bounds update
+        if (this.updateViewBoundsCallback) {
+            this.updateViewBoundsCallback();
+        }
+    }
+
+    /**
+     * Set the panel width percentage
+     * @param width - Width as percentage (0-100)
+     */
+    setPanelWidth(width: number): void {
+        if (!this.sidePanelState) return;
+
+        // Clamp between 20% and 80%
+        this.sidePanelState.panelWidth = Math.max(20, Math.min(80, width));
+
+        // Notify frontend
+        this.mainWindow.webContents.send('side-panel-state-changed', this.sidePanelState);
+
+        // Trigger view bounds update
+        if (this.updateViewBoundsCallback) {
+            this.updateViewBoundsCallback();
+        }
+    }
+
+    /**
+     * Get the current side panel state
+     */
+    getSidePanelState(): SidePanelState | null {
+        return this.sidePanelState;
+    }
+
+    /**
+     * Set the side panel state (used for session restore)
+     */
+    setSidePanelState(state: SidePanelState | null): void {
+        this.sidePanelState = state;
+    }
+
+    /**
+     * Get the pinned tab's view
+     */
+    getPinnedView(): WebContentsView | null {
+        if (!this.sidePanelState) return null;
+        const tab = this.tabs.get(this.sidePanelState.pinnedTabId);
+        return tab?.view || null;
+    }
+
+    /**
+     * Resize the pinned view
+     */
+    resizePinnedView(bounds: ViewBounds): void {
+        const view = this.getPinnedView();
+        if (view) {
+            view.setBounds(bounds);
+        }
     }
 }
 

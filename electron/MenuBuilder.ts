@@ -138,6 +138,81 @@ class MenuBuilder {
                         this.mainWindow.webContents.send('request-close-tab', tabId);
                     }
                 },
+                { type: 'separator' },
+                // Side Panel options
+                ...((): MenuItemConstructorOptions[] => {
+                    const panelState = this.tabManager.getSidePanelState();
+                    const isPinned = panelState?.pinnedTabId === tabId;
+                    const hasAnyPinned = panelState !== null;
+
+                    if (isPinned) {
+                        // Right-clicking the pinned tab
+                        return [
+                            {
+                                label: 'Unpin from Side Panel',
+                                click: () => {
+                                    this.tabManager.unpinSidePanel();
+                                    this.saveSession();
+                                }
+                            },
+                            {
+                                label: 'Move to Other Side',
+                                click: () => {
+                                    this.tabManager.swapPanelSide();
+                                    this.saveSession();
+                                }
+                            }
+                        ];
+                    } else if (hasAnyPinned) {
+                        // Right-clicking a free tab when another tab is already pinned
+                        return [
+                            {
+                                label: 'Replace Pinned Tab',
+                                submenu: [
+                                    {
+                                        label: `Replace to ${panelState.panelSide === 'right' ? 'Right' : 'Left'}`,
+                                        click: () => {
+                                            this.tabManager.pinToSidePanel(tabId, panelState.panelSide);
+                                            this.saveSession();
+                                        }
+                                    },
+                                    {
+                                        label: `Replace to ${panelState.panelSide === 'right' ? 'Left' : 'Right'}`,
+                                        click: () => {
+                                            const otherSide = panelState.panelSide === 'right' ? 'left' : 'right';
+                                            this.tabManager.pinToSidePanel(tabId, otherSide);
+                                            this.saveSession();
+                                        }
+                                    }
+                                ]
+                            }
+                        ];
+                    } else {
+                        // No pinned tab exists
+                        return [
+                            {
+                                label: 'Pin to Side Panel',
+                                submenu: [
+                                    {
+                                        label: 'Pin to Right',
+                                        click: () => {
+                                            this.tabManager.pinToSidePanel(tabId, 'right');
+                                            this.saveSession();
+                                        }
+                                    },
+                                    {
+                                        label: 'Pin to Left',
+                                        click: () => {
+                                            this.tabManager.pinToSidePanel(tabId, 'left');
+                                            this.saveSession();
+                                        }
+                                    }
+                                ]
+                            }
+                        ];
+                    }
+                })(),
+                { type: 'separator' },
                 {
                     label: 'Close Other Tabs',
                     click: () => {

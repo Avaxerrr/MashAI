@@ -160,5 +160,23 @@ contextBridge.exposeInMainWorld('api', {
 
     // Ad Blocker
     getAdBlockStatus: () => ipcRenderer.invoke('get-adblock-status'),
-    updateAdBlockLists: () => ipcRenderer.invoke('update-adblock-lists')
+    updateAdBlockLists: () => ipcRenderer.invoke('update-adblock-lists'),
+
+    // Side Panel
+    pinToSidePanel: (tabId: string, side?: 'left' | 'right') => ipcRenderer.send('pin-to-side-panel', { tabId, side }),
+    unpinSidePanel: () => ipcRenderer.send('unpin-side-panel'),
+    swapPanelSide: () => ipcRenderer.send('swap-panel-side'),
+    setPanelWidth: (width: number) => ipcRenderer.send('set-panel-width', width),
+    getSidePanelState: () => ipcRenderer.invoke('get-side-panel-state'),
+    onSidePanelStateChanged: (callback: (state: unknown) => void) => {
+        const handler = (e: IpcRendererEvent, state: unknown) => callback(state);
+        ipcRenderer.on('side-panel-state-changed', handler);
+        return () => ipcRenderer.removeListener('side-panel-state-changed', handler);
+    },
+    onPulseSidePanel: (callback: () => void) => {
+        const handler = () => callback();
+        ipcRenderer.on('pulse-side-panel', handler);
+        return () => ipcRenderer.removeListener('pulse-side-panel', handler);
+    },
+    pulseSidePanel: () => ipcRenderer.send('pulse-side-panel')
 });

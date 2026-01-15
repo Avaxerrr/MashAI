@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import TitleBar from './components/TitleBar'
-import type { Profile, AIProvider, Settings, TabCreatedEvent, TabUpdatedEvent, ProfileTabsLoadedEvent, TabMemoryInfo } from './types'
+import type { Profile, AIProvider, Settings, TabCreatedEvent, TabUpdatedEvent, ProfileTabsLoadedEvent, TabMemoryInfo, SidePanelState } from './types'
 
 interface TabState {
     id: string;
@@ -28,6 +28,8 @@ function App() {
     const [toastMessage, setToastMessage] = useState<string>('')
     const [showToast, setShowToast] = useState<boolean>(false)
     const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
+    const [sidePanelState, setSidePanelState] = useState<SidePanelState | null>(null)
+    const [isPanelPulsing, setIsPanelPulsing] = useState<boolean>(false)
 
     const closeTabRef = useRef<((tabId: string) => void) | null>(null)
 
@@ -189,6 +191,18 @@ function App() {
             setShowToast(true)
         })
 
+        // Side panel state listener
+        const cleanupSidePanel = window.api.onSidePanelStateChanged?.((state) => {
+            console.log('App: Side panel state changed', state)
+            setSidePanelState(state)
+        })
+
+        // Listen for pulse-side-panel to trigger visual feedback
+        const cleanupPulse = window.api.onPulseSidePanel?.(() => {
+            setIsPanelPulsing(true);
+            setTimeout(() => setIsPanelPulsing(false), 500);
+        });
+
         return () => {
             console.log('Cleaning up listeners')
             if (cleanupProfilesLoaded) cleanupProfilesLoaded()
@@ -202,6 +216,8 @@ function App() {
             if (cleanupTabClosedBackend) cleanupTabClosedBackend()
             if (cleanupSettingsUpdated) cleanupSettingsUpdated()
             if (cleanupShowToast) cleanupShowToast()
+            if (cleanupSidePanel) cleanupSidePanel()
+            if (cleanupPulse) cleanupPulse()
         }
     }, [])
 
@@ -389,9 +405,64 @@ function App() {
                 showToast={showToast}
                 toastType={toastType}
                 onCloseToast={() => setShowToast(false)}
+                sidePanelState={sidePanelState}
             />
 
+            {/* Draggable Divider for Side Panel */}
+            {sidePanelState && (
+                <div
+                    className="absolute z-50 cursor-col-resize group"
+                    style={{
+                        top: '36px',
+                        bottom: 0,
+                        // Position divider at the edge between main and panel
+                        left: sidePanelState.panelSide === 'right'
+                            ? `${100 - sidePanelState.panelWidth}%`
+                            : `${sidePanelState.panelWidth}%`,
+                        width: '8px',
+                        transform: 'translateX(-50%)'
+                    }}
+                    onMouseDown={(e) => {
+                        e.preventDefault();
+                        const startX = e.clientX;
+                        const startPosition = sidePanelState.panelWidth;
+                        const windowWidth = window.innerWidth;
+                        const isRight = sidePanelState.panelSide === 'right';
 
+                        const handleMouseMove = (moveEvent: MouseEvent) => {
+                            const deltaX = moveEvent.clientX - startX;
+                            const deltaPercent = (deltaX / windowWidth) * 100;
+                            // When panel is on right: dragging left (negative delta) = larger panel
+                            // When panel is on left: dragging right (positive delta) = larger panel
+                            const newPosition = isRight
+                                ? Math.max(20, Math.min(80, startPosition - deltaPercent))
+                                : Math.max(20, Math.min(80, startPosition + deltaPercent));
+                            window.api.setPanelWidth(newPosition);
+                        };
+
+                        const handleMouseUp = () => {
+                            document.removeEventListener('mousemove', handleMouseMove);
+                            document.removeEventListener('mouseup', handleMouseUp);
+                            document.body.style.cursor = '';
+                            document.body.style.userSelect = '';
+                        };
+
+                        document.addEventListener('mousemove', handleMouseMove);
+                        document.addEventListener('mouseup', handleMouseUp);
+                        document.body.style.cursor = 'col-resize';
+                        document.body.style.userSelect = 'none';
+                    }}
+                >
+                    {/* Visual handle with pulse animation */}
+                    <div
+                        className={`absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 transition-all duration-300
+                            ${isPanelPulsing
+                                ? 'bg-violet-500 w-2 shadow-[0_0_15px_3px_rgba(139,92,246,0.6)]'
+                                : 'bg-[#3a3a3b] group-hover:bg-violet-500'
+                            }`}
+                    />
+                </div>
+            )}
 
             <div className="flex-1" />
         </div>

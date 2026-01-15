@@ -176,6 +176,19 @@ export interface Session {
     activeTabByProfile: Record<string, string>;
     windowBounds: WindowBounds;
     isMaximized: boolean;
+    sidePanelByProfile?: Record<string, SidePanelState | null>;
+}
+
+// =============================================================================
+// Side Panel Types
+// =============================================================================
+
+export type PanelSide = 'left' | 'right';
+
+export interface SidePanelState {
+    pinnedTabId: string;
+    panelSide: PanelSide;
+    panelWidth: number;  // Percentage (0-100)
 }
 
 // =============================================================================

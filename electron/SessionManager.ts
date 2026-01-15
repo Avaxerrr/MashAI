@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
-import type { Session, SessionTab, WindowState } from './types';
+import type { Session, SessionTab, WindowState, SidePanelState } from './types';
 import type TabManager from './TabManager';
 import type SettingsManager from './SettingsManager';
 
@@ -14,12 +14,14 @@ class SessionManager {
     private settingsManager: SettingsManager;
     private currentWindowState: WindowState;
     private activeTabByProfile: Record<string, string>;
+    private sidePanelByProfile: Record<string, SidePanelState | null>;
 
     constructor(tabManager: TabManager, settingsManager: SettingsManager) {
         this.tabManager = tabManager;
         this.settingsManager = settingsManager;
         this.currentWindowState = { width: 1200, height: 800, isMaximized: false };
         this.activeTabByProfile = {};
+        this.sidePanelByProfile = {};
     }
 
     /**
@@ -84,6 +86,12 @@ class SessionManager {
         const settings = this.settingsManager.getSettings();
         const rememberWindowPosition = settings.general?.rememberWindowPosition !== false;
 
+        // Update sidePanelByProfile with current state
+        const currentPanelState = this.tabManager.getSidePanelState();
+        if (currentPanelState && lastActiveProfileId) {
+            this.sidePanelByProfile[lastActiveProfileId] = currentPanelState;
+        }
+
         const sessionData: Session = {
             tabs: Array.from(this.tabManager.tabs.values()).map(t => ({
                 id: t.id,
@@ -97,7 +105,8 @@ class SessionManager {
             activeTabByProfile: this.activeTabByProfile,
             // Only save window bounds if setting is enabled
             windowBounds: rememberWindowPosition ? this.currentWindowState : { width: 1200, height: 800 },
-            isMaximized: rememberWindowPosition ? this.currentWindowState.isMaximized : false
+            isMaximized: rememberWindowPosition ? this.currentWindowState.isMaximized : false,
+            sidePanelByProfile: this.sidePanelByProfile
         };
 
         try {
@@ -203,12 +212,20 @@ class SessionManager {
             const stats = this.tabManager.getLoadStats();
             console.log(`[SessionManager] Tab stats: ${stats.loaded} loaded, ${stats.unloaded} unloaded, ${stats.total} total`);
 
+            // Load sidePanelByProfile into memory
+            if (data.sidePanelByProfile) {
+                this.sidePanelByProfile = { ...data.sidePanelByProfile };
+            }
+
             // Switch to the active tab
             if (activeTabId && this.tabManager.tabs.has(activeTabId)) {
                 setTimeout(() => {
                     this.tabManager.switchTo(activeTabId);
                     mainWindow.webContents.send('restore-active', activeTabId);
                     updateViewBounds();
+
+                    // Restore side panel for the active profile
+                    this.restoreSidePanelForProfile(lastActiveProfileId, mainWindow, updateViewBounds);
                 }, 500);
             } else if (lastActiveProfileId) {
                 setTimeout(() => {
@@ -217,11 +234,52 @@ class SessionManager {
                         this.tabManager.switchTo(profileTabs[0].id);
                         mainWindow.webContents.send('restore-active', profileTabs[0].id);
                         updateViewBounds();
+
+                        // Restore side panel for the active profile
+                        this.restoreSidePanelForProfile(lastActiveProfileId, mainWindow, updateViewBounds);
                     }
                 }, 500);
             }
         } catch (e) {
             console.error('Failed to restore session:', e);
+        }
+    }
+
+    /**
+     * Restore side panel state for a specific profile
+     */
+    private restoreSidePanelForProfile(profileId: string | null, mainWindow: BrowserWindow, updateViewBounds: () => void): void {
+        if (!profileId) return;
+
+        const panelState = this.sidePanelByProfile[profileId];
+        if (panelState && panelState.pinnedTabId) {
+            // Verify the pinned tab exists
+            if (this.tabManager.tabs.has(panelState.pinnedTabId)) {
+                console.log(`[SessionManager] Restoring side panel for profile ${profileId}, pinned tab: ${panelState.pinnedTabId}`);
+
+                // Set the panel state on TabManager
+                this.tabManager.setSidePanelState(panelState);
+
+                // Load the pinned tab if not loaded
+                if (!this.tabManager.isTabLoaded(panelState.pinnedTabId)) {
+                    this.tabManager.loadTab(panelState.pinnedTabId);
+                }
+
+                // Add the view to window
+                const pinnedView = this.tabManager.getPinnedView();
+                if (pinnedView) {
+                    mainWindow.contentView.addChildView(pinnedView);
+                }
+
+                // Notify frontend
+                mainWindow.webContents.send('side-panel-state-changed', panelState);
+
+                // Update bounds
+                setTimeout(() => updateViewBounds(), 100);
+            } else {
+                console.log(`[SessionManager] Pinned tab ${panelState.pinnedTabId} no longer exists, clearing panel state`);
+                delete this.sidePanelByProfile[profileId];
+            }
         }
     }
 
