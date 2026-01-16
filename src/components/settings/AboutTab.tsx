@@ -44,7 +44,8 @@ export default function AboutTab() {
 
                     {/* Description */}
                     <p className="text-sm text-gray-400 leading-relaxed text-center">
-                        The all-in-one workspace for your AI workflow. Manage cloud and local models in one private, ad-free environment.
+                        Your unified AI workspace. All your AI tools organized for work.<br />
+                        Free and open-source.
                     </p>
 
                     {/* Action Buttons - Row 1 */}
@@ -92,7 +93,7 @@ export default function AboutTab() {
                             Created by <span className="text-white font-medium">Avaxerrr</span>
                         </p>
                         <p className="text-xs text-gray-500">
-                            © 2026 All rights reserved
+                            Licensed under MPL 2.0
                         </p>
                     </div>
                 </div>

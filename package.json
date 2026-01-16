@@ -6,8 +6,9 @@
     "name": "Avaxerrr",
     "email": "avaxerrr@users.noreply.github.com"
   },
-  "description": "A unified AI workspace browser",
+  "description": "Your unified AI workspace - ChatGPT, Claude, Gemini, and more organized in one desktop app",
   "main": "dist/electron/main.js",
+  "license": "MPL-2.0",
   "type": "module",
   "scripts": {
     "build:ts": "tsc -p tsconfig.electron.json && echo {\"type\":\"commonjs\"} > dist/electron/package.json",

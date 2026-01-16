@@ -4,27 +4,30 @@
 
 ### Your Unified AI Workspace
 
-**A multi-profile desktop browser for accessing all your AI assistants in one place**
+**Stop losing work in browser tabs. MashAI keeps all your AI tools organized in one desktop app.**
 
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-blue.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Electron](https://img.shields.io/badge/Electron-39.2-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 
 </div>
 
 ---
 
-## What is MashAI?
+## All your AI tools, organized for work
 
-**MashAI** is your all-in-one desktop workspace for artificial intelligence. It consolidates all your AI tools—cloud-based services like ChatGPT, Claude, and Gemini—into a single, privacy-focused environment with built-in ad blocking.
+Use ChatGPT for writing, Claude for analysis, Gemini for research - all in one desktop app. Separate work and personal with profiles. Built-in ad blocking keeps you focused. And it's fast, even with 20+ conversations open.
 
-### The Problem It Solves
+**Free, open-source, and built for people who use AI to get work done.**
 
-- **Fragmented Workflow** – Stop jumping between browser tabs and different apps.
-- **Privacy Concerns** – Block ads and trackers that harvest your data.
-- **Resource Hogging** – Intelligent tab management keeps your system running smooth.
-- **Context Switching** – Separate profiles for Work, Personal, and Research.
+## Why MashAI?
+
+**Keep work organized** - Separate client projects, research, and personal conversations into profiles. Never lose an important AI chat again.
+
+**Stay productive** - No more browser tab chaos. No more "which tab was that in?" Just open MashAI and get to work.
+
+**Work without distractions** - Ad blocking built-in. Privacy-first. Your AI conversations stay on your computer, not sold to advertisers.
 
 ---
 
@@ -32,53 +35,76 @@
 
 ### Multi-AI Provider Support
 Access all major AI assistants from one window:
-- **Perplexity** – AI-powered search
-- **Gemini** – Google's AI assistant
 - **ChatGPT** – OpenAI's conversational AI
 - **Claude** – Anthropic's helpful assistant
+- **Gemini** – Google's AI assistant
+- **Perplexity** – AI-powered search
 - **Grok** – xAI's real-time AI
+- **DeepSeek** – Advanced reasoning AI
 - **Custom Providers** – Add any web-based AI service
-
-### Quick Search Overlay
-Fast navigation and command palette:
-- **Ctrl+K** to open anywhere
-- Search web, switch tabs, or execute commands
-- Seamless floating interface
-
-### Built-in Ad Blocking
-Privacy-first browsing powered by Ghostery's adblocker:
-- Blocks ads and trackers automatically
-- Per-tab blocked request counts
-- Toggle on/off from settings
 
 ### Profile System
 Organize your AI workflows by context:
 - Create unlimited profiles (Work, Personal, Research, etc.)
 - Each profile maintains its own tab sessions and cookies
 - Custom icons and colors for quick identification
-- Remembers your last active tab per profile
-- **Complete Cleanup** – Thoroughly removes all profile data on deletion
+- Automatic session persistence per profile
+- Complete data cleanup on profile deletion
 
 ### Advanced Tab Management
 Browser-like experience with power-user features:
 - Drag-and-drop tab reordering
 - Duplicate, reload, and reopen closed tabs
 - Close tabs to the right / close other tabs
-- Real-time memory usage per tab
-- Parent tab navigation (close child returns to parent)
+- Real-time favicon caching
+- Right-click context menu with rich options
+- Tab navigation history (child tabs return to parent)
+
+### Side Panel
+Work with two AI assistants simultaneously:
+- Pin any tab to left or right side panel
+- Draggable divider to resize panels
+- Swap panel sides with one click
+- Visual indicator for pinned tabs in tab bar
+- Persists across sessions
+
+### Smart Tab Suspension
+Intelligent memory management inspired by Chrome's Memory Saver:
+- **Auto-suspend inactive tabs** after configurable timeout (1-120 minutes)
+- **Media-aware protection** – Tabs playing audio/video are never suspended
+- **Manual exclusion** – Right-click any tab → "Never Suspend This Tab"
+- **Profile exclusion** – Option to protect all tabs in current profile
+- Suspended tabs reload instantly when clicked
+
+### Quick Search Overlay
+Fast navigation and command palette:
+- **Ctrl+K** to open anywhere
+- Search across all open tabs
+- Switch to any tab instantly
+- Search the web directly
+- Floating interface accessible anywhere
+
+### Built-in Ad Blocking
+Privacy-first browsing powered by Ghostery's adblocker:
+- Blocks ads, trackers, and analytics automatically
+- Per-tab blocked request counter
+- Cosmetic filtering for cleaner pages
+- Toggle on/off from settings
+- Whitelist specific sites
 
 ### Performance & Memory Optimization
 Stay productive without slowing down your system:
 - **Lazy Loading** – Only load tabs when needed
-- **Auto-Suspend** – Inactive tabs are suspended after configurable timeout
-- **Profile Switch Behavior** – Choose to keep, suspend, or close tabs when switching profiles
+- **Startup Options** – Load all tabs, active profile only, or last active tab
+- **Profile Switch Behavior** – Choose to keep, suspend, or close tabs when switching
+- **Tray Optimization** – Suspend tabs when minimized to tray
 - **Hardware Acceleration** – Toggle on/off based on your system
 - **Smart Cleanup** – Instantly removes orphaned data on startup
 
 ### System Integration
 Native desktop experience:
 - **System Tray** – Minimize to tray, quick access menu
-- **Global Shortcuts** – Toggle visibility from anywhere
+- **Global Shortcuts** – Toggle visibility from anywhere (customizable)
 - **Session Persistence** – Tabs and window position/size reliably restored
 - **Launch at Startup** – Start with your system
 - **Always-on-Top** – Keep MashAI visible over other windows
@@ -88,12 +114,13 @@ Built-in download handling:
 - View and manage downloads
 - Toast notifications for completed downloads
 - Configurable download location
+- Open file or folder from manager
 
 ### Modern UI/UX
 Clean, focused interface:
 - Dark theme with violet accent colors
 - Custom frameless window with native controls
-- **Flexible Layout** – Responsive title bar with dynamic drag regions
+- Responsive tab bar with dynamic drag regions
 - Native context menus
 - Comprehensive settings panel
 
@@ -103,9 +130,9 @@ Clean, focused interface:
 
 Features planned for future releases:
 
-- 🔜 **Bring Your Own Keys** – Use your own API keys for direct API access
-- 🔜 **Local AI Support** – Integration with Ollama, LM Studio, and other local LLM runners
-- 🔜 **Unified Chat Interface** – Single interface for all AI providers via API
+- **Bring Your Own Keys** – Use your own API keys for direct API access
+- **Local AI Support** – Integration with Ollama, LM Studio, and other local LLM runners
+- **Unified Chat Interface** – Single interface for all AI providers via API
 
 ---
 
@@ -160,7 +187,26 @@ MashAI stores its configuration in your user data directory:
 | **Profiles** | Create/edit/delete profiles, custom icons and colors |
 | **AI Providers** | Add/remove/reorder AI services, set default provider |
 | **Performance** | Tab loading strategy, auto-suspend timeout, profile switch behavior |
+| **Shortcuts** | Customize all keyboard shortcuts |
 | **Privacy** | Ad blocking toggle, download settings |
+
+---
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+T` | New tab |
+| `Ctrl+W` | Close tab |
+| `Ctrl+Tab` | Next tab |
+| `Ctrl+Shift+Tab` | Previous tab |
+| `Ctrl+R` | Reload active tab |
+| `Ctrl+Shift+T` | Reopen closed tab |
+| `Ctrl+J` | Open downloads |
+| `Ctrl+K` | Quick Search |
+| `Ctrl+Shift+A` | Toggle always-on-top |
+
+*All shortcuts are customizable in Settings → Shortcuts*
 
 ---
 
@@ -214,27 +260,37 @@ MashAI/
 
 ---
 
-## Keyboard Shortcuts
+## Contributing
 
-| Shortcut | Action |
+We welcome contributions! Here's how you can help:
+
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Commit your changes** (`git commit -m 'Add amazing feature'`)
+4. **Push to the branch** (`git push origin feature/amazing-feature`)
+5. **Open a Pull Request**
+
+Please read [FEATURES.md](FEATURES.md) for the complete feature list and project goals.
+
+### Reporting Issues
+
+Found a bug? Have a feature request? Please [open an issue](https://github.com/Avaxerrr/MashAI/issues) on GitHub.
+
+---
+
+## Platform Support
+
+| Platform | Status |
 |----------|--------|
-| `Ctrl+T` | New tab |
-| `Ctrl+W` | Close tab |
-| `Ctrl+Tab` | Next tab |
-| `Ctrl+Shift+Tab` | Previous tab |
-| `Ctrl+R` | Reload active tab |
-| `Ctrl+Shift+T` | Reopen closed tab |
-| `Ctrl+J` | Open downloads |
-| `Ctrl+K` | Quick Search |
-| `Ctrl+Shift+A` | Toggle always-on-top |
+| Windows 10/11 | ✅ Supported |
+| macOS | Coming Soon |
+| Linux | Coming Soon |
 
 ---
 
 ## License
 
-All Rights Reserved © 2026 Avaxerrr
-
-This software is proprietary. Unauthorized copying, distribution, or modification is prohibited.
+This project is licensed under the Mozilla Public License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ---
 
@@ -250,5 +306,7 @@ This software is proprietary. Unauthorized copying, distribution, or modificatio
 <div align="center">
 
 **Made with care for AI enthusiasts**
+
+[Report Bug](https://github.com/Avaxerrr/MashAI/issues) • [Request Feature](https://github.com/Avaxerrr/MashAI/issues) • [Support the Project](https://ko-fi.com/O4O31RETV3)
 
 </div>
