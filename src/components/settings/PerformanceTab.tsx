@@ -186,6 +186,12 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
 
             {/* Auto-suspend Section */}
             <div className="bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
+                    <h3 className="text-white font-medium text-sm">Auto-suspend inactive tabs</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                        Tabs playing audio/video are automatically protected. Right-click any tab to exclude it manually.
+                    </p>
+                </div>
                 <div className="px-5 py-4 space-y-4">
                     <div className="space-y-2">
                         <label className="flex items-center gap-3 cursor-pointer">

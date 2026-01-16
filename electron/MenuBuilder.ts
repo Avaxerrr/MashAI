@@ -86,17 +86,10 @@ class MenuBuilder {
             }));
 
             const template: MenuItemConstructorOptions[] = [
+                // === Tab Creation ===
                 {
                     label: 'New Tab to Right',
                     submenu: newTabSubmenu
-                },
-                { type: 'separator' },
-                {
-                    label: 'Reload',
-                    accelerator: shortcuts.reloadTab,
-                    click: () => {
-                        if (tab.view) tab.view.webContents.reload();
-                    }
                 },
                 {
                     label: 'Duplicate',
@@ -116,13 +109,20 @@ class MenuBuilder {
                     }
                 },
                 { type: 'separator' },
+                // === Page Actions ===
+                {
+                    label: 'Reload',
+                    accelerator: shortcuts.reloadTab,
+                    click: () => {
+                        if (tab.view) tab.view.webContents.reload();
+                    }
+                },
                 {
                     label: 'Copy URL',
                     click: () => {
                         const currentUrl = tab.view?.webContents.getURL() || tab.url;
                         if (currentUrl) {
                             clipboard.writeText(currentUrl);
-                            // Send toast notification to renderer
                             this.mainWindow.webContents.send('show-toast', {
                                 message: 'URL copied to clipboard',
                                 type: 'success'
@@ -131,14 +131,7 @@ class MenuBuilder {
                     }
                 },
                 { type: 'separator' },
-                {
-                    label: 'Close Tab',
-                    accelerator: shortcuts.closeTab,
-                    click: () => {
-                        this.mainWindow.webContents.send('request-close-tab', tabId);
-                    }
-                },
-                { type: 'separator' },
+                // === Tab Management ===
                 // Side Panel options
                 ...((): MenuItemConstructorOptions[] => {
                     const panelState = this.tabManager.getSidePanelState();
@@ -212,7 +205,28 @@ class MenuBuilder {
                         ];
                     }
                 })(),
+                {
+                    label: 'Never Suspend This Tab',
+                    type: 'checkbox',
+                    checked: tab.excludeFromSuspension || false,
+                    click: () => {
+                        tab.excludeFromSuspension = !tab.excludeFromSuspension;
+                        const status = tab.excludeFromSuspension ? 'excluded from' : 'included in';
+                        this.mainWindow.webContents.send('show-toast', {
+                            message: `Tab ${status} auto-suspension`,
+                            type: 'success'
+                        });
+                    }
+                },
                 { type: 'separator' },
+                // === Close Actions ===
+                {
+                    label: 'Close Tab',
+                    accelerator: shortcuts.closeTab,
+                    click: () => {
+                        this.mainWindow.webContents.send('request-close-tab', tabId);
+                    }
+                },
                 {
                     label: 'Close Other Tabs',
                     click: () => {

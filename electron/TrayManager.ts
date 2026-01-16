@@ -541,6 +541,16 @@ class TrayManager {
             }
 
             if (tab.loaded && tab.view) {
+                // Skip tabs with active media playback (Chrome-like behavior)
+                if (tab.isMediaPlaying || tab.isAudible) {
+                    console.log(`[TrayManager] Keeping tab ${tabId} (${tab.title}) - media is playing`);
+                    return;
+                }
+                // Skip tabs manually excluded from suspension
+                if (tab.excludeFromSuspension) {
+                    console.log(`[TrayManager] Keeping tab ${tabId} (${tab.title}) - excluded from suspension`);
+                    return;
+                }
                 console.log(`[TrayManager] Suspending tab ${tabId} (${tab.title})`);
                 this.tabManager!.unloadTab(tabId);
                 suspendedCount++;

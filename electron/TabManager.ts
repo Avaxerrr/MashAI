@@ -42,6 +42,11 @@ interface TabEntry {
     suspended?: boolean;
     lastActiveTime: number;
     faviconDataUrl?: string;
+    // Media activity tracking - prevents suspension of tabs playing audio/video
+    isMediaPlaying?: boolean;
+    isAudible?: boolean;
+    // Manual exclusion from suspension (context menu option)
+    excludeFromSuspension?: boolean;
 }
 
 interface TabMetadata {
@@ -202,6 +207,16 @@ class TabManager {
                 return;
             }
 
+            // Skip tabs with active media playback (Chrome-like behavior)
+            if (tab.isMediaPlaying || tab.isAudible) {
+                return;
+            }
+
+            // Skip tabs manually excluded from suspension
+            if (tab.excludeFromSuspension) {
+                return;
+            }
+
             // Check if tab has been inactive too long
             const lastActive = tab.lastActiveTime || 0;
             const inactiveMs = now - lastActive;
@@ -349,6 +364,33 @@ class TabManager {
                 this.mainWindow.webContents.send('tab-updated', { id, url });
             }
         });
+
+        // =============================================================================
+        // Media Activity Tracking (prevents suspension of tabs playing audio/video)
+        // =============================================================================
+        view.webContents.on('media-started-playing', () => {
+            const tab = this.tabs.get(id);
+            if (tab) {
+                tab.isMediaPlaying = true;
+                console.log(`[TabManager] Media started playing in tab ${id} (${tab.title})`);
+            }
+        });
+
+        view.webContents.on('media-paused', () => {
+            const tab = this.tabs.get(id);
+            if (tab) {
+                tab.isMediaPlaying = false;
+                console.log(`[TabManager] Media paused in tab ${id} (${tab.title})`);
+            }
+        });
+
+        (view.webContents as Electron.WebContents).on('audio-state-changed' as 'zoom-changed', ((_e: Event, audible: boolean) => {
+            const tab = this.tabs.get(id);
+            if (tab) {
+                tab.isAudible = audible;
+                console.log(`[TabManager] Audio state changed in tab ${id}: ${audible ? 'audible' : 'silent'}`);
+            }
+        }) as () => void);
 
         // =============================================================================
         // Security Handlers
@@ -829,15 +871,20 @@ class TabManager {
         // Now proceed with the switch
         if (this.activeTabId && this.activeTabId !== tabId) {
             const currentTab = this.tabs.get(this.activeTabId);
-            if (currentTab && currentTab.view) {
-                // DON'T remove the view if it's the pinned tab - it needs to stay visible
-                const currentState = this.getCurrentSidePanelState();
-                const isPinnedTab = currentState?.pinnedTabId === this.activeTabId;
-                if (!isPinnedTab) {
-                    try {
-                        this.mainWindow.contentView.removeChildView(currentTab.view);
-                    } catch (e) {
-                        console.warn('Could not remove view:', e);
+            if (currentTab) {
+                // Update lastActiveTime on the tab we're LEAVING (this is when it becomes inactive)
+                currentTab.lastActiveTime = Date.now();
+
+                if (currentTab.view) {
+                    // DON'T remove the view if it's the pinned tab - it needs to stay visible
+                    const currentState = this.getCurrentSidePanelState();
+                    const isPinnedTab = currentState?.pinnedTabId === this.activeTabId;
+                    if (!isPinnedTab) {
+                        try {
+                            this.mainWindow.contentView.removeChildView(currentTab.view);
+                        } catch (e) {
+                            console.warn('Could not remove view:', e);
+                        }
                     }
                 }
             }
@@ -846,9 +893,6 @@ class TabManager {
         try {
             this.mainWindow.contentView.addChildView(tab.view!);
             this.activeTabId = tabId;
-
-            // Update last active time for inactivity tracking
-            tab.lastActiveTime = Date.now();
 
             return true;
         } catch (e) {
