@@ -61,6 +61,8 @@ export interface TabInfo {
     suspended?: boolean;
     faviconDataUrl?: string;
     isLoading?: boolean;
+    isMediaPlaying?: boolean;
+    isAudible?: boolean;
 }
 
 /** Options for creating a new tab */

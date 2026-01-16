@@ -42,6 +42,8 @@ export interface TabInfo {
     suspended?: boolean;
     faviconDataUrl?: string;
     isLoading?: boolean;
+    isMediaPlaying?: boolean;
+    isAudible?: boolean;
 }
 
 export interface PerformanceSettings {
@@ -295,6 +297,8 @@ export interface TabUpdatedEvent {
     suspended?: boolean;
     faviconDataUrl?: string;
     isLoading?: boolean;
+    isMediaPlaying?: boolean;
+    isAudible?: boolean;
 }
 
 export interface ProfileTabsLoadedEvent {

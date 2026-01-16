@@ -373,6 +373,7 @@ class TabManager {
             if (tab) {
                 tab.isMediaPlaying = true;
                 console.log(`[TabManager] Media started playing in tab ${id} (${tab.title})`);
+                this.mainWindow.webContents.send('tab-updated', { id, isMediaPlaying: true });
             }
         });
 
@@ -381,6 +382,7 @@ class TabManager {
             if (tab) {
                 tab.isMediaPlaying = false;
                 console.log(`[TabManager] Media paused in tab ${id} (${tab.title})`);
+                this.mainWindow.webContents.send('tab-updated', { id, isMediaPlaying: false });
             }
         });
 
@@ -389,6 +391,7 @@ class TabManager {
             if (tab) {
                 tab.isAudible = audible;
                 console.log(`[TabManager] Audio state changed in tab ${id}: ${audible ? 'audible' : 'silent'}`);
+                this.mainWindow.webContents.send('tab-updated', { id, isAudible: audible });
             }
         }) as () => void);
 
@@ -951,7 +954,9 @@ class TabManager {
                     profileId: tab.profileId,
                     loaded: tab.loaded,
                     suspended: tab.suspended || false,
-                    faviconDataUrl: tab.faviconDataUrl
+                    faviconDataUrl: tab.faviconDataUrl,
+                    isMediaPlaying: tab.isMediaPlaying,
+                    isAudible: tab.isAudible
                 });
             }
         }
@@ -1002,7 +1007,9 @@ class TabManager {
                     url: tab.url,
                     loaded: tab.loaded,
                     suspended: tab.suspended || false,
-                    faviconDataUrl: tab.faviconDataUrl
+                    faviconDataUrl: tab.faviconDataUrl,
+                    isMediaPlaying: tab.isMediaPlaying,
+                    isAudible: tab.isAudible
                 });
             }
         }

@@ -1,4 +1,4 @@
-import { Minus, Square, X, ChevronDown, ArrowLeft, RotateCw, Plus, Briefcase, User, Home, Zap, Code, Globe, Check, LucideIcon, AlertTriangle } from 'lucide-react'
+import { Minus, Square, X, ChevronDown, ArrowLeft, RotateCw, Plus, Briefcase, User, Home, Zap, Code, Globe, Check, LucideIcon, AlertTriangle, Volume2 } from 'lucide-react'
 import { useState, useEffect, SyntheticEvent, DragEvent } from 'react'
 import type { Profile, AIProvider, TabMemoryInfo, SidePanelState } from '../types'
 
@@ -11,6 +11,8 @@ interface TabState {
     suspended?: boolean;
     loading?: boolean;
     faviconDataUrl?: string;
+    isMediaPlaying?: boolean;
+    isAudible?: boolean;
 }
 
 interface TitleBarProps {
@@ -317,6 +319,9 @@ export default function TitleBar({
                                         e.currentTarget.src = 'https://www.perplexity.ai/favicon.ico';
                                     }}
                                 />
+                                {(tab.isMediaPlaying || tab.isAudible) && (
+                                    <Volume2 size={12} className="text-violet-400 flex-shrink-0 animate-pulse" />
+                                )}
                                 <span className="text-xs text-white truncate flex-1 text-center">
                                     {tab.title?.replace(' - Perplexity', '') || 'New Thread'}
                                 </span>
