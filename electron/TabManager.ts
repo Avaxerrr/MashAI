@@ -4,6 +4,10 @@ import type SettingsManager from './SettingsManager';
 import type AdBlockManager from './AdBlockManager';
 
 const INJECTED_CSS = `
+    /* Ensure pages have a white background foundation - prevents dark WebContentsView from bleeding through */
+    /* This can be overridden by websites' own CSS that sets explicit backgrounds */
+    html, body { background-color: #ffffff; }
+    
     .sticky.top-0.z-50.w-full.bg-super,
     [class*="AppBanner"],
     [class*="downloadBanner"] { 
@@ -17,7 +21,7 @@ const INJECTED_CSS = `
         height: 10px;
     }
     ::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.03);
+        background: #1e1e1e;
         border-radius: 5px;
     }
     ::-webkit-scrollbar-thumb {
@@ -729,6 +733,8 @@ class TabManager {
                 backgroundThrottling: true
             }
         });
+        // Dark background prevents white flash during page loading
+        // WebContentsForceDark is disabled via command line switch so this won't force dark mode
         view.setBackgroundColor('#1e1e1e');
 
         // Enable ad blocking for this profile's session
@@ -825,6 +831,7 @@ class TabManager {
                 backgroundThrottling: true
             }
         });
+        // Dark background prevents white flash during page loading
         view.setBackgroundColor('#1e1e1e');
 
         // Enable ad blocking for this profile's session

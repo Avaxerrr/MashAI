@@ -1,9 +1,26 @@
-import { ElectronBlocker, fullLists } from '@ghostery/adblocker-electron';
+import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import { session, app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import type SettingsManager from './SettingsManager';
-import type { AdBlockSettings, AdBlockStatus } from './types';
+import type { AdBlockSettings, AdBlockStatus, FilterListInfo } from './types';
+
+/**
+ * Built-in filter lists with human-readable names
+ * These are the same lists as Ghostery's fullLists, but with names for transparency
+ */
+const BUILT_IN_LISTS: { name: string; url: string }[] = [
+    { name: 'EasyList', url: 'https://easylist.to/easylist/easylist.txt' },
+    { name: 'EasyPrivacy', url: 'https://easylist.to/easylist/easyprivacy.txt' },
+    { name: 'EasyList Cookie', url: 'https://easylist-downloads.adblockplus.org/easylist-cookie.txt' },
+    { name: 'Peter Lowe\'s List', url: 'https://pgl.yoyo.org/adservers/serverlist.php?hostformat=adblockplus&showintro=1&mimetype=plaintext' },
+    { name: 'uBlock Filters', url: 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt' },
+    { name: 'uBlock Privacy', url: 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/privacy.txt' },
+    { name: 'uBlock Badware', url: 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/badware.txt' },
+    { name: 'uBlock Quick Fixes', url: 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/quick-fixes.txt' },
+    { name: 'uBlock Annoyances', url: 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/annoyances-others.txt' },
+    { name: 'uBlock Cookies', url: 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/annoyances-cookies.txt' },
+];
 
 /**
  * AdBlockManager - Manages the Ghostery ad blocking engine
@@ -14,6 +31,7 @@ import type { AdBlockSettings, AdBlockStatus } from './types';
  * - Auto-updates filter lists every 24 hours
  * - Per-session blocking (per profile)
  * - Whitelist support
+ * - Transparent filter list tracking
  */
 class AdBlockManager {
     private blocker: ElectronBlocker | null = null;
@@ -21,8 +39,10 @@ class AdBlockManager {
     private blockedCount: number = 0;
     private lastUpdated: string | null = null;
     private cacheFilePath: string;
+    private metadataFilePath: string;
     private enabledSessions: Set<string> = new Set();
     private initialized: boolean = false;
+    private filterLists: FilterListInfo[] = [];
 
     // Package version (read from node_modules)
     private version: string = '2.13.2';
@@ -30,6 +50,7 @@ class AdBlockManager {
     constructor(settingsManager: SettingsManager) {
         this.settingsManager = settingsManager;
         this.cacheFilePath = path.join(app.getPath('userData'), 'adblock-cache.bin');
+        this.metadataFilePath = path.join(app.getPath('userData'), 'adblock-metadata.json');
 
         // Try to read version from package
         try {
@@ -40,7 +61,77 @@ class AdBlockManager {
             // Use default version
         }
 
+        // Try to load cached metadata
+        this.loadMetadata();
+
         console.log(`[AdBlock] Manager created - Ghostery Engine v${this.version}`);
+    }
+
+    /**
+     * Load filter list metadata from cache
+     */
+    private loadMetadata(): void {
+        try {
+            if (fs.existsSync(this.metadataFilePath)) {
+                const data = JSON.parse(fs.readFileSync(this.metadataFilePath, 'utf-8'));
+                this.filterLists = data.filterLists || [];
+                this.lastUpdated = data.lastUpdated || null;
+            }
+        } catch (error) {
+            console.warn('[AdBlock] Failed to load metadata:', error);
+        }
+    }
+
+    /**
+     * Save filter list metadata to cache
+     */
+    private saveMetadata(): void {
+        try {
+            const data = {
+                filterLists: this.filterLists,
+                lastUpdated: this.lastUpdated
+            };
+            fs.writeFileSync(this.metadataFilePath, JSON.stringify(data, null, 2));
+        } catch (error) {
+            console.warn('[AdBlock] Failed to save metadata:', error);
+        }
+    }
+
+    /**
+     * Parse filter list header to extract version and date
+     */
+    private parseListHeader(content: string, listName: string): { version: string; lastUpdated: string } {
+        let version = 'unknown';
+        let lastUpdated = new Date().toISOString();
+
+        // Common header patterns:
+        // ! Version: 202401161234
+        // ! Last modified: 16 Jan 2024 12:34 UTC
+        // ! Updated: 2024-01-16
+        const lines = content.split('\n').slice(0, 30); // Check first 30 lines
+
+        for (const line of lines) {
+            // Try to find version
+            const versionMatch = line.match(/!\s*Version:\s*(\S+)/i);
+            if (versionMatch) {
+                version = versionMatch[1];
+            }
+
+            // Try to find last modified date
+            const dateMatch = line.match(/!\s*(Last modified|Updated|Date):\s*(.+)/i);
+            if (dateMatch) {
+                try {
+                    const parsed = new Date(dateMatch[2].trim());
+                    if (!isNaN(parsed.getTime())) {
+                        lastUpdated = parsed.toISOString();
+                    }
+                } catch {
+                    // Keep default
+                }
+            }
+        }
+
+        return { version, lastUpdated };
     }
 
     /**
@@ -67,13 +158,13 @@ class AdBlockManager {
                 const cacheData = fs.readFileSync(this.cacheFilePath);
                 this.blocker = ElectronBlocker.deserialize(cacheData);
 
-                // Read last updated timestamp
-                const cacheStat = fs.statSync(this.cacheFilePath);
-                this.lastUpdated = cacheStat.mtime.toISOString();
+                // Read last updated timestamp from metadata
+                this.loadMetadata();
 
                 console.log('[AdBlock] ✓ Loaded from cache');
 
                 // Check if cache is older than 24 hours, update in background
+                const cacheStat = fs.statSync(this.cacheFilePath);
                 const cacheAge = Date.now() - cacheStat.mtime.getTime();
                 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
                 if (cacheAge > TWENTY_FOUR_HOURS) {
@@ -104,21 +195,76 @@ class AdBlockManager {
     }
 
     /**
-     * Fetch fresh filter lists from the internet
+     * Fetch fresh filter lists from the internet with metadata tracking
      */
     private async fetchFreshLists(): Promise<void> {
         console.log('[AdBlock] Fetching filter lists...');
 
-        this.blocker = await ElectronBlocker.fromLists(fetch, fullLists, {
+        const settings = this.settingsManager.getSettings();
+        const customUrls = settings.adBlock?.customListUrls || [];
+
+        // Combine built-in lists with custom lists
+        const allLists = [
+            ...BUILT_IN_LISTS,
+            ...customUrls.map((url, i) => ({ name: `Custom List ${i + 1}`, url }))
+        ];
+
+        const listContents: string[] = [];
+        const newFilterLists: FilterListInfo[] = [];
+
+        // Fetch each list individually for transparency
+        for (const list of allLists) {
+            try {
+                console.log(`[AdBlock] Fetching: ${list.name}`);
+                const response = await fetch(list.url);
+                if (!response.ok) {
+                    console.warn(`[AdBlock] Failed to fetch ${list.name}: ${response.status}`);
+                    continue;
+                }
+
+                const content = await response.text();
+                listContents.push(content);
+
+                // Parse header for metadata
+                const { version, lastUpdated } = this.parseListHeader(content, list.name);
+                const ruleCount = content.split('\n').filter(line =>
+                    line.trim() && !line.startsWith('!') && !line.startsWith('[')
+                ).length;
+
+                newFilterLists.push({
+                    name: list.name,
+                    url: list.url,
+                    version,
+                    lastUpdated,
+                    ruleCount
+                });
+
+                console.log(`[AdBlock] ✓ ${list.name}: ${ruleCount} rules (v${version})`);
+            } catch (error) {
+                console.warn(`[AdBlock] Error fetching ${list.name}:`, error);
+            }
+        }
+
+        if (listContents.length === 0) {
+            throw new Error('Failed to fetch any filter lists');
+        }
+
+        // Create blocker from fetched lists by combining all filter content
+        const combinedFilters = listContents.join('\n');
+        this.blocker = ElectronBlocker.parse(combinedFilters, {
             enableCompression: true
         });
 
+        // Update metadata
+        this.filterLists = newFilterLists;
         this.lastUpdated = new Date().toISOString();
 
         // Save to cache
         this.saveCache();
+        this.saveMetadata();
 
-        console.log('[AdBlock] ✓ Fresh lists fetched and cached');
+        const totalRules = newFilterLists.reduce((sum, l) => sum + l.ruleCount, 0);
+        console.log(`[AdBlock] ✓ Fresh lists fetched: ${newFilterLists.length} lists, ${totalRules} total rules`);
     }
 
     /**
@@ -303,11 +449,14 @@ class AdBlockManager {
      */
     getStatus(): AdBlockStatus {
         const settings = this.settingsManager.getSettings();
+        const totalRules = this.filterLists.reduce((sum, l) => sum + l.ruleCount, 0);
         return {
             enabled: settings.adBlock?.enabled ?? true,
             version: this.version,
             lastUpdated: this.lastUpdated,
-            blockedCount: this.blockedCount
+            blockedCount: this.blockedCount,
+            filterLists: this.filterLists,
+            totalRules
         };
     }
 

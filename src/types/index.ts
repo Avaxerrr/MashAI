@@ -95,6 +95,15 @@ export interface AdBlockSettings {
     blockTrackers: boolean;
     blockAnnoyances: boolean;
     whitelist: string[];
+    customListUrls?: string[];
+}
+
+export interface FilterListInfo {
+    name: string;
+    url: string;
+    version: string;
+    lastUpdated: string;
+    ruleCount: number;
 }
 
 export interface AdBlockStatus {
@@ -102,6 +111,8 @@ export interface AdBlockStatus {
     version: string;
     lastUpdated: string | null;
     blockedCount: number;
+    filterLists?: FilterListInfo[];
+    totalRules?: number;
 }
 
 // Side Panel types

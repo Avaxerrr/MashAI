@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { TITLEBAR_HEIGHT, DEFAULT_WINDOW, SETTINGS_WINDOW, MAX_CLOSED_TABS } from './constants';
@@ -27,6 +27,15 @@ if (process.platform === 'linux') {
     app.commandLine.appendSwitch('no-sandbox');
 }
 
+// Disable Chromium's auto-dark mode feature that forces dark colors on websites
+// This allows us to use a dark background (to prevent white flash) without
+// websites being forced into dark mode
+app.commandLine.appendSwitch('disable-features', 'WebContentsForceDark');
+
+// Keep native menus (context menus, dialogs) always dark regardless of Windows theme
+// Note: This also tells websites prefers-color-scheme: dark, but the white setBackgroundColor
+// on WebContentsView prevents Chromium from forcing auto-dark mode on websites
+nativeTheme.themeSource = 'dark';
 // Check hardware acceleration setting BEFORE app is ready
 try {
     const settingsPath = path.join(app.getPath('userData'), 'settings.json');

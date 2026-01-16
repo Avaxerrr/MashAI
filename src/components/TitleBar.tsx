@@ -190,7 +190,7 @@ export default function TitleBar({
                     >
                         {renderProfileIcon(activeProfile?.icon || 'briefcase')}
                     </div>
-                    <span className="text-sm text-white">{activeProfile?.name || 'Work'}</span>
+                    <span className="text-sm text-white max-w-[80px] truncate whitespace-nowrap">{activeProfile?.name || 'Work'}</span>
                     <ChevronDown size={14} className="text-gray-400" />
                 </button>
 

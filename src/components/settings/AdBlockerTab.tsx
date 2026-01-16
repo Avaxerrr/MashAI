@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Ban, RefreshCw, Plus, X, Zap, Eye, Cookie } from 'lucide-react'
+import { Ban, RefreshCw, Plus, X, Zap, Eye, Cookie, ExternalLink, List } from 'lucide-react'
+import type { FilterListInfo } from '../../types'
 
 interface AdBlockSettings {
     enabled: boolean;
@@ -7,6 +8,7 @@ interface AdBlockSettings {
     blockTrackers: boolean;
     blockAnnoyances: boolean;
     whitelist: string[];
+    customListUrls?: string[];
 }
 
 interface AdBlockStatus {
@@ -14,6 +16,8 @@ interface AdBlockStatus {
     version: string;
     lastUpdated: string | null;
     blockedCount: number;
+    filterLists?: FilterListInfo[];
+    totalRules?: number;
 }
 
 interface AdBlockerTabProps {
@@ -26,6 +30,7 @@ interface AdBlockerTabProps {
  */
 export default function AdBlockerTab({ adBlockSettings, onAdBlockChange }: AdBlockerTabProps) {
     const [newDomain, setNewDomain] = useState('')
+    const [newCustomListUrl, setNewCustomListUrl] = useState('')
     const [status, setStatus] = useState<AdBlockStatus | null>(null)
     const [isUpdating, setIsUpdating] = useState(false)
 
@@ -36,6 +41,7 @@ export default function AdBlockerTab({ adBlockSettings, onAdBlockChange }: AdBlo
         blockTrackers: true,
         blockAnnoyances: true,
         whitelist: [],
+        customListUrls: [],
         ...adBlockSettings
     }
 
@@ -72,6 +78,19 @@ export default function AdBlockerTab({ adBlockSettings, onAdBlockChange }: AdBlo
 
     const removeFromWhitelist = (domain: string) => {
         updateSetting('whitelist', settings.whitelist.filter(d => d !== domain))
+    }
+
+    const addCustomList = () => {
+        const url = newCustomListUrl.trim()
+        // Basic URL validation
+        if (url && (url.startsWith('http://') || url.startsWith('https://')) && !settings.customListUrls?.includes(url)) {
+            updateSetting('customListUrls', [...(settings.customListUrls || []), url])
+            setNewCustomListUrl('')
+        }
+    }
+
+    const removeCustomList = (url: string) => {
+        updateSetting('customListUrls', (settings.customListUrls || []).filter(u => u !== url))
     }
 
     const handleUpdateLists = async () => {
@@ -149,6 +168,105 @@ export default function AdBlockerTab({ adBlockSettings, onAdBlockChange }: AdBlo
                         <RefreshCw size={12} className={isUpdating ? 'animate-spin' : ''} />
                         {isUpdating ? 'Updating...' : 'Update Now'}
                     </button>
+                </div>
+            </div>
+
+            {/* Filter Lists - Transparency Section */}
+            {status?.filterLists && status.filterLists.length > 0 && (
+                <div className={`bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden transition-opacity ${!settings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b] flex items-center justify-between">
+                        <div>
+                            <h3 className="text-white font-medium text-sm flex items-center gap-2">
+                                <List size={14} className="text-violet-400" />
+                                Filter Lists
+                            </h3>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                                {status.filterLists.length} lists • {(status.totalRules || 0).toLocaleString()} total rules
+                            </p>
+                        </div>
+                    </div>
+                    <div className="divide-y divide-[#3e3e42]">
+                        {status.filterLists.map((list, index) => (
+                            <div key={index} className="px-5 py-3 flex items-center justify-between hover:bg-[#2a2a2b] transition-colors">
+                                <div className="flex-1 min-w-0">
+                                    <a
+                                        href={list.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-white hover:text-violet-400 transition-colors flex items-center gap-1.5"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            window.api?.openExternal?.(list.url);
+                                        }}
+                                    >
+                                        {list.name}
+                                        <ExternalLink size={12} className="text-gray-500" />
+                                    </a>
+                                    <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                        v{list.version} • {formatDate(list.lastUpdated)}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-sm text-violet-400 font-medium">
+                                        {list.ruleCount.toLocaleString()}
+                                    </span>
+                                    <p className="text-xs text-gray-500">rules</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Custom Filter Lists */}
+            <div className={`bg-[#252526] rounded-xl border border-[#3e3e42] overflow-hidden transition-opacity ${!settings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className="px-5 py-3.5 border-b border-[#3e3e42] bg-[#2a2a2b]">
+                    <h3 className="text-white font-medium text-sm flex items-center gap-2">
+                        <Plus size={14} className="text-violet-400" />
+                        Custom Filter Lists
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-0.5">Add your own filter lists (EasyList format)</p>
+                </div>
+                <div className="p-5">
+                    {/* Existing custom lists */}
+                    {settings.customListUrls && settings.customListUrls.length > 0 && (
+                        <div className="space-y-2 mb-4">
+                            {settings.customListUrls.map((url, index) => (
+                                <div key={index} className="flex items-center justify-between bg-[#1e1e1e] rounded-lg px-3 py-2">
+                                    <span className="text-sm text-gray-300 truncate flex-1 mr-2">{url}</span>
+                                    <button
+                                        onClick={() => removeCustomList(url)}
+                                        className="p-1 hover:bg-[#3e3e42] rounded text-gray-400 hover:text-red-400 transition-colors flex-shrink-0"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Add new custom list */}
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={newCustomListUrl}
+                            onChange={(e) => setNewCustomListUrl(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && addCustomList()}
+                            placeholder="https://example.com/filterlist.txt"
+                            className="flex-1 bg-[#1e1e1e] border border-[#3e3e42] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                        />
+                        <button
+                            onClick={addCustomList}
+                            disabled={!newCustomListUrl.trim() || (!newCustomListUrl.startsWith('http://') && !newCustomListUrl.startsWith('https://'))}
+                            className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-sm rounded-lg flex items-center gap-1.5 transition-colors"
+                        >
+                            <Plus size={14} />
+                            Add
+                        </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                        After adding, click "Update Now" above to fetch the new lists
+                    </p>
                 </div>
             </div>
 

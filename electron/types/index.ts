@@ -112,6 +112,15 @@ export interface AdBlockSettings {
     blockTrackers: boolean;         // Block tracking scripts (default: true)
     blockAnnoyances: boolean;       // Block cookie banners, etc. (default: true)
     whitelist: string[];            // Exempt domains (default: [])
+    customListUrls?: string[];      // User-added filter list URLs
+}
+
+export interface FilterListInfo {
+    name: string;                   // Human-readable name (e.g., "EasyList")
+    url: string;                    // Source URL
+    version: string;                // Parsed from list header (e.g., "202401161234")
+    lastUpdated: string;            // Parsed from list header or current time
+    ruleCount: number;              // Number of rules in this list
 }
 
 export interface AdBlockStatus {
@@ -119,6 +128,8 @@ export interface AdBlockStatus {
     version: string;                // Ghostery engine version (e.g., "2.13.2")
     lastUpdated: string | null;     // ISO timestamp of last filter list update
     blockedCount: number;           // Session counter of blocked requests
+    filterLists?: FilterListInfo[]; // Info about each loaded filter list
+    totalRules?: number;            // Total rules across all lists
 }
 
 export interface Settings {
