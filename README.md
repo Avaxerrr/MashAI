@@ -21,6 +21,8 @@ Use ChatGPT for writing, Claude for analysis, Gemini for research - all in one d
 
 **Free, open-source, and built for people who use AI to get work done.**
 
+![MashAI Screenshot](https://getmashai.com/app-screenshot.webp)
+
 ## Why MashAI?
 
 **Keep work organized** - Separate client projects, research, and personal conversations into profiles. Never lose an important AI chat again.
@@ -50,6 +52,8 @@ Organize your AI workflows by context:
 - Custom icons and colors for quick identification
 - Automatic session persistence per profile
 - Complete data cleanup on profile deletion
+
+![Multi-Profile System](https://getmashai.com/profiles.webp)
 
 ### Advanced Tab Management
 Browser-like experience with power-user features:
@@ -92,6 +96,8 @@ Privacy-first browsing powered by Ghostery's adblocker:
 - Toggle on/off from settings
 - Whitelist specific sites
 
+![Built-in Ad Blocking](https://getmashai.com/adblock.webp)
+
 ### Performance & Memory Optimization
 Stay productive without slowing down your system:
 - **Lazy Loading** – Only load tabs when needed
@@ -100,6 +106,8 @@ Stay productive without slowing down your system:
 - **Tray Optimization** – Suspend tabs when minimized to tray
 - **Hardware Acceleration** – Toggle on/off based on your system
 - **Smart Cleanup** – Instantly removes orphaned data on startup
+
+![Performance Settings](https://getmashai.com/performance.webp)
 
 ### System Integration
 Native desktop experience:
