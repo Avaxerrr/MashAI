@@ -308,20 +308,31 @@ class TabManager {
         view.webContents.on('did-finish-load', injectCosmeticFilters);
         view.webContents.on('did-navigate-in-page', injectCosmeticFilters);
 
+        // Helper to safely send IPC messages (prevents "Object has been destroyed" errors during app shutdown)
+        const safeSend = (channel: string, data: object) => {
+            try {
+                if (!this.mainWindow.isDestroyed() && !this.mainWindow.webContents.isDestroyed()) {
+                    this.mainWindow.webContents.send(channel, data);
+                }
+            } catch {
+                // Silently fail during app shutdown
+            }
+        };
+
         // Track loading state for UI spinner
         view.webContents.on('did-start-loading', () => {
-            this.mainWindow.webContents.send('tab-updated', { id, isLoading: true });
+            safeSend('tab-updated', { id, isLoading: true });
         });
 
         view.webContents.on('did-stop-loading', () => {
-            this.mainWindow.webContents.send('tab-updated', { id, isLoading: false });
+            safeSend('tab-updated', { id, isLoading: false });
         });
 
         view.webContents.on('page-title-updated', (_e, title) => {
             const tab = this.tabs.get(id);
             if (tab) {
                 tab.title = title;
-                this.mainWindow.webContents.send('tab-updated', { id, title });
+                safeSend('tab-updated', { id, title });
             }
         });
 
@@ -340,7 +351,7 @@ class TabManager {
                         const tab = this.tabs.get(id);
                         if (tab) {
                             tab.faviconDataUrl = dataUrl;
-                            this.mainWindow.webContents.send('tab-updated', { id, faviconDataUrl: dataUrl });
+                            safeSend('tab-updated', { id, faviconDataUrl: dataUrl });
                         }
                     }
                 } catch (err) {
@@ -353,7 +364,7 @@ class TabManager {
             const tab = this.tabs.get(id);
             if (tab) {
                 tab.url = url;
-                this.mainWindow.webContents.send('tab-updated', { id, url });
+                safeSend('tab-updated', { id, url });
             }
         });
 
@@ -361,7 +372,7 @@ class TabManager {
             const tab = this.tabs.get(id);
             if (tab) {
                 tab.url = url;
-                this.mainWindow.webContents.send('tab-updated', { id, url });
+                safeSend('tab-updated', { id, url });
             }
         });
 
@@ -373,7 +384,7 @@ class TabManager {
             if (tab) {
                 tab.isMediaPlaying = true;
                 console.log(`[TabManager] Media started playing in tab ${id} (${tab.title})`);
-                this.mainWindow.webContents.send('tab-updated', { id, isMediaPlaying: true });
+                safeSend('tab-updated', { id, isMediaPlaying: true });
             }
         });
 
@@ -382,7 +393,7 @@ class TabManager {
             if (tab) {
                 tab.isMediaPlaying = false;
                 console.log(`[TabManager] Media paused in tab ${id} (${tab.title})`);
-                this.mainWindow.webContents.send('tab-updated', { id, isMediaPlaying: false });
+                safeSend('tab-updated', { id, isMediaPlaying: false });
             }
         });
 
@@ -391,7 +402,7 @@ class TabManager {
             if (tab) {
                 tab.isAudible = audible;
                 console.log(`[TabManager] Audio state changed in tab ${id}: ${audible ? 'audible' : 'silent'}`);
-                this.mainWindow.webContents.send('tab-updated', { id, isAudible: audible });
+                safeSend('tab-updated', { id, isAudible: audible });
             }
         }) as () => void);
 
