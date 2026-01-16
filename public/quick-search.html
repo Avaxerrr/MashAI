@@ -144,6 +144,7 @@
         ];
 
         let selectedIndex = 0;
+        let isUrlMode = false; // Track if current input looks like a URL
         const input = document.getElementById('searchInput');
         const badge = document.getElementById('engineBadge');
         const enginesRow = document.getElementById('enginesRow');
@@ -160,10 +161,34 @@
 
             // Update badge
             const current = ENGINES[selectedIndex];
-            badge.textContent = current.name[0];
-            badge.style.background = current.color;
-            input.placeholder = `Search ${current.name}...`;
-            input.style.caretColor = current.color;
+
+            // Only update badge if not in URL mode
+            if (!isUrlMode) {
+                badge.textContent = current.name[0];
+                badge.style.background = current.color;
+                input.placeholder = `Search ${current.name}...`;
+                input.style.caretColor = current.color;
+            }
+        }
+
+        // Update badge for URL mode
+        function setUrlMode(enabled) {
+            isUrlMode = enabled;
+            if (enabled) {
+                // Use inline SVG for globe icon
+                badge.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
+                badge.style.background = '#8b5cf6'; // violet
+                input.placeholder = 'Go to URL...';
+                input.style.caretColor = '#8b5cf6';
+            } else {
+                // Restore search engine mode
+                const current = ENGINES[selectedIndex];
+                badge.innerHTML = '';
+                badge.textContent = current.name[0];
+                badge.style.background = current.color;
+                input.placeholder = `Search ${current.name}...`;
+                input.style.caretColor = current.color;
+            }
         }
 
         // Handle pill clicks
@@ -175,6 +200,65 @@
                 input.focus();
             }
         });
+
+        // =============================================================================
+        // URL Detection - detects if input looks like a URL vs search query
+        // =============================================================================
+
+        // Common TLDs for URL detection
+        const COMMON_TLDS = [
+            'com', 'org', 'net', 'io', 'dev', 'app', 'ai', 'co', 'me', 'info',
+            'biz', 'edu', 'gov', 'mil', 'int', 'xyz', 'online', 'site', 'tech',
+            'store', 'blog', 'cloud', 'page', 'live', 'tv', 'gg', 'to', 'in',
+            'uk', 'de', 'fr', 'jp', 'ph', 'au', 'ca', 'us', 'eu', 'asia'
+        ];
+
+        /**
+         * Detects if a string looks like a URL
+         * Returns the normalized URL if detected, or null if it's a search query
+         */
+        function detectUrl(input) {
+            const trimmed = input.trim();
+            if (!trimmed) return null;
+
+            // Rule 1: Explicit protocol (http:// or https://)
+            if (/^https?:\/\//i.test(trimmed)) {
+                return trimmed;
+            }
+
+            // Rule 2: Block file:// URLs (security - also blocked in TabManager)
+            if (/^file:\/\//i.test(trimmed)) {
+                return null; // Treat as search, TabManager will block anyway
+            }
+
+            // Rule 3: www. prefix
+            if (/^www\./i.test(trimmed)) {
+                return 'https://' + trimmed;
+            }
+
+            // Rule 4: localhost (with optional port)
+            if (/^localhost(:\d+)?(\/|$)/i.test(trimmed)) {
+                return 'http://' + trimmed;
+            }
+
+            // Rule 5: IP address (IPv4 with optional port)
+            if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?(\/|$)/.test(trimmed)) {
+                return 'http://' + trimmed;
+            }
+
+            // Rule 6: Has common TLD (e.g., example.com, site.io/path)
+            // Pattern: something.tld or something.tld/path or something.tld:port
+            const tldPattern = new RegExp(
+                `^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\\.(${COMMON_TLDS.join('|')})(:\\d+)?(\\/.*)?$`,
+                'i'
+            );
+            if (tldPattern.test(trimmed) && !trimmed.includes(' ')) {
+                return 'https://' + trimmed;
+            }
+
+            // Everything else is a search query
+            return null;
+        }
 
         // Keyboard handling
         document.addEventListener('keydown', (e) => {
@@ -193,8 +277,16 @@
                 e.preventDefault();
                 const query = input.value.trim();
                 if (query) {
-                    const url = ENGINES[selectedIndex].url + encodeURIComponent(query);
-                    window.api?.send?.('quick-search-submit', url);
+                    // Check if it's a URL first
+                    const detectedUrl = detectUrl(query);
+                    if (detectedUrl) {
+                        // Navigate directly to URL
+                        window.api?.send?.('quick-search-submit', detectedUrl);
+                    } else {
+                        // Use search engine
+                        const url = ENGINES[selectedIndex].url + encodeURIComponent(query);
+                        window.api?.send?.('quick-search-submit', url);
+                    }
                 }
             }
         });
@@ -203,9 +295,26 @@
         if (window.api?.onQuickSearchFocus) {
             window.api.onQuickSearchFocus(() => {
                 input.value = '';
+                setUrlMode(false); // Reset to search mode
                 input.focus();
             });
         }
+
+        // Detect URLs as user types
+        input.addEventListener('input', () => {
+            const value = input.value.trim();
+            if (value) {
+                const isUrl = detectUrl(value) !== null;
+                if (isUrl !== isUrlMode) {
+                    setUrlMode(isUrl);
+                }
+            } else {
+                // Empty input, reset to search mode
+                if (isUrlMode) {
+                    setUrlMode(false);
+                }
+            }
+        });
 
         // Initial render
         renderEngines();

@@ -1,24 +1,17 @@
-import { Info, Github, Coffee, Bug, RefreshCw, Send, MessageSquare } from 'lucide-react'
-import { useState } from 'react'
+import { Info, Github, Coffee, Bug, Send, MessageSquare, Lightbulb, HelpCircle, MessageCircle, ExternalLink } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 import MashAILogo from '../../assets/MashAI-logo.png'
 
 type FeedbackType = 'bug' | 'suggestion' | 'question' | 'other';
 
-// Discord webhook URLs
-const DISCORD_WEBHOOKS: Record<FeedbackType, string> = {
-    bug: 'https://discord.com/api/webhooks/1461793527603396769/ojhR0hbikwZk-JXfwBmIDYls-zFrQ-JaJpUKnL2zGo6yOZqYm-flYKEOmom3brg4ApgG',
-    suggestion: 'https://discord.com/api/webhooks/1461793469298118880/8SocdaputUYg-jIQQbyMm5hjGkV1ilSDY3aBPcND9ZZKj8mI-OXzu02qRXJ6D7EPz18q',
-    question: 'https://discord.com/api/webhooks/1461793299802357831/UlK-0J8zmiWNOmMbehEyDFM6m5DVr1O9e_RbSwhbUS7icvHOSTo2xvKVvgYQ3VaDoYjG',
-    other: 'https://discord.com/api/webhooks/1461793299802357831/UlK-0J8zmiWNOmMbehEyDFM6m5DVr1O9e_RbSwhbUS7icvHOSTo2xvKVvgYQ3VaDoYjG'
-};
+// Cloudflare Worker URL (from environment variable)
+const FEEDBACK_API_URL = import.meta.env.VITE_FEEDBACK_API_URL || '';
 
-const WEB3FORMS_KEY = '79d73666-1e1a-474c-a484-5e985b162039';
-
-const FEEDBACK_LABELS: Record<FeedbackType, { label: string; color: number; emoji: string }> = {
-    bug: { label: 'Bug Report', color: 0xef4444, emoji: '🐛' },
-    suggestion: { label: 'Suggestion', color: 0x8b5cf6, emoji: '💡' },
-    question: { label: 'Question', color: 0x3b82f6, emoji: '❓' },
-    other: { label: 'General Feedback', color: 0x6b7280, emoji: '💬' }
+const FEEDBACK_LABELS: Record<FeedbackType, { label: string; color: number; icon: ReactNode }> = {
+    bug: { label: 'Bug Report', color: 0xef4444, icon: <Bug size={14} /> },
+    suggestion: { label: 'Suggestion', color: 0x8b5cf6, icon: <Lightbulb size={14} /> },
+    question: { label: 'Question', color: 0x3b82f6, icon: <HelpCircle size={14} /> },
+    other: { label: 'General Feedback', color: 0x6b7280, icon: <MessageCircle size={14} /> }
 };
 
 /**
@@ -47,48 +40,38 @@ export default function AboutTab() {
     const submitFeedback = async () => {
         if (!message.trim()) return
 
+        if (!FEEDBACK_API_URL) {
+            console.error('Feedback API URL not configured. Set VITE_FEEDBACK_API_URL in .env')
+            setSubmitStatus('error')
+            return
+        }
+
         setIsSubmitting(true)
         setSubmitStatus('idle')
 
-        const feedbackInfo = FEEDBACK_LABELS[feedbackType]
         const osInfo = getOSInfo()
 
         try {
-            // Send to Discord
-            const discordPayload = {
-                embeds: [{
-                    title: `${feedbackInfo.emoji} ${feedbackInfo.label}`,
-                    description: message,
-                    color: feedbackInfo.color,
-                    fields: [
-                        { name: 'App Version', value: `v${appVersion}`, inline: true },
-                        { name: 'OS', value: osInfo, inline: true },
-                        ...(email ? [{ name: 'Email', value: email, inline: true }] : [])
-                    ],
-                    timestamp: new Date().toISOString()
-                }]
+            // Send to Cloudflare Worker (Secure Proxy)
+            const payload = {
+                type: feedbackType,
+                message: message,
+                email: email.trim() || undefined,
+                version: `v${appVersion}`,
+                os: osInfo
             }
 
-            await fetch(DISCORD_WEBHOOKS[feedbackType], {
+            const response = await fetch(FEEDBACK_API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(discordPayload)
+                body: JSON.stringify(payload)
             })
 
-            // Send to Web3Forms as backup
-            const web3Payload = {
-                access_key: WEB3FORMS_KEY,
-                subject: `[MashAI ${feedbackInfo.label}] App Feedback`,
-                from_name: email || 'Anonymous User',
-                email: email || 'noreply@mashai.app',
-                message: `Type: ${feedbackInfo.label}\nVersion: v${appVersion}\nOS: ${osInfo}\n\n${message}`
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Feedback server error:', errorData);
+                throw new Error(`Server responded with ${response.status}: ${errorData.details || errorData.error || 'Unknown error'}`)
             }
-
-            await fetch('https://api.web3forms.com/submit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(web3Payload)
-            })
 
             setSubmitStatus('success')
             setMessage('')
@@ -141,39 +124,48 @@ export default function AboutTab() {
                         Free and open-source.
                     </p>
 
-                    {/* Action Buttons - Row 1 */}
-                    <div className="flex items-center justify-center gap-2">
+                    {/* Links - Vertical Cards */}
+                    <div className="space-y-2">
                         <button
                             onClick={() => openLink('https://github.com/Avaxerrr/MashAI')}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e1e] hover:bg-[#2a2a2b] border border-[#3e3e42] rounded-lg text-xs text-white transition-colors"
+                            className="w-full flex items-center gap-3 p-3 bg-[#1e1e1e] hover:bg-[#2a2a2b] border border-[#3e3e42] rounded-lg text-left transition-colors group"
                         >
-                            <Github size={14} />
-                            <span>GitHub</span>
+                            <div className="flex-shrink-0 w-8 h-8 bg-[#2a2a2b] group-hover:bg-[#333] rounded-lg flex items-center justify-center">
+                                <Github size={16} className="text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm text-white font-medium">GitHub</p>
+                                <p className="text-xs text-gray-500">Source code, releases & updates</p>
+                            </div>
+                            <ExternalLink size={14} className="text-gray-500 group-hover:text-gray-400" />
                         </button>
+
                         <button
                             onClick={() => openLink('https://github.com/Avaxerrr/MashAI/issues')}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e1e] hover:bg-[#2a2a2b] border border-[#3e3e42] rounded-lg text-xs text-white transition-colors"
+                            className="w-full flex items-center gap-3 p-3 bg-[#1e1e1e] hover:bg-[#2a2a2b] border border-[#3e3e42] rounded-lg text-left transition-colors group"
                         >
-                            <Bug size={14} />
-                            <span>GitHub Issues</span>
+                            <div className="flex-shrink-0 w-8 h-8 bg-[#2a2a2b] group-hover:bg-[#333] rounded-lg flex items-center justify-center">
+                                <Bug size={16} className="text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm text-white font-medium">Report an Issue</p>
+                                <p className="text-xs text-gray-500">Public issue tracker on GitHub</p>
+                            </div>
+                            <ExternalLink size={14} className="text-gray-500 group-hover:text-gray-400" />
                         </button>
+
                         <button
                             onClick={() => openLink('https://ko-fi.com/O4O31RETV3')}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 border border-violet-500 rounded-lg text-xs text-white transition-colors"
+                            className="w-full flex items-center gap-3 p-3 bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/30 rounded-lg text-left transition-colors group"
                         >
-                            <Coffee size={14} />
-                            <span>Buy Me a Coffee</span>
-                        </button>
-                    </div>
-
-                    {/* Check for Updates */}
-                    <div className="flex items-center justify-center">
-                        <button
-                            onClick={() => openLink('https://github.com/Avaxerrr/MashAI/releases')}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e1e] hover:bg-[#2a2a2b] border border-[#3e3e42] rounded-lg text-xs text-gray-400 hover:text-white transition-colors"
-                        >
-                            <RefreshCw size={14} />
-                            <span>Check for Updates</span>
+                            <div className="flex-shrink-0 w-8 h-8 bg-violet-600/20 group-hover:bg-violet-600/30 rounded-lg flex items-center justify-center">
+                                <Coffee size={16} className="text-violet-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm text-violet-300 font-medium">Support the Project</p>
+                                <p className="text-xs text-violet-400/60">Buy me a coffee (optional)</p>
+                            </div>
+                            <ExternalLink size={14} className="text-violet-400/50 group-hover:text-violet-400/70" />
                         </button>
                     </div>
 
@@ -200,7 +192,7 @@ export default function AboutTab() {
                         Send Feedback
                     </h3>
                     <p className="text-xs text-gray-500 mt-0.5">
-                        Report bugs, suggest features, or ask questions
+                        Quick way to reach me — no GitHub account needed
                     </p>
                 </div>
                 <div className="p-5 space-y-4">
@@ -213,11 +205,11 @@ export default function AboutTab() {
                                     key={type}
                                     onClick={() => setFeedbackType(type)}
                                     className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${feedbackType === type
-                                            ? 'bg-violet-600 text-white'
-                                            : 'bg-[#1e1e1e] text-gray-400 hover:bg-[#2a2a2b] hover:text-white'
+                                        ? 'bg-violet-600 text-white'
+                                        : 'bg-[#1e1e1e] text-gray-400 hover:bg-[#2a2a2b] hover:text-white'
                                         }`}
                                 >
-                                    {FEEDBACK_LABELS[type].emoji} {FEEDBACK_LABELS[type].label}
+                                    <span className="inline-flex items-center gap-1.5">{FEEDBACK_LABELS[type].icon} {FEEDBACK_LABELS[type].label}</span>
                                 </button>
                             ))}
                         </div>
@@ -225,7 +217,7 @@ export default function AboutTab() {
 
                     {/* Email (optional) */}
                     <div>
-                        <label className="block text-xs text-gray-400 mb-2">Email (optional, for follow-up)</label>
+                        <label className="block text-xs text-gray-400 mb-2">Email (optional — add for a personal response)</label>
                         <input
                             type="email"
                             value={email}
@@ -256,10 +248,10 @@ export default function AboutTab() {
                             onClick={submitFeedback}
                             disabled={!message.trim() || isSubmitting}
                             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-colors ${submitStatus === 'success'
-                                    ? 'bg-green-600 text-white'
-                                    : submitStatus === 'error'
-                                        ? 'bg-red-600 text-white'
-                                        : 'bg-violet-600 hover:bg-violet-700 text-white disabled:bg-gray-700 disabled:cursor-not-allowed'
+                                ? 'bg-green-600 text-white'
+                                : submitStatus === 'error'
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-violet-600 hover:bg-violet-700 text-white disabled:bg-gray-700 disabled:cursor-not-allowed'
                                 }`}
                         >
                             <Send size={14} />

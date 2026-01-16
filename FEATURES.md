@@ -85,7 +85,9 @@ Privacy-first browsing powered by Ghostery:
 - Per-tab blocked request counter
 - Cosmetic filtering for cleaner pages
 - Toggle on/off from settings
-- Whitelist specific sites
+- **Custom filter lists** – Add your own EasyList-compatible URLs
+- **Site whitelist** – Disable blocking for specific domains
+- Cached locally for fast startup
 
 ### 🔒 Isolated Profiles
 Each profile has its own:
@@ -98,10 +100,12 @@ Each profile has its own:
 ## Quick Search
 
 ### 🔍 Quick Search Overlay (Ctrl+K)
-Fast navigation and command palette:
-- Search across all open tabs
-- Switch to any tab instantly
-- Search the web directly
+Fast navigation and web access:
+- **URL detection** – Type a URL to navigate directly (e.g., `github.com`)
+- **Multi-engine search** – Google, Perplexity, Bing, DuckDuckGo, Brave, Yahoo
+- **Tab to cycle** – Switch between search engines with Tab key
+- **Smart detection** – Visual indicator shows URL vs search mode
+- Supports localhost, IP addresses, and common TLDs
 - Floating interface accessible anywhere
 
 ---
@@ -156,6 +160,13 @@ Clean, focused interface:
 - Responsive tab bar
 - Native context menus
 - Toast notifications
+
+### 💬 Built-in Feedback System
+Quick way to reach the developer:
+- Report bugs, suggest features, or ask questions
+- Smart routing – Email replies via email, anonymous via Discord
+- No GitHub account required
+- One-click access from About page
 
 ### ⚙️ Comprehensive Settings
 Full control over your experience:

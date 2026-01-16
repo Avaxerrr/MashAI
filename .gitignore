@@ -16,6 +16,7 @@ dist-ssr
 release/
 
 # Environment files
+.env
 *.local
 
 # Editor directories and files
