@@ -288,7 +288,7 @@ export default function TitleBar({
                                         ${isDragging ? 'scale-95 shadow-lg shadow-violet-500/30 z-50' : ''}
                                         ${tab.loaded === false && !isDragging && !isDragOver ? 'opacity-50' : ''}
                                         ${tab.loading ? 'tab-loading-shimmer' : ''}
-                                        ${isPinnedTab ? 'border-b-2 border-b-violet-500' : ''}
+                                        ${isPinnedTab ? 'border-t-[3px] border-t-violet-500' : ''}
                                     `}
                                 title={(() => {
                                     const mem = tabMemory[tab.id];

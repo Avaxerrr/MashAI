@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from 'electron';
+import { BrowserWindow, ipcMain, app } from 'electron';
 import * as path from 'path';
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -72,10 +72,12 @@ class QuickSearchManager {
             this.quickSearchWindow.setBackgroundColor('#00000000');
         }
 
-        // Load the quick search HTML (always load from file since it's self-contained)
+        // Load the quick search HTML
+        // - Dev mode: loads from public folder (same as production source)
+        // - Production: loads from dist root (Vite copies public folder contents to dist)
         const htmlPath = isDev
-            ? path.join(__dirname, '../../src/quick-search.html')
-            : path.join(__dirname, '../../dist/quick-search.html');
+            ? path.join(__dirname, '../../public/quick-search.html')
+            : path.join(app.getAppPath(), 'dist/quick-search.html');
         this.quickSearchWindow.loadFile(htmlPath);
 
         // Hide on blur (click outside)

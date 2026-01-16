@@ -249,6 +249,9 @@ export function register(
             sessionManager.setActiveTabForProfile(fromProfileId, tabManager.activeTabId);
         }
 
+        // Switch side panel state for the new profile
+        tabManager.switchSidePanelForProfile(fromProfileId, toProfileId);
+
         saveSession();
     });
 

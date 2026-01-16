@@ -86,11 +86,9 @@ class SessionManager {
         const settings = this.settingsManager.getSettings();
         const rememberWindowPosition = settings.general?.rememberWindowPosition !== false;
 
-        // Update sidePanelByProfile with current state
-        const currentPanelState = this.tabManager.getSidePanelState();
-        if (currentPanelState && lastActiveProfileId) {
-            this.sidePanelByProfile[lastActiveProfileId] = currentPanelState;
-        }
+        // Get all side panel states from TabManager (source of truth)
+        // Replace entirely - if a tab was unpinned, it won't be in TabManager's state
+        this.sidePanelByProfile = this.tabManager.getAllSidePanelStates();
 
         const sessionData: Session = {
             tabs: Array.from(this.tabManager.tabs.values()).map(t => ({
@@ -212,9 +210,11 @@ class SessionManager {
             const stats = this.tabManager.getLoadStats();
             console.log(`[SessionManager] Tab stats: ${stats.loaded} loaded, ${stats.unloaded} unloaded, ${stats.total} total`);
 
-            // Load sidePanelByProfile into memory
+            // Load sidePanelByProfile into memory and push to TabManager
             if (data.sidePanelByProfile) {
                 this.sidePanelByProfile = { ...data.sidePanelByProfile };
+                // Push all side panel states to TabManager so they're available for profile switches
+                this.tabManager.restoreAllSidePanelStates(data.sidePanelByProfile);
             }
 
             // Switch to the active tab
@@ -257,8 +257,11 @@ class SessionManager {
             if (this.tabManager.tabs.has(panelState.pinnedTabId)) {
                 console.log(`[SessionManager] Restoring side panel for profile ${profileId}, pinned tab: ${panelState.pinnedTabId}`);
 
-                // Set the panel state on TabManager
-                this.tabManager.setSidePanelState(panelState);
+                // Set the current profile ID on TabManager
+                this.tabManager.setCurrentProfileId(profileId);
+
+                // Set the panel state on TabManager for this profile
+                this.tabManager.setSidePanelState(panelState, profileId);
 
                 // Load the pinned tab if not loaded
                 if (!this.tabManager.isTabLoaded(panelState.pinnedTabId)) {

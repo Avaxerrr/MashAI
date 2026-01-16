@@ -453,19 +453,106 @@ function App() {
                         document.body.style.userSelect = 'none';
                     }}
                 >
-                    {/* Visual handle with pulse animation */}
+                    {/* Visual handle with faded gradient effect - fades at top and bottom */}
                     <div
-                        className={`absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 transition-all duration-300
+                        className={`absolute inset-y-0 left-1/2 -translate-x-1/2 transition-all duration-300
                             ${isPanelPulsing
-                                ? 'bg-violet-500 w-2 shadow-[0_0_15px_3px_rgba(139,92,246,0.6)]'
-                                : 'bg-[#3a3a3b] group-hover:bg-violet-500'
+                                ? 'w-2 shadow-[0_0_20px_5px_rgba(139,92,246,0.7)]'
+                                : 'w-1 group-hover:bg-violet-500'
                             }`}
+                        style={{
+                            background: isPanelPulsing
+                                ? 'linear-gradient(to bottom, rgba(139,92,246,0), rgba(139,92,246,0.9) 20%, rgba(139,92,246,0.9) 80%, rgba(139,92,246,0))'
+                                : 'linear-gradient(to bottom, rgba(58,58,59,0), rgba(58,58,59,1) 20%, rgba(58,58,59,1) 80%, rgba(58,58,59,0))'
+                        }}
                     />
                 </div>
             )}
 
+            {/* Side panel top glow bar when clicking pinned tab */}
+            {sidePanelState && isPanelPulsing && (
+                <div
+                    className="absolute h-2 pointer-events-none z-[9999] animate-pulse"
+                    style={{
+                        top: '36px',
+                        left: sidePanelState.panelSide === 'left' ? 0 : `${100 - sidePanelState.panelWidth}%`,
+                        right: sidePanelState.panelSide === 'right' ? 0 : `${100 - sidePanelState.panelWidth}%`,
+                        background: 'linear-gradient(to right, rgba(139,92,246,0), rgba(139,92,246,0.9) 20%, rgba(139,92,246,0.9) 80%, rgba(139,92,246,0))',
+                        boxShadow: '0 0 30px 8px rgba(139, 92, 246, 0.6)'
+                    }}
+                />
+            )}
+            {/* Empty state when pinned tab is the only/active tab */}
+            {sidePanelState && activeTabId === sidePanelState.pinnedTabId && (
+                <div
+                    className="absolute flex flex-col items-center justify-center bg-[#1a1a1b] text-zinc-400"
+                    style={{
+                        top: '36px',
+                        bottom: 0,
+                        left: sidePanelState.panelSide === 'left' ? `${sidePanelState.panelWidth}%` : 0,
+                        right: sidePanelState.panelSide === 'right' ? `${sidePanelState.panelWidth}%` : 0,
+                    }}
+                >
+                    {/* Browser Window Icon */}
+                    <svg
+                        className="w-12 h-12 mb-3 text-zinc-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M3.75 6A2.25 2.25 0 016 3.75h12A2.25 2.25 0 0120.25 6v12A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18V6zM3.75 9h16.5"
+                        />
+                    </svg>
+                    <p className="text-lg font-medium mb-1">No active tab</p>
+                    <p className="text-sm text-zinc-500 mb-6">Choose an AI to start browsing</p>
+
+                    {/* AI Providers Grid */}
+                    <div className="grid grid-cols-4 gap-3 max-w-md px-4">
+                        {aiProviders.map(provider => (
+                            <button
+                                key={provider.id}
+                                onClick={() => createTabWithUrl(activeProfileId, provider.url)}
+                                className={`flex flex-col items-center p-3 rounded-lg transition-all duration-200 hover:scale-105
+                                    ${provider.id === defaultProviderId
+                                        ? 'bg-violet-600/20 border border-violet-500/50 hover:bg-violet-600/30'
+                                        : 'bg-[#2a2a2b] hover:bg-[#3a3a3b] border border-transparent'
+                                    }`}
+                                title={provider.name}
+                            >
+                                <img
+                                    src={provider.faviconDataUrl || `https://www.google.com/s2/favicons?domain=${new URL(provider.url).hostname}&sz=32`}
+                                    alt={provider.name}
+                                    className="w-8 h-8 mb-2 rounded"
+                                    onError={(e) => {
+                                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23888" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
+                                    }}
+                                />
+                                <span className="text-xs text-zinc-300 truncate w-full text-center">
+                                    {provider.name.length > 10 ? provider.name.slice(0, 10) + '…' : provider.name}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Default New Tab Button */}
+                    <button
+                        onClick={createTab}
+                        className="mt-6 flex items-center gap-2 px-4 py-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors duration-200"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        or open default tab
+                    </button>
+                </div>
+            )}
+
             <div className="flex-1" />
-        </div>
+        </div >
     )
 }
 

@@ -84,7 +84,8 @@ class TabManager {
     private openDownloadsWindowCallback: (() => void) | null;
     private pendingDownloadPaths: Map<string, string>; // URL -> save path for user-confirmed downloads
     private adBlockManager: AdBlockManager | null;
-    private sidePanelState: SidePanelState | null;
+    private sidePanelByProfile: Map<string, SidePanelState> = new Map();
+    private currentProfileId: string | null = null;
 
     constructor(mainWindow: BrowserWindow, settingsManager: SettingsManager) {
         this.mainWindow = mainWindow;
@@ -99,7 +100,7 @@ class TabManager {
         this.openDownloadsWindowCallback = null;
         this.pendingDownloadPaths = new Map();
         this.adBlockManager = null;
-        this.sidePanelState = null;
+        // sidePanelByProfile and currentProfileId already initialized at declaration
 
         // Start inactivity check timer (runs every minute)
         this._startInactivityTimer();
@@ -830,7 +831,8 @@ class TabManager {
             const currentTab = this.tabs.get(this.activeTabId);
             if (currentTab && currentTab.view) {
                 // DON'T remove the view if it's the pinned tab - it needs to stay visible
-                const isPinnedTab = this.sidePanelState?.pinnedTabId === this.activeTabId;
+                const currentState = this.getCurrentSidePanelState();
+                const isPinnedTab = currentState?.pinnedTabId === this.activeTabId;
                 if (!isPinnedTab) {
                     try {
                         this.mainWindow.contentView.removeChildView(currentTab.view);
@@ -860,7 +862,8 @@ class TabManager {
         if (!tab) return;
 
         // If closing the pinned tab, exit side panel mode first
-        if (this.sidePanelState?.pinnedTabId === tabId) {
+        const currentState = this.getCurrentSidePanelState();
+        if (currentState?.pinnedTabId === tabId) {
             console.log(`[TabManager] Closing pinned tab ${tabId}, exiting side panel mode`);
             this.unpinSidePanel();
         }
@@ -1019,6 +1022,85 @@ class TabManager {
     // =========================================================================
 
     /**
+     * Get the current profile's side panel state (helper)
+     */
+    private getCurrentSidePanelState(): SidePanelState | null {
+        if (!this.currentProfileId) return null;
+        return this.sidePanelByProfile.get(this.currentProfileId) || null;
+    }
+
+    /**
+     * Set the current profile ID (called when switching profiles)
+     */
+    setCurrentProfileId(profileId: string): void {
+        this.currentProfileId = profileId;
+    }
+
+    /**
+     * Switch side panel state when switching profiles
+     * Removes old profile's pinned view and adds new profile's pinned view
+     */
+    switchSidePanelForProfile(fromProfileId: string | null, toProfileId: string): void {
+        console.log(`[TabManager] Switching side panel from profile ${fromProfileId} to ${toProfileId}`);
+
+        // 1. Remove old profile's pinned view from window (if any)
+        if (fromProfileId) {
+            const oldState = this.sidePanelByProfile.get(fromProfileId);
+            if (oldState) {
+                const oldPinnedTab = this.tabs.get(oldState.pinnedTabId);
+                if (oldPinnedTab?.view) {
+                    try {
+                        this.mainWindow.contentView.removeChildView(oldPinnedTab.view);
+                        console.log(`[TabManager] Removed pinned view for profile ${fromProfileId}`);
+                    } catch (e) {
+                        console.warn('Could not remove old pinned view:', e);
+                    }
+                }
+            }
+        }
+
+        // 2. Set current profile ID
+        this.currentProfileId = toProfileId;
+
+        // 3. Add new profile's pinned view to window (if exists)
+        const newState = this.sidePanelByProfile.get(toProfileId);
+        if (newState) {
+            const newPinnedTab = this.tabs.get(newState.pinnedTabId);
+
+            // Verify pinned tab still exists
+            if (newPinnedTab) {
+                // Load the tab if not loaded
+                if (!newPinnedTab.loaded) {
+                    console.log(`[TabManager] Loading pinned tab ${newState.pinnedTabId} for profile ${toProfileId}`);
+                    this.loadTab(newState.pinnedTabId);
+                }
+
+                // Add view to window
+                if (newPinnedTab.view) {
+                    this.mainWindow.contentView.addChildView(newPinnedTab.view);
+                    console.log(`[TabManager] Added pinned view for profile ${toProfileId}`);
+                }
+
+                // Notify frontend
+                this.mainWindow.webContents.send('side-panel-state-changed', newState);
+            } else {
+                // Pinned tab no longer exists, clear the state
+                console.log(`[TabManager] Pinned tab ${newState.pinnedTabId} no longer exists, clearing state`);
+                this.sidePanelByProfile.delete(toProfileId);
+                this.mainWindow.webContents.send('side-panel-state-changed', null);
+            }
+        } else {
+            // No pinned tab for this profile
+            this.mainWindow.webContents.send('side-panel-state-changed', null);
+        }
+
+        // 4. Update view bounds
+        if (this.updateViewBoundsCallback) {
+            this.updateViewBoundsCallback();
+        }
+    }
+
+    /**
      * Pin a tab to the side panel
      * @param tabId - The tab to pin
      * @param side - Which side to pin to ('left' or 'right')
@@ -1031,14 +1113,19 @@ class TabManager {
             return false;
         }
 
-        // If there's already a pinned tab, remove its view first
-        const previousWidth = this.sidePanelState?.panelWidth || 40;
-        if (this.sidePanelState && this.sidePanelState.pinnedTabId !== tabId) {
-            const oldPinnedTab = this.tabs.get(this.sidePanelState.pinnedTabId);
+        // Use the tab's profile ID as the current profile
+        const profileId = tab.profileId;
+        this.currentProfileId = profileId;
+
+        // If there's already a pinned tab for this profile, remove its view first
+        const currentState = this.sidePanelByProfile.get(profileId);
+        const previousWidth = currentState?.panelWidth || 50;
+        if (currentState && currentState.pinnedTabId !== tabId) {
+            const oldPinnedTab = this.tabs.get(currentState.pinnedTabId);
             if (oldPinnedTab?.view) {
                 try {
                     this.mainWindow.contentView.removeChildView(oldPinnedTab.view);
-                    console.log(`[TabManager] Removed old pinned tab ${this.sidePanelState.pinnedTabId}`);
+                    console.log(`[TabManager] Removed old pinned tab ${currentState.pinnedTabId}`);
                 } catch (e) {
                     console.warn('Could not remove old pinned view:', e);
                 }
@@ -1051,18 +1138,17 @@ class TabManager {
             this.loadTab(tabId);
         }
 
-        // Set the side panel state FIRST (so switchTo knows about it)
-        // Preserve previous width when replacing
-        this.sidePanelState = {
+        // Set the side panel state for this profile
+        const newState: SidePanelState = {
             pinnedTabId: tabId,
             panelSide: side,
             panelWidth: previousWidth
         };
+        this.sidePanelByProfile.set(profileId, newState);
 
-        console.log(`[TabManager] Pinned tab ${tabId} to ${side} side panel`);
+        console.log(`[TabManager] Pinned tab ${tabId} to ${side} side panel for profile ${profileId}`);
 
         // If the pinned tab was the active tab, switch to another tab FIRST
-        // This way switchTo() won't remove the pinned tab's view (since sidePanelState is set)
         if (this.activeTabId === tabId) {
             const profileTabs = this.getTabsForProfile(tab.profileId);
             const currentIndex = profileTabs.findIndex(t => t.id === tabId);
@@ -1071,10 +1157,8 @@ class TabManager {
             let newActiveTab = null;
             if (profileTabs.length > 1) {
                 if (currentIndex < profileTabs.length - 1) {
-                    // Switch to next tab
                     newActiveTab = profileTabs[currentIndex + 1];
                 } else if (currentIndex > 0) {
-                    // Switch to previous tab
                     newActiveTab = profileTabs[currentIndex - 1];
                 }
             }
@@ -1092,7 +1176,7 @@ class TabManager {
         }
 
         // Notify frontend
-        this.mainWindow.webContents.send('side-panel-state-changed', this.sidePanelState);
+        this.mainWindow.webContents.send('side-panel-state-changed', newState);
 
         // Trigger view bounds update
         if (this.updateViewBoundsCallback) {
@@ -1103,12 +1187,15 @@ class TabManager {
     }
 
     /**
-     * Unpin the side panel
+     * Unpin the side panel for the current profile
      */
     unpinSidePanel(): void {
-        if (!this.sidePanelState) return;
+        if (!this.currentProfileId) return;
 
-        const pinnedTabId = this.sidePanelState.pinnedTabId;
+        const currentState = this.sidePanelByProfile.get(this.currentProfileId);
+        if (!currentState) return;
+
+        const pinnedTabId = currentState.pinnedTabId;
         const pinnedTab = this.tabs.get(pinnedTabId);
 
         // Remove the pinned view from window (if it exists and isn't the active tab)
@@ -1120,9 +1207,10 @@ class TabManager {
             }
         }
 
-        console.log(`[TabManager] Unpinned side panel (was tab ${pinnedTabId})`);
+        console.log(`[TabManager] Unpinned side panel for profile ${this.currentProfileId} (was tab ${pinnedTabId})`);
 
-        this.sidePanelState = null;
+        // Remove the state for this profile
+        this.sidePanelByProfile.delete(this.currentProfileId);
 
         // Notify frontend
         this.mainWindow.webContents.send('side-panel-state-changed', null);
@@ -1137,13 +1225,16 @@ class TabManager {
      * Swap the side panel to the other side
      */
     swapPanelSide(): void {
-        if (!this.sidePanelState) return;
+        if (!this.currentProfileId) return;
 
-        this.sidePanelState.panelSide = this.sidePanelState.panelSide === 'left' ? 'right' : 'left';
-        console.log(`[TabManager] Swapped side panel to ${this.sidePanelState.panelSide}`);
+        const currentState = this.sidePanelByProfile.get(this.currentProfileId);
+        if (!currentState) return;
+
+        currentState.panelSide = currentState.panelSide === 'left' ? 'right' : 'left';
+        console.log(`[TabManager] Swapped side panel to ${currentState.panelSide}`);
 
         // Notify frontend
-        this.mainWindow.webContents.send('side-panel-state-changed', this.sidePanelState);
+        this.mainWindow.webContents.send('side-panel-state-changed', currentState);
 
         // Trigger view bounds update
         if (this.updateViewBoundsCallback) {
@@ -1156,13 +1247,16 @@ class TabManager {
      * @param width - Width as percentage (0-100)
      */
     setPanelWidth(width: number): void {
-        if (!this.sidePanelState) return;
+        if (!this.currentProfileId) return;
+
+        const currentState = this.sidePanelByProfile.get(this.currentProfileId);
+        if (!currentState) return;
 
         // Clamp between 20% and 80%
-        this.sidePanelState.panelWidth = Math.max(20, Math.min(80, width));
+        currentState.panelWidth = Math.max(20, Math.min(80, width));
 
         // Notify frontend
-        this.mainWindow.webContents.send('side-panel-state-changed', this.sidePanelState);
+        this.mainWindow.webContents.send('side-panel-state-changed', currentState);
 
         // Trigger view bounds update
         if (this.updateViewBoundsCallback) {
@@ -1171,25 +1265,56 @@ class TabManager {
     }
 
     /**
-     * Get the current side panel state
+     * Get the current profile's side panel state
      */
     getSidePanelState(): SidePanelState | null {
-        return this.sidePanelState;
+        return this.getCurrentSidePanelState();
     }
 
     /**
-     * Set the side panel state (used for session restore)
+     * Get all side panel states (for session persistence)
      */
-    setSidePanelState(state: SidePanelState | null): void {
-        this.sidePanelState = state;
+    getAllSidePanelStates(): Record<string, SidePanelState> {
+        const result: Record<string, SidePanelState> = {};
+        for (const [profileId, state] of this.sidePanelByProfile.entries()) {
+            result[profileId] = state;
+        }
+        return result;
     }
 
     /**
-     * Get the pinned tab's view
+     * Set the side panel state for a specific profile (used for session restore)
+     */
+    setSidePanelState(state: SidePanelState | null, profileId?: string): void {
+        const targetProfileId = profileId || this.currentProfileId;
+        if (!targetProfileId) return;
+
+        if (state) {
+            this.sidePanelByProfile.set(targetProfileId, state);
+        } else {
+            this.sidePanelByProfile.delete(targetProfileId);
+        }
+    }
+
+    /**
+     * Restore all side panel states from session (called on app startup)
+     */
+    restoreAllSidePanelStates(states: Record<string, SidePanelState | null>): void {
+        for (const [profileId, state] of Object.entries(states)) {
+            if (state) {
+                this.sidePanelByProfile.set(profileId, state);
+            }
+        }
+        console.log(`[TabManager] Restored side panel states for ${Object.keys(states).length} profiles`);
+    }
+
+    /**
+     * Get the pinned tab's view for the current profile
      */
     getPinnedView(): WebContentsView | null {
-        if (!this.sidePanelState) return null;
-        const tab = this.tabs.get(this.sidePanelState.pinnedTabId);
+        const currentState = this.getCurrentSidePanelState();
+        if (!currentState) return null;
+        const tab = this.tabs.get(currentState.pinnedTabId);
         return tab?.view || null;
     }
 
