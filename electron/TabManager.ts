@@ -4,10 +4,6 @@ import type SettingsManager from './SettingsManager';
 import type AdBlockManager from './AdBlockManager';
 
 const INJECTED_CSS = `
-    /* Ensure pages have a white background foundation - prevents dark WebContentsView from bleeding through */
-    /* This can be overridden by websites' own CSS that sets explicit backgrounds */
-    html, body { background-color: #ffffff; }
-    
     .sticky.top-0.z-50.w-full.bg-super,
     [class*="AppBanner"],
     [class*="downloadBanner"] { 
@@ -34,6 +30,10 @@ const INJECTED_CSS = `
         background: #71717a;
     }
 `;
+
+// White background CSS - only injected if site has no background set
+// This prevents dark WebContentsView from bleeding through on transparent sites
+const WHITE_BG_CSS = `html, body { background-color: #ffffff; }`;
 
 /** Internal tab entry with WebContentsView reference */
 interface TabEntry {
@@ -302,6 +302,35 @@ class TabManager {
             }
         };
 
+        // Smart background detection: only inject white background if site has no background set
+        // This prevents dark WebContentsView from bleeding through on transparent sites
+        // while respecting sites (like Facebook/YouTube) that set their own dark backgrounds
+        const injectSmartBackground = () => {
+            view.webContents.executeJavaScript(`
+                (function() {
+                    const htmlBg = getComputedStyle(document.documentElement).backgroundColor;
+                    const bodyBg = getComputedStyle(document.body).backgroundColor;
+                    // Check if background is transparent (rgba with 0 alpha) or not set
+                    const isTransparent = (color) => {
+                        if (!color || color === 'transparent') return true;
+                        const match = color.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*([\\d.]+))?\\)/);
+                        if (match && match[4] !== undefined && parseFloat(match[4]) === 0) return true;
+                        return false;
+                    };
+                    // Only return true if BOTH html and body have no background
+                    return isTransparent(htmlBg) && isTransparent(bodyBg);
+                })();
+            `).then((needsWhiteBg: boolean) => {
+                if (needsWhiteBg) {
+                    view.webContents.insertCSS(WHITE_BG_CSS, { cssOrigin: 'user' }).catch(() => {
+                        // Silently fail
+                    });
+                }
+            }).catch(() => {
+                // Silently fail - page might have navigated away
+            });
+        };
+
         // Inject on multiple events to ensure persistence
         view.webContents.on('will-navigate', injectCSS);
         view.webContents.on('did-start-loading', injectCSS);
@@ -311,6 +340,9 @@ class TabManager {
         // Inject cosmetic filters after page loads
         view.webContents.on('did-finish-load', injectCosmeticFilters);
         view.webContents.on('did-navigate-in-page', injectCosmeticFilters);
+
+        // Smart background detection after page fully loads
+        view.webContents.on('did-finish-load', injectSmartBackground);
 
         // Helper to safely send IPC messages (prevents "Object has been destroyed" errors during app shutdown)
         const safeSend = (channel: string, data: object) => {
