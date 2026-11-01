@@ -18,6 +18,10 @@ interface ShortcutInputProps {
  * GeneralTab - System settings, tray settings, and general app settings
  */
 export default function GeneralTab({ generalSettings, onGeneralChange }: GeneralTabProps) {
+    const platform = window.api.platform
+    const loginTarget = platform === 'darwin' ? 'your Mac' : platform === 'win32' ? 'Windows' : 'your computer'
+    const trayName = platform === 'darwin' ? 'menu bar' : 'system tray'
+
     const settings: GeneralSettings = {
         ...{
             rememberWindowPosition: true,
@@ -204,7 +208,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }: General
                         />
                         <div>
                             <span className="text-sm text-white">Launch at system startup</span>
-                            <p className="text-xs text-gray-500">Start MashAI when you log in to Windows</p>
+                            <p className="text-xs text-gray-500">Start MashAI when you log in to {loginTarget}</p>
                         </div>
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
@@ -247,7 +251,7 @@ export default function GeneralTab({ generalSettings, onGeneralChange }: General
                         />
                         <div>
                             <span className="text-sm text-white">Show tray icon</span>
-                            <p className="text-xs text-gray-500">Display MashAI icon in the system tray</p>
+                            <p className="text-xs text-gray-500">Display MashAI icon in the {trayName}</p>
                         </div>
                     </label>
 
