@@ -135,7 +135,8 @@ function createSettingsWindow(): void {
         parent: mainWindow!,
         modal: false,
         frame: false,
-        titleBarStyle: 'hidden',
+        // On macOS 'hidden' would still draw traffic lights over the custom header
+        ...(process.platform !== 'darwin' && { titleBarStyle: 'hidden' as const }),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -188,7 +189,8 @@ function createDownloadsWindow(): void {
         parent: mainWindow!,
         modal: false,
         frame: false,
-        titleBarStyle: 'hidden',
+        // On macOS 'hidden' would still draw traffic lights over the custom header
+        ...(process.platform !== 'darwin' && { titleBarStyle: 'hidden' as const }),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
