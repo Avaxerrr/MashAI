@@ -105,6 +105,11 @@ contextBridge.exposeInMainWorld('api', {
         ipcRenderer.on('window-maximized', handler);
         return () => ipcRenderer.removeListener('window-maximized', handler);
     },
+    onWindowFullScreen: (callback: (isFullScreen: boolean) => void) => {
+        const handler = (e: IpcRendererEvent, isFullScreen: boolean) => callback(isFullScreen);
+        ipcRenderer.on('window-fullscreen', handler);
+        return () => ipcRenderer.removeListener('window-fullscreen', handler);
+    },
     onRequestCloseTab: (callback: (id: string) => void) => {
         const handler = (e: IpcRendererEvent, id: string) => callback(id);
         ipcRenderer.on('request-close-tab', handler);

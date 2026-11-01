@@ -71,6 +71,9 @@ export default function TitleBar({
     // On macOS the native traffic lights replace our window controls
     const isMac = window.api.platform === 'darwin'
     const modKey = isMac ? '⌘' : 'Ctrl+'
+    const [isFullScreen, setIsFullScreen] = useState(false)
+
+    useEffect(() => window.api.onWindowFullScreen(setIsFullScreen), [])
 
     const getProviderForTab = (tab: TabState): AIProvider | undefined => {
         if (!tab.url) return undefined;
@@ -184,7 +187,7 @@ export default function TitleBar({
 
             {/* Left: Profile Switcher */}
             {/* Spacer reserving room for the macOS traffic lights (stays draggable) */}
-            {isMac && <div className="h-full w-[76px] flex-shrink-0" />}
+            {isMac && !isFullScreen && <div className="h-full w-[76px] flex-shrink-0" />}
             <div className="flex items-center h-full relative" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
                 <button
                     onClick={handleProfileClick}

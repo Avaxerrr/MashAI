@@ -523,6 +523,18 @@ function createWindow(): void {
             event.preventDefault();
             trayManager.hideWindow();
             console.log('[main] Window hidden to tray (close intercepted)');
+        } else if (trayManager && !trayManager.isQuitting && process.platform === 'darwin') {
+            // macOS convention: closing the window keeps the app in the Dock.
+            // Cmd+Q / Dock "Quit" set isQuitting via before-quit and still quit.
+            event.preventDefault();
+            if (mainWindow!.isFullScreen()) {
+                // Hiding a fullscreen window leaves an empty black Space
+                mainWindow!.once('leave-full-screen', () => trayManager!.hideWindow());
+                mainWindow!.setFullScreen(false);
+            } else {
+                trayManager.hideWindow();
+            }
+            console.log('[main] Window hidden, app stays in Dock (close intercepted)');
         } else {
             console.log('[main] Allowing window to close (quitting app)');
         }
@@ -584,6 +596,15 @@ function createWindow(): void {
         sessionManager!.updateWindowState({ isMaximized: false });
         mainWindow!.webContents.send('window-maximized', false);
     });
+
+    // macOS hides the traffic lights in fullscreen, so the title bar drops their spacer
+    mainWindow.on('enter-full-screen', () => {
+        mainWindow!.webContents.send('window-fullscreen', true);
+    });
+
+    mainWindow.on('leave-full-screen', () => {
+        mainWindow!.webContents.send('window-fullscreen', false);
+    });
 }
 
 // App lifecycle
@@ -604,6 +625,13 @@ app.on('window-all-closed', () => {
         app.quit();
     } else {
         console.log('[main] Staying alive in tray mode');
+    }
+});
+
+// macOS: clicking the Dock icon brings back the hidden main window
+app.on('activate', () => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+        trayManager?.showWindow();
     }
 });
 
