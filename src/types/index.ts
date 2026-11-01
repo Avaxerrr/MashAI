@@ -189,6 +189,8 @@ declare global {
 }
 
 export interface ElectronAPI {
+    platform: string;
+
     // Window controls
     minimize: () => void;
     maximize: () => void;

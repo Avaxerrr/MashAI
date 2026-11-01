@@ -341,8 +341,11 @@ function createWindow(): void {
         minHeight: DEFAULT_WINDOW.minHeight,
         backgroundColor: '#1e1e1e',
         icon: path.join(__dirname, '../../src/assets/MashAI-logo.png'),
-        frame: false,
-        titleBarStyle: 'hidden',
+        // macOS keeps the native traffic lights (centered in our title bar);
+        // other platforms use the custom window controls rendered in TitleBar
+        ...(process.platform === 'darwin'
+            ? { titleBarStyle: 'hidden' as const, trafficLightPosition: { x: 12, y: (TITLEBAR_HEIGHT - 14) / 2 } }
+            : { frame: false, titleBarStyle: 'hidden' as const }),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
