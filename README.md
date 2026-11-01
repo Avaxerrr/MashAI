@@ -202,19 +202,17 @@ MashAI stores its configuration in your user data directory:
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+T` | New tab |
-| `Ctrl+W` | Close tab |
-| `Ctrl+Tab` | Next tab |
-| `Ctrl+Shift+Tab` | Previous tab |
-| `Ctrl+R` | Reload active tab |
-| `Ctrl+Shift+T` | Reopen closed tab |
-| `Ctrl+J` | Open downloads |
-| `Ctrl+K` | Quick Search |
-| `Ctrl+Shift+A` | Toggle always-on-top |
-
-On macOS, use `⌘` instead of `Ctrl` (tab switching stays `Ctrl+Tab` / `Ctrl+Shift+Tab`, as in browsers).
+| Action | Windows / Linux | macOS |
+|--------|-----------------|-------|
+| New tab | `Ctrl+T` | `⌘T` |
+| Close tab | `Ctrl+W` | `⌘W` |
+| Next tab | `Ctrl+Tab` | `⌃Tab` |
+| Previous tab | `Ctrl+Shift+Tab` | `⌃⇧Tab` |
+| Reload active tab | `Ctrl+R` | `⌘R` |
+| Reopen closed tab | `Ctrl+Shift+T` | `⌘⇧T` |
+| Open downloads | `Ctrl+J` | `⌘J` |
+| Quick Search | `Ctrl+K` | `⌘K` |
+| Toggle always-on-top | `Ctrl+Shift+A` | `⌘⇧A` |
 
 *All shortcuts are customizable in Settings → Shortcuts*
 
