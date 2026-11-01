@@ -214,6 +214,8 @@ MashAI stores its configuration in your user data directory:
 | `Ctrl+K` | Quick Search |
 | `Ctrl+Shift+A` | Toggle always-on-top |
 
+On macOS, use `⌘` instead of `Ctrl` (tab switching stays `Ctrl+Tab` / `Ctrl+Shift+Tab`, as in browsers).
+
 *All shortcuts are customizable in Settings → Shortcuts*
 
 ---
@@ -262,7 +264,8 @@ MashAI/
 │   │   └── settings/      # Settings tab components
 │   └── index.css          # Global styles (Tailwind)
 ├── tools/                 # Build utilities
-│   └── png_to_icns.py     # macOS icon generator
+│   ├── png_to_icns.py     # macOS icon generator
+│   └── png_to_tray_template.py  # macOS menu bar (tray) icon generator
 └── dist/                  # Production build output
 ```
 
@@ -291,8 +294,10 @@ Found a bug? Have a feature request? Please [open an issue](https://github.com/A
 | Platform | Status |
 |----------|--------|
 | Windows 10/11 | ✅ Supported |
-| macOS | Coming Soon |
+| macOS (Apple Silicon & Intel) | ✅ Supported |
 | Linux | Coming Soon |
+
+> **macOS builds are not code-signed.** On first launch macOS will block the app. Right-click `MashAI.app` → **Open** → **Open**, or run `xattr -dr com.apple.quarantine /Applications/MashAI.app` once.
 
 ---
 
