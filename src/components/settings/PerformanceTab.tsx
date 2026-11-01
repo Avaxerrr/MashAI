@@ -315,7 +315,7 @@ export default function PerformanceTab({ performanceSettings, onPerformanceChang
                         )}
                     </div>
                     <p className="text-xs text-gray-500 leading-relaxed">
-                        May differ slightly from Task Manager due to how memory is measured across platforms.
+                        May differ slightly from {window.api.platform === 'darwin' ? 'Activity Monitor' : 'Task Manager'} due to how memory is measured across platforms.
                     </p>
                 </div>
             </div>

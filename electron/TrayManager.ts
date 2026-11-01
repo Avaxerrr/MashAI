@@ -352,18 +352,23 @@ class TrayManager {
      * Create a simple placeholder icon for the tray
      */
     private _createPlaceholderIcon() {
+        // macOS uses a monochrome template image (tinted by the menu bar);
+        // the "Template" suffix and @2x variant are picked up by Electron
+        const isMac = process.platform === 'darwin';
+        const fileName = isMac ? 'trayTemplate.png' : 'MashAI-logo.png';
+
         let logoPath;
         if (app.isPackaged) {
             // In production, assets are in resources/assets
-            logoPath = path.join(process.resourcesPath, 'assets/MashAI-logo.png');
+            logoPath = path.join(process.resourcesPath, 'assets', fileName);
         } else {
             // In development, relative to this file
-            logoPath = path.join(__dirname, '../../src/assets/MashAI-logo.png');
+            logoPath = path.join(__dirname, '../../src/assets', fileName);
         }
 
         try {
             const icon = nativeImage.createFromPath(logoPath);
-            return icon.resize({ width: 16, height: 16 });
+            return isMac ? icon : icon.resize({ width: 16, height: 16 });
         } catch (e) {
             console.warn('[TrayManager] Could not load logo, using fallback:', e);
             return nativeImage.createEmpty();

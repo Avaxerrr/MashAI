@@ -68,6 +68,13 @@ export default function TitleBar({
     const [dragSide, setDragSide] = useState<'left' | 'right'>('left')
     const [isToastExiting, setIsToastExiting] = useState(false)
 
+    // On macOS the native traffic lights replace our window controls
+    const isMac = window.api.platform === 'darwin'
+    const modKey = isMac ? '⌘' : 'Ctrl+'
+    const [isFullScreen, setIsFullScreen] = useState(false)
+
+    useEffect(() => window.api.onWindowFullScreen(setIsFullScreen), [])
+
     const getProviderForTab = (tab: TabState): AIProvider | undefined => {
         if (!tab.url) return undefined;
         return aiProviders.find(p => tab.url.includes(p.url) || (p.url && tab.url.startsWith(p.url)));
@@ -179,6 +186,8 @@ export default function TitleBar({
             )}
 
             {/* Left: Profile Switcher */}
+            {/* Spacer reserving room for the macOS traffic lights (stays draggable) */}
+            {isMac && !isFullScreen && <div className="h-full w-[76px] flex-shrink-0" />}
             <div className="flex items-center h-full relative" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
                 <button
                     onClick={handleProfileClick}
@@ -205,7 +214,7 @@ export default function TitleBar({
                 <button
                     onClick={() => window.api.reload()}
                     className="h-full px-3 hover:bg-[#2a2a2a] transition-colors"
-                    title="Reload (Ctrl+R)"
+                    title={`Reload (${modKey}R)`}
                 >
                     <RotateCw size={16} className="text-gray-300" />
                 </button>
@@ -350,7 +359,7 @@ export default function TitleBar({
                         window.api.showNewTabMenu(Math.round(rect.left), Math.round(rect.bottom), activeProfile?.id || '')
                     }}
                     className="h-full px-3 hover:bg-[#2a2a2a] transition-colors flex items-center flex-shrink-0 border-l border-[#1e1e1e]"
-                    title="New Tab (Ctrl+T)"
+                    title={`New Tab (${modKey}T)`}
                     style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
                 >
                     <Plus size={16} className="text-gray-300" />
@@ -361,7 +370,7 @@ export default function TitleBar({
             <div className="h-full min-w-6 flex-1" title="Drag to move window" />
 
             {/* Right: Window Controls */}
-            <div className="flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+            {!isMac && <div className="flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
                 <button
                     onClick={() => window.api.minimize()}
                     className="h-full w-12 hover:bg-[#2a2a2a] flex items-center justify-center transition-colors"
@@ -380,7 +389,7 @@ export default function TitleBar({
                 >
                     <X size={16} className="text-white" />
                 </button>
-            </div>
+            </div>}
         </div>
     )
 }

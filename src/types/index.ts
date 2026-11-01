@@ -189,11 +189,14 @@ declare global {
 }
 
 export interface ElectronAPI {
+    platform: string;
+
     // Window controls
     minimize: () => void;
     maximize: () => void;
     close: () => void;
     onMaximized: (callback: (isMaximized: boolean) => void) => () => void;
+    onWindowFullScreen: (callback: (isFullScreen: boolean) => void) => () => void;
 
     // Tab operations
     createTab: (profileId: string) => void;

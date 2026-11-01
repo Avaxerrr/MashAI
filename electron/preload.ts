@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
 contextBridge.exposeInMainWorld('api', {
+    platform: process.platform,
+
     // Window Controls
     minimizeWindow: () => ipcRenderer.send('window-minimize'),
     maximizeWindow: () => ipcRenderer.send('window-maximize'),
@@ -102,6 +104,11 @@ contextBridge.exposeInMainWorld('api', {
         const handler = (e: IpcRendererEvent, isMax: boolean) => callback(isMax);
         ipcRenderer.on('window-maximized', handler);
         return () => ipcRenderer.removeListener('window-maximized', handler);
+    },
+    onWindowFullScreen: (callback: (isFullScreen: boolean) => void) => {
+        const handler = (e: IpcRendererEvent, isFullScreen: boolean) => callback(isFullScreen);
+        ipcRenderer.on('window-fullscreen', handler);
+        return () => ipcRenderer.removeListener('window-fullscreen', handler);
     },
     onRequestCloseTab: (callback: (id: string) => void) => {
         const handler = (e: IpcRendererEvent, id: string) => callback(id);

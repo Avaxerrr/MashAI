@@ -210,5 +210,5 @@ Full control over your experience:
 | Platform | Status |
 |----------|--------|
 | Windows 10/11 | ✅ Supported |
-| macOS | 🔜 Coming Soon |
+| macOS (Apple Silicon & Intel) | ✅ Supported |
 | Linux | 🔜 Coming Soon |
